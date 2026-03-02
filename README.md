@@ -1,66 +1,67 @@
-# ReportIQ - Whistleblowing Reporting Webapp
+# ReportIQ – Whistleblowing Report Form
 
-A two-panel web application for whistleblowing reports: chat-assisted input (left) and live report preview (right). Uses Phi-3.5-mini running locally in the browser via WebLLM.
+A structured whistleblowing report application. Users complete a multi-section form and export a PDF. An AI chat backend is available (WebSocket) but not currently shown in the UI.
 
 ## Stack
 
-- **Backend**: FastAPI (Python)
-- **Frontend**: React + Vite + TypeScript
-- **AI**: WebLLM + Phi-3.5-mini (browser-based, WebGPU)
+| Layer | Technology |
+|-------|-------------|
+| Frontend | React 18, TypeScript, Vite |
+| Backend | FastAPI, Pydantic |
+| AI | Gemini 1.5 Flash (default) / Ollama / local Phi |
 
-## Setup
+## Quick Start
 
 ### Backend
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+```
+
+Create `backend/.env` with `GEMINI_API_KEY` (when using `LLM_PROVIDER=gemini`), then:
+
+```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend
 
-From project root:
-
 ```bash
-npm run install:frontend   # first time only
+npm run install:frontend
 npm run dev
 ```
 
-Or from the frontend directory:
+- **App**: http://localhost:5173  
+- **API**: http://localhost:8000
 
-```bash
-cd frontend
-npm install
-npm run dev
+## Project Structure
+
+```
+├── frontend/          # React + Vite app
+│   └── src/
+│       ├── components/ReportPanel/   # Form sections
+│       ├── context/ReportContext.tsx
+│       └── utils/generateReportPdf.ts
+├── backend/           # FastAPI + LLM
+│   └── app/
+│       ├── llm/       # Gemini, Ollama, local Phi
+│       ├── prompts/   # Two-layer workflow
+│       └── routers/chat.py
+└── docs/
+    ├── ARCHITECTURE.md
+    ├── SETUP.md
+    └── api/
 ```
 
-Frontend runs at `http://localhost:5173` with API proxy to `http://localhost:8000`.
+## Documentation
 
-### AI Model (Phi-3.5-mini)
+- **[Architecture](docs/ARCHITECTURE.md)** – Tech stack, data flow, components
+- **[Setup](docs/SETUP.md)** – Detailed setup and configuration
+- **[API](docs/api/README.md)** – WebSocket and endpoints
 
-The app runs Phi-3.5-mini locally in the browser. No data is sent to external servers.
+## Environment
 
-- **Activate**: Click "Activate AI" in the chat panel to load the model. The LLM is inactive until you click.
-- **First visit**: Downloads ~2.3 GB; progress shown during download.
-- **Subsequent visits**: Loads from IndexedDB cache in seconds; no re-download.
-- **WebGPU required**: Chrome 113+, Edge 113+, Safari 18 (macOS 15), or Firefox with WebGPU enabled.
-- **RAM**: Recommend 8 GB+ system RAM. Chrome may use 5–10 GB during inference.
-
-### Production
-
-```bash
-cd frontend && npm run build
-cd ../backend && uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
-
-The built SPA is served from `frontend/dist` when it exists.
-
-## Architecture
-
-- **State**: In-memory only (lost on refresh). Architecture prepared for future DB.
-- **Report schema**: Pydantic models in `backend/app/models.py`; TypeScript types in `frontend/src/types/report.ts`.
-- **AI**: WebLLM loads Phi-3.5-mini on user-triggered "Activate". Model cached in IndexedDB. Chat extracts report fields via streaming JSON; checklist auto-ticks as fields are filled.
-# Whistleblowing
+For Gemini (default): set `GEMINI_API_KEY` in `backend/.env`. See `backend/.env.example`.

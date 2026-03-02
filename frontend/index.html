@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ReportIQ - Whistleblowing Assistant</title>
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
+    <link rel="preload" href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" as="style" />
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap" rel="stylesheet" />
+    <style>
+      /* System font fallback while custom font loads */
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+      }
+      /* Override with custom font when loaded */
+      @supports (font-display: swap) {
+        body {
+          font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+            'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+            sans-serif;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <noscript>Enable JavaScript to use ReportIQ.</noscript>
+      <div id="app-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui;color:#71717a">Loading…</div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

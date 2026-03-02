@@ -1,0 +1,58 @@
+.question {
+  font-weight: 600;
+  font-size: var(--text-md);
+  margin-bottom: var(--space-12);
+}
+
+.questionText {
+  color: var(--color-text);
+}
+
+.radioRow {
+  display: flex;
+  gap: var(--space-24);
+  margin-bottom: var(--space-32);
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  cursor: pointer;
+  font-size: var(--text-base);
+}
+
+.radio {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}
+
+.conditionalBlock {
+  margin-top: var(--space-24);
+  padding-top: var(--space-24);
+  border-top: 1px solid var(--color-border);
+}
+
+.conditionalIntro {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-24);
+}
+
+.nameRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-24);
+  margin-bottom: var(--space-24);
+}
+
+.nameField {
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  .nameRow {
+    grid-template-columns: 1fr;
+  }
+}

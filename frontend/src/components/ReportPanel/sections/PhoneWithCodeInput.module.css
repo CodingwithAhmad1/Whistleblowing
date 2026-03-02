@@ -1,0 +1,44 @@
+.field {
+  margin-bottom: var(--space-24);
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  display: block;
+  font-size: var(--text-md);
+  font-weight: 500;
+  margin-bottom: var(--space-8);
+  color: var(--color-text);
+}
+
+.phoneRow {
+  display: flex;
+  gap: var(--space-8);
+  align-items: stretch;
+}
+
+.codeSelect {
+  flex: 0 0 auto;
+}
+
+.numberInput {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-12) var(--space-16);
+  font-family: inherit;
+  font-size: var(--text-base);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.numberInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+.numberInput:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}

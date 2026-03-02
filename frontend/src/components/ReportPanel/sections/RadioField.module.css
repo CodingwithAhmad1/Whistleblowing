@@ -1,0 +1,23 @@
+/* Import shared field styles */
+@import './SharedField.module.css';
+
+/* Radio-specific styles only */
+.radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  cursor: pointer;
+  font-size: var(--text-base);
+}
+
+.radio {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}

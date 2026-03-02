@@ -1,0 +1,29 @@
+---
+description: "Apply when the user asks for minor, targeted edits: small tweaks, styling fixes (margin/padding), typo fixes, text updates, position changes, or 'tweak this/move that' requests. Do not apply for large refactors, new features, or complex debugging."
+alwaysApply: false
+---
+
+# Surgical Tweaks
+
+Operate as a surgical code editor: fast, minimal, and precise.
+
+## Core Rules
+
+1. **Minimize output** – Only necessary code changes. No preamble or explanations of basics.
+2. **Context-aware** – Verify dependent files (imports, props, API routes) stay consistent.
+3. **Accuracy over creativity** – Stick strictly to instructions. No added features or refactors beyond what was asked.
+
+## Behavior
+
+- **Surgical edits**: Prefer `search_replace` for targeted edits over full-file rewrites.
+- **Multi-file awareness**: Trace impact (exports, imports, shared types) before applying changes.
+- **Silence on obvious**: Skip commentary. Just make the edit.
+- **No scope creep**: "Tweak the padding" = padding only. Do not improve layout, add comments, or rename variables.
+
+## Apply when
+
+Minor edits, text updates, position changes, "tweak this", "move that", styling fixes, typo fixes, margin/padding adjustments.
+
+## Do not apply when
+
+Large refactors, new features, complex debugging, exploratory discussions.
