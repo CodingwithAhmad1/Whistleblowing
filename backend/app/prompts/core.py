@@ -1,10 +1,10 @@
 """Core prompt building logic."""
 
-from typing import Dict, Any
+from typing import Any
 import logging
 
+from ..question_processors.report_utils import has_value
 from .formats import format_for_provider
-from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -60,20 +60,26 @@ REPORT_FIELDS = [
     {"key": "how_aware", "label": "How you became aware of this violation (it_happened_to_me, i_observed_it, i_heard_it, told_by_coworker, told_by_outside, overheard_it, accidentally_found_document, other)"},
     {"key": "how_aware_other", "label": "How you became aware (other)"},
     {"key": "persons_concealing", "label": "Persons concealing / steps taken"},
-    {"key": "full_details", "label": "Full details of alleged violation"},
+    {"key": "full_details_q1", "label": "Please describe what happened in your own words."},
+    {"key": "full_details_q2", "label": "Answer to AI-generated follow-up question"},
+    {"key": "full_details_q3", "label": "How well does this policy excerpt describe your experience?"},
 ]
 
 
-def build_system_prompt(report_data: Dict[str, Any]) -> str:
+def get_filled_report_fields(report_data: dict[str, Any]) -> list[dict[str, str]]:
+    """Return REPORT_FIELDS entries where the key has a non-empty value."""
+    return [f for f in REPORT_FIELDS if has_value(report_data.get(f["key"]))]
+
+
+def get_unfilled_report_fields(report_data: dict[str, Any]) -> list[dict[str, str]]:
+    """Return REPORT_FIELDS entries where the key is missing or empty."""
+    return [f for f in REPORT_FIELDS if not has_value(report_data.get(f["key"]))]
+
+
+def build_system_prompt(report_data: dict[str, Any]) -> str:
     """Build system prompt based on current report state."""
-    filled_fields = [
-        f for f in REPORT_FIELDS
-        if f["key"] in report_data and report_data[f["key"]] and str(report_data[f["key"]]).strip()
-    ]
-    unfilled_fields = [
-        f for f in REPORT_FIELDS
-        if f["key"] not in report_data or not report_data[f["key"]] or not str(report_data[f["key"]]).strip()
-    ]
+    filled_fields = get_filled_report_fields(report_data)
+    unfilled_fields = get_unfilled_report_fields(report_data)
     field_list = "\n".join([f"- {f['key']}: {f['label']}" for f in REPORT_FIELDS])
     filled_keys = ", ".join([f["key"] for f in filled_fields]) or "none"
     unfilled_keys = ", ".join([f["key"] for f in unfilled_fields]) or "none"
@@ -117,10 +123,9 @@ Priority: Focus on unfilled fields first ({unfilled_keys})."""
 
 def build_chat_prompt(
     system_prompt: str,
-    conversation_history: list[Dict[str, str]],
+    conversation_history: list[dict[str, str]],
     max_history: int = 20,
     provider_name: str | None = None,
 ) -> str:
-    """Build full prompt with history, formatted for the active provider."""
-    provider = provider_name or settings.LLM_PROVIDER
-    return format_for_provider(system_prompt, conversation_history, provider)
+    """Build full prompt with history, formatted for Gemini."""
+    return format_for_provider(system_prompt, conversation_history, provider_name)

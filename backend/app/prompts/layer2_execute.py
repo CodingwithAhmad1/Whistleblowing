@@ -1,17 +1,16 @@
 """Layer 2: Execution prompts per response type."""
 
-from typing import Dict, Any
+from typing import Any
 
-from .core import build_system_prompt, REPORT_FIELDS
+from .core import build_system_prompt, get_unfilled_report_fields
 from .formats import format_for_provider
 from .policy_quoting import get_relevant_policy_snippets
-from ..config import settings
 
 
 def build_execution_prompt(
     response_type: str,
-    report_data: Dict[str, Any],
-    conversation_history: list[Dict[str, str]],
+    report_data: dict[str, Any],
+    conversation_history: list[dict[str, str]],
     user_message: str,
     provider_name: str | None = None,
 ) -> str:
@@ -19,7 +18,7 @@ def build_execution_prompt(
     Build the Layer 2 execution prompt based on classified response type.
     For extract_data, uses full report system prompt. For others, uses focused templates.
     """
-    provider = provider_name or settings.LLM_PROVIDER
+    provider = provider_name or "gemini"
 
     if response_type == "extract_data":
         system = build_system_prompt(report_data)
@@ -29,7 +28,7 @@ def build_execution_prompt(
         return format_for_provider(system, conversation_history, provider)
 
     # Lightweight prompts for non-extract types
-    unfilled = [f for f in REPORT_FIELDS if not (report_data.get(f["key"]) and str(report_data.get(f["key"], "")).strip())]
+    unfilled = get_unfilled_report_fields(report_data)
     unfilled_keys = ", ".join([f["key"] for f in unfilled[:5]]) or "none"
 
     if response_type == "irrelevant":

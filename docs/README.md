@@ -8,7 +8,7 @@
 | [SETUP.md](SETUP.md) | Development setup and configuration |
 | [api/](api/) | WebSocket and API reference |
 | [development/](development/) | Coding standards |
-| [guides/](guides/) | User guide |
+| [guides/](guides/) | User guide, Admin guide |
 | [testing/](testing/README.md) | Testing guide |
 | [performance/](performance/README.md) | Performance notes |
 

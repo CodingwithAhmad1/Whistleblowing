@@ -6,7 +6,6 @@ interface FormFieldProps {
   onChange: (value: string) => void
   placeholder?: string
   type?: 'text' | 'textarea'
-  options?: { value: string; label: string }[]
   helperText?: string
   rows?: number
 }
@@ -17,31 +16,9 @@ export function FormField({
   onChange,
   placeholder = '',
   type = 'text',
-  options,
   helperText,
   rows,
 }: FormFieldProps) {
-  if (options) {
-    return (
-      <div className={styles.field}>
-        <label className={styles.label}>{label}</label>
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={styles.select}
-          aria-label={label}
-        >
-          <option value="">{placeholder}</option>
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    )
-  }
-
   if (type === 'textarea') {
     return (
       <div className={styles.field}>

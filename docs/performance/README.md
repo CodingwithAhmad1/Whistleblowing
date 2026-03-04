@@ -16,18 +16,44 @@
 
 - CSS custom properties (colors, spacing, type scale) in `index.css` keep styling consistent and maintainable.
 
+---
+
 ## Backend
 
 ### LLM Provider
 
-- **Gemini**: Cloud API; no local model load.
-- **Ollama**: Local; model must be pre-pulled.
-- **Local Phi**: Downloads on first run (~2.3 GB); cached in `backend/models/`.
+- **Gemini**: Cloud API via `google-genai` SDK. No local model load; minimal memory footprint (API calls only).
+- **SDK pattern**: Uses `genai.Client(api_key=...)` with native async streaming (`client.aio.models.generate_content_stream`). No thread/queue overhead compared to the old `google-generativeai` SDK.
+- **genai_config**: `get_client()` resolves the API key in order — explicit argument → `settings.json` `apiKey` (Admin-stored) → `GEMINI_API_KEY` env var — then returns a module-level singleton. The client is re-created only when the resolved key changes, avoiding duplicate construction across `GeminiProvider` and `EmbeddingService`. An Admin API key change takes effect on the next request without a server restart.
 
-### Memory Usage
+### Model Fallback
 
-- **Gemini**: Minimal (API calls only).
-- **Ollama / Local Phi**: ~2–3 GB when model is loaded.
+- **Quota resilience**: `GeminiProvider.generate_stream` catches `ClientError` with code `429` and retries with the next model in the fallback chain (`model_fallback.get_active_model()`).
+- **No busy-wait**: The retry is immediate — no `asyncio.sleep()` between tokens or between model switches.
+- **Exhaustion state**: Stored in `data/usage.json` via `UsageTracker`. `is_exhausted(model)` is a fast file read; only one file read per request at the model selection step.
+
+### Usage Tracker
+
+- **File locking**: `filelock.FileLock` used for all writes to `data/usage.json`. Prevents concurrent write races under high request load.
+- **Atomic write**: `record_usage` and `mark_exhausted` use `tempfile.mkstemp` + `Path.replace` for crash-safe atomic updates.
+- **Cleanup**: Entries older than 7 days are pruned inside each write, avoiding unbounded file growth.
+
+### Settings Store
+
+- **File locking**: `filelock` used during `update_settings()` to prevent concurrent write races.
+- **Atomic write**: Same tempfile + rename pattern as `UsageTracker`.
+
+### Embeddings
+
+- **InMemoryDocumentStore**: Uses `heapq.nlargest` for top-k similarity search — O(n log k) vs O(n log n) for a full sort.
+- **Lazy init**: `EmbeddingService` initialises only on first use, avoiding startup latency.
+
+### Full Details Frontend
+
+- **Q3 cache**: `useQuestionContent` cache key includes `settingsModified` from sessionStorage. Admin saves invalidate Q3 cache so updated templates are used on new Full Details requests.
+- **Admin usage polling**: `ModelUsageSection` polls `GET /api/admin/usage` every 30 seconds with `setInterval`. The interval is cleared on unmount via the `useEffect` cleanup.
+
+---
 
 ## Future Enhancements
 
@@ -35,3 +61,4 @@
 - Lazy loading for heavy components if added
 - Performance budgets in CI/CD
 - Bundle analysis for frontend regressions
+- Rate limiting middleware on question generation endpoints

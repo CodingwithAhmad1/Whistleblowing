@@ -1,60 +1,105 @@
-# Backend Setup
+# Backend
 
-## Installation
+FastAPI backend for ReportIQ. Serves the WebSocket chat API, question generation endpoints, admin settings, and model usage stats.
 
-### Using Virtual Environment (Recommended)
+## Setup
 
 ```bash
 cd backend
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Manual Installation (if llama-cpp-python fails)
+## Running
 
-If you get compilation errors with llama-cpp-python, use the pre-built CPU-only wheel:
+Use the project root scripts (recommended):
 
 ```bash
-pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
-pip install fastapi uvicorn[standard] pydantic pydantic-settings websockets huggingface-hub
+# From project root — starts both backend and frontend
+npm run start
+
+# Backend only
+npm run start:backend
 ```
 
-## Running the Server
+Or run directly from the backend directory (must use the venv interpreter):
 
 ```bash
 cd backend
-source venv/bin/activate  # If using venv
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+venv/bin/python -m uvicorn app.main:app --reload --port 8000
 ```
 
-The server will:
-1. Auto-download the Phi-3.5-mini GGUF model on first run (~2.3 GB)
-2. Load the model into memory
-3. Start the WebSocket chat server on port 8000
+> **Important:** Always run via `venv/bin/python` (or the activated venv). The system `python3` does not have the project dependencies installed.
 
 ## Configuration
 
-Set environment variables (or create `.env` from `.env.example`):
+Create `backend/.env` from `.env.example`:
+
+```env
+GEMINI_API_KEY=your_google_ai_api_key_here
+```
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| LLM_PROVIDER | No | gemini | gemini \| ollama \| local |
-| GEMINI_API_KEY | When gemini | - | Google AI API key |
-| OLLAMA_BASE_URL | When ollama | http://localhost:11434 | Ollama API URL |
-| OLLAMA_MODEL | When ollama | phi3.5 | Ollama model name |
+| `GEMINI_API_KEY` | No* | — | Google AI API key. Admin-stored key takes precedence. |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Preferred Gemini model. Falls back through the model chain on quota exhaustion. |
+| `GEMINI_EMBEDDING_MODEL` | No | `models/text-embedding-004` | Embedding model for future policy document search. |
+| `TEMPERATURE` | No | `0.7` | LLM sampling temperature. |
+| `TOP_P` | No | `0.9` | LLM nucleus sampling probability. |
+| `MAX_TOKENS` | No | `512` | Default max output tokens per request. |
+| `HOST` | No | `0.0.0.0` | Bind address. |
+| `PORT` | No | `8000` | Bind port. |
+| `CORS_ORIGINS` | No | `["http://localhost:5173","http://localhost:3000"]` | Allowed CORS origins. |
 
-- **gemini**: Uses Gemini 1.5 Flash. Set `GEMINI_API_KEY` in `.env`.
-- **ollama**: Uses local Ollama. Run `ollama pull phi3.5` first.
-- **local**: Uses llama-cpp Phi model (auto-downloads on first run).
+\* API key is required (from Admin settings OR `.env`) to enable chat, Q2/Q3 generation, and embeddings.
+
+## Model Fallback Chain
+
+When a model returns a 429 quota error, the backend automatically retries with the next available model. The full chain is:
+
+```
+gemini-2.0-flash → gemini-2.5-flash-lite → gemini-1.5-flash
+```
+
+The backend starts from whichever model is set in `GEMINI_MODEL` (default: `gemini-2.5-flash-lite`) and cycles through the rest in chain order. Exhausted models are tracked per-day in `backend/data/usage.json` and reset at UTC midnight.
 
 ## API Endpoints
 
-- `GET /api/health` - Health check
-- `WS /api/chat/{session_id}` - WebSocket chat endpoint
-- `GET /api/reports/{session_id}` - Get report state
-- `POST /api/reports/{session_id}/reset` - Reset session
+### Chat & Session
 
-## Model Download Location
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Health check |
+| `WS` | `/api/chat/{session_id}` | Streaming chat (two-layer classify → execute) |
+| `GET` | `/api/reports/{session_id}` | Report state for a session |
+| `POST` | `/api/reports/{session_id}/reset` | Reset session |
+| `GET` | `/api/sessions/{session_id}/history` | Conversation history |
 
-Models are cached in `backend/models/` directory.
+### Question Generation (Full Details)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/questions/intake/analyze` | 3-layer deterministic intake analysis on Q1 narrative → 0–2 follow-up questions |
+| `POST` | `/api/questions/q2/generate` | AI-generated ~10-word follow-up question (legacy, used by chat workflow) |
+| `POST` | `/api/questions/q3/generate` | AI-generated policy excerpt + question (legacy) |
+
+### Admin
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/admin/settings` | Get admin settings |
+| `PUT` | `/api/admin/settings` | Update admin settings |
+| `GET` | `/api/admin/usage` | Per-model daily usage stats |
+| `GET` | `/api/admin/intake-gaps` | Get all intake gap configurations |
+| `PUT` | `/api/admin/intake-gaps` | Replace full ordered gap list |
+| `POST` | `/api/admin/intake-gaps` | Add a new gap (auto-generates id from label) |
+| `PUT` | `/api/admin/intake-gaps/{gap_id}` | Update fields on a single gap |
+| `DELETE` | `/api/admin/intake-gaps/{gap_id}` | Delete a gap by id |
+
+## Data Files
+
+| File | Description |
+|------|-------------|
+| `backend/data/settings.json` | Persisted admin settings (API key, Q2/Q3 templates, intake gap configs). Created on first save. |
+| `backend/data/usage.json` | Per-model, per-day usage counters. Created automatically. Entries older than 7 days are pruned. |

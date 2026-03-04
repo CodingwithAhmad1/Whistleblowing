@@ -80,7 +80,7 @@ components/
 import React, { useState, useCallback } from 'react';
 
 // 2. Third-party libraries
-import { useRouter } from 'next/router';
+import { useNavigate } from 'react-router-dom';
 
 // 3. Internal imports (absolute paths)
 import { ReportProvider } from '@/context/ReportContext';
@@ -165,20 +165,19 @@ async def get_report(report_id: str) -> Report:
 backend/app/
 ├── __init__.py
 ├── main.py                 # FastAPI application
-├── config.py              # Configuration settings
-├── models.py              # Pydantic models
+├── config.py               # Configuration settings
+├── models.py               # Pydantic models
+├── storage.py              # Session and report storage
 ├── routers/
 │   ├── __init__.py
-│   ├── chat.py           # Chat endpoints
-│   └── reports.py        # Report endpoints
-├── services/
-│   ├── __init__.py
-│   ├── report_service.py  # Business logic
-│   └── llm_service.py     # AI integration
-└── utils/
-    ├── __init__.py
-    ├── validation.py      # Validation utilities
-    └── helpers.py         # Helper functions
+│   ├── chat.py             # WebSocket chat, reports, history
+│   ├── questions.py        # Q2/Q3 generation
+│   └── admin.py            # Admin settings
+├── llm/                    # LLM provider, genai config
+├── prompts/                # Layer1, Layer2, formats
+├── question_processors/    # Q2, Q3 processors, report_utils
+├── settings/               # JSON settings store
+└── embeddings/             # Embedding service, document store
 ```
 
 ## Testing Standards
@@ -253,49 +252,22 @@ describe('Report Integration', () => {
 
 #### Unit Tests (Pytest)
 ```python
-# test_report_service.py
+# test_storage.py
 import pytest
-from app.services.report_service import ReportService
-from app.models import ReportCreate
+from app.storage import session_store, ChatSession
 
-@pytest.fixture
-def report_service():
-    return ReportService()
+def test_create_session():
+    """Test session creation."""
+    session = session_store.create_session("test-123")
+    assert session.session_id == "test-123"
+    assert session.report_data == {}
+    assert len(session.conversation_history) == 0
 
-@pytest.fixture
-def sample_report():
-    return ReportCreate(
-        organization_tier="Regional",
-        country="US",
-        incident_location="Office"
-    )
-
-class TestReportService:
-    def test_create_report(self, report_service, sample_report):
-        """Test report creation."""
-        report = report_service.create(sample_report)
-        
-        assert report.id is not None
-        assert report.organization_tier == "Regional"
-        assert report.country == "US"
-
-    def test_validate_report(self, report_service):
-        """Test report validation."""
-        invalid_report = ReportCreate()
-        
-        with pytest.raises(ValueError, match="required fields"):
-            report_service.validate(invalid_report)
-
-@pytest.mark.asyncio
-async def test_llm_integration():
-    """Test LLM service integration."""
-    from app.services.llm_service import LLMService
-    
-    llm_service = LLMService()
-    response = await llm_service.process_message("Hello")
-    
-    assert response is not None
-    assert len(response) > 0
+def test_get_or_create_session():
+    """Test get or create."""
+    s1 = session_store.get_or_create_session("abc")
+    s2 = session_store.get_or_create_session("abc")
+    assert s1 is s2
 ```
 
 #### API Tests
@@ -313,22 +285,32 @@ def test_health_check():
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
 
-def test_chat_endpoint():
-    """Test chat endpoint."""
-    response = client.post(
-        "/api/chat",
-        json={"message": "Hello"}
-    )
+def test_admin_settings():
+    """Test admin settings endpoints."""
+    response = client.get("/api/admin/settings")
     assert response.status_code == 200
-    assert "response" in response.json()
+    data = response.json()
+    # policyExcerpt and apiKey are backend-only — stripped from the GET response
+    assert "policyExcerpt" not in data
+    assert "apiKey" not in data
+    assert "q2PromptTemplate" in data
+    assert "q3PromptTemplate" in data
+    assert "defaultQ2PromptTemplate" in data
+    assert "defaultQ3PromptTemplate" in data
 
 @pytest.mark.asyncio
 async def test_websocket_chat():
-    """Test WebSocket chat functionality."""
-    with client.websocket_connect("/api/chat/ws") as websocket:
-        websocket.send_json({"message": "Hello"})
-        response = websocket.receive_json()
-        assert "response" in response
+    """Test WebSocket chat (requires GEMINI_API_KEY)."""
+    with client.websocket_connect("/api/chat/test-session") as websocket:
+        websocket.send_json({"type": "message", "content": "Hello"})
+        # Expect token(s) then done
+        msgs = []
+        while True:
+            msg = websocket.receive_json()
+            msgs.append(msg)
+            if msg.get("type") == "done":
+                break
+        assert len(msgs) >= 1
 ```
 
 ## Documentation Standards

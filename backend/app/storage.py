@@ -1,13 +1,33 @@
 """In-memory storage for chat sessions and reports."""
 
-from typing import Dict, List, Optional
+from typing import Optional
 from datetime import datetime
-from .models import ReportCreate
 import json
 import re
 import logging
 
+from .models import ReportCreate
+from .question_processors.report_utils import has_value
+
 logger = logging.getLogger(__name__)
+
+# Valid report field keys for JSON extraction (built once, reused)
+_PERSON_FIELDS = {
+    f"person_{n}_{s}"
+    for n in range(1, 11)
+    for s in ("first", "last", "title")
+}
+_VALID_REPORT_FIELDS = {
+    "organization_tier", "country", "incident_location",
+    "is_employee", "wish_anonymous", "reporter_first_name", "reporter_last_name",
+    "reporter_phone_code", "reporter_phone", "reporter_email", "best_time_contact",
+    *_PERSON_FIELDS,
+    "supervisor_involved", "supervisor_who", "management_aware",
+    "general_nature", "where_occurred", "when_occurred", "duration",
+    "how_aware", "how_aware_other",
+    "full_details_q1", "full_details_q2", "full_details_q3",
+    "persons_concealing",
+}
 
 
 class ChatSession:
@@ -16,8 +36,8 @@ class ChatSession:
     def __init__(self, session_id: str):
         self.session_id = session_id
         self.created_at = datetime.utcnow()
-        self.conversation_history: List[Dict[str, str]] = []
-        self.report_data: Dict[str, str] = {}
+        self.conversation_history: list[dict[str, str]] = []
+        self.report_data: dict[str, str] = {}
         self._cached_system_prompt: Optional[str] = None
         self._prompt_cache_key: Optional[str] = None
 
@@ -29,7 +49,7 @@ class ChatSession:
             "timestamp": datetime.utcnow().isoformat(),
         })
 
-    def update_report(self, updates: Dict[str, str]):
+    def update_report(self, updates: dict[str, str]):
         """Update report data with new fields."""
         self.report_data.update(updates)
         self._cached_system_prompt = None
@@ -39,7 +59,7 @@ class ChatSession:
         """Get current report state as Pydantic model."""
         return ReportCreate(**self.report_data)
 
-    def extract_json_from_response(self, response: str) -> Optional[Dict]:
+    def extract_json_from_response(self, response: str) -> dict | None:
         """
         Extract JSON object from assistant response.
         Returns dict with 'data' (field updates) or None.
@@ -53,23 +73,8 @@ class ChatSession:
         json_pattern = r'\{(?:[^{}]|\{[^{}]*\})*\}'
         matches = re.findall(json_pattern, response)
 
-        person_fields = {
-            f"person_{n}_{s}"
-            for n in range(1, 11)
-            for s in ("first", "last", "title")
-        }
-        valid_fields = {
-            "organization_tier", "country", "incident_location",
-            "is_employee", "wish_anonymous", "reporter_first_name", "reporter_last_name",
-            "reporter_phone_code", "reporter_phone", "reporter_email", "best_time_contact",
-            *person_fields,
-            "supervisor_involved", "supervisor_who", "management_aware",
-            "general_nature", "where_occurred", "when_occurred", "duration",
-            "how_aware", "how_aware_other", "full_details", "persons_concealing"
-        }
-
         def filter_valid(raw: dict) -> dict:
-            return {k: str(v) for k, v in raw.items() if k in valid_fields and v}
+            return {k: str(v) for k, v in raw.items() if k in _VALID_REPORT_FIELDS and v}
 
         for match in matches:
             try:
@@ -90,12 +95,15 @@ class ChatSession:
 
         return None
 
-    def get_cached_system_prompt(self, prompt_builder_func, report_data: Dict[str, str]) -> str:
+    def get_cached_system_prompt(self, prompt_builder_func, report_data: dict[str, str]) -> str:
         """
         Get cached system prompt or build new one if report state changed.
-        Cache key is based on filled field keys to avoid rebuilding on every message.
+        Cache key includes both field keys and values so updates to existing fields
+        also trigger a prompt rebuild.
         """
-        cache_key = ",".join(sorted([k for k, v in report_data.items() if v and str(v).strip()]))
+        cache_key = ",".join(
+            sorted(f"{k}={v}" for k, v in report_data.items() if has_value(v))
+        )
 
         if self._cached_system_prompt and self._prompt_cache_key == cache_key:
             logger.debug("Using cached system prompt")
@@ -111,7 +119,7 @@ class SessionStore:
     """In-memory store for all chat sessions."""
 
     def __init__(self):
-        self._sessions: Dict[str, ChatSession] = {}
+        self._sessions: dict[str, ChatSession] = {}
 
     def create_session(self, session_id: str) -> ChatSession:
         """Create a new chat session."""

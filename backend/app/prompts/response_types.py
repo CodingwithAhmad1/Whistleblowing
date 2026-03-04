@@ -10,13 +10,14 @@ RESPONSE_TYPES = [
 
 DEFAULT_TYPE = "extract_data"
 
+_RESPONSE_TYPE_SET = set(RESPONSE_TYPES)
+
 
 def normalize_response_type(raw: str) -> str:
     """Parse and normalize classifier output to a valid response type."""
     if not raw or not isinstance(raw, str):
         return DEFAULT_TYPE
     normalized = raw.strip().lower().replace(" ", "_").replace("-", "_")
-    for rt in RESPONSE_TYPES:
-        if rt in normalized or normalized == rt:
-            return rt
+    if normalized in _RESPONSE_TYPE_SET:
+        return normalized
     return DEFAULT_TYPE

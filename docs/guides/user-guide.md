@@ -15,8 +15,9 @@ ReportIQ helps you create structured whistleblowing reports through a multi-sect
 ### Opening the Application
 
 1. Navigate to the ReportIQ URL.
-2. You see a single-page form with the header "Whistleblower Report".
-3. Scroll through the four sections and fill in the fields.
+2. Use the navigation bar: **Home** (report form) and **Admin** (settings, for administrators).
+3. On Home, you see the report form with the header "Whistleblower Report".
+4. Scroll through the four sections and fill in the fields.
 
 ## Form Sections
 
@@ -53,7 +54,11 @@ If you select **No** for anonymous:
 - **How did you become aware?**
 - **If other, how?** (conditional)
 - **Persons concealing** (with examples)
-- **Full details** (violation, witnesses, etc.)
+- **Full details** — a dynamic wizard:
+  1. **Q1**: Describe what happened in your own words (violation, witnesses, evidence, timeline, etc.). Click **Next** when done.
+  2. **Analyzing**: The system briefly analyzes your response to identify any important details that may be missing.
+  3. **Follow-up questions** *(0–2, depending on your Q1 response)*: Targeted questions are shown one at a time based on gaps identified in your narrative (e.g. missing timeline, no specific example, unclear individuals involved). Answer each question and click **Next** or **Done**.
+  4. **Review**: All your answers are shown together in an editable panel. You can edit any answer before submitting.
 
 ## Exporting Your Report
 
@@ -61,9 +66,15 @@ If you select **No** for anonymous:
 2. Click **Submit** at the bottom.
 3. A PDF is generated and downloaded with your responses.
 
+## Admin Page (Administrators)
+
+If you have access to **Admin** (via the navigation bar), you can configure the **intake gap types** — the categories of missing information the system checks for after Q1 — as well as prompt templates and model usage. See [Admin Guide](admin-guide.md) for details.
+
 ## Tips
 
-- Use specific dates, names, and locations when possible.
+- Use specific dates, names, and locations in your Q1 response — this reduces the number of follow-up questions the system needs to ask.
+- Mention any evidence you have (emails, documents, screenshots) in your Q1 response.
 - The "Persons concealing" section lists example actions (e.g. "Ignored it", "Changed documents").
 - You can edit any field before submitting.
 - Report data is stored in your browser session; refreshing clears it.
+- If the analysis step fails (network error or backend unavailable), you can click **Skip & Continue** to proceed without follow-up questions.

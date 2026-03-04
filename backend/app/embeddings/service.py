@@ -19,24 +19,21 @@ class EmbeddingService:
     def _ensure_initialized(self) -> None:
         if self._model is not None:
             return
-        api_key = settings.GEMINI_API_KEY
-        if not api_key or not api_key.strip():
-            raise ValueError("GEMINI_API_KEY required for embeddings")
-        import google.generativeai as genai
-        genai.configure(api_key=api_key.strip())
+        from ..llm.genai_config import ensure_genai_from_settings
+        ensure_genai_from_settings()
         self._model = settings.GEMINI_EMBEDDING_MODEL
         logger.info(f"Embedding service initialized (model: {self._model})")
 
     def embed_text(self, text: str) -> list[float]:
         """Embed a single text. Returns vector of floats."""
         self._ensure_initialized()
-        import google.generativeai as genai
-        result = genai.embed_content(
+        from ..llm.genai_config import get_client
+        client = get_client()
+        result = client.models.embed_content(
             model=self._model,
-            content=text,
-            task_type="retrieval_query",
+            contents=text,
         )
-        return result["embedding"]
+        return result.embeddings[0].values
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Embed multiple documents."""

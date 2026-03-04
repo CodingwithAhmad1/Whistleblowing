@@ -1,27 +1,9 @@
 import { useReport } from '@/context/ReportContext'
+import { DURATION_OPTIONS, HOW_AWARE_OPTIONS } from '@/data/reportSchema'
 import { FormField } from './FormField'
 import { SearchableSelect } from './SearchableSelect'
+import { FullDetailsQuestionnaire } from './FullDetailsQuestionnaire'
 import styles from './Incident.module.css'
-
-const HOW_AWARE_OPTIONS = [
-  { value: 'it_happened_to_me', label: 'It happened to me' },
-  { value: 'i_observed_it', label: 'I observed it' },
-  { value: 'i_heard_it', label: 'I heard it' },
-  { value: 'told_by_coworker', label: 'Told to me by a co-worker' },
-  { value: 'told_by_outside', label: 'Told to me by someone outside the company' },
-  { value: 'overheard_it', label: 'Overheard it' },
-  { value: 'accidentally_found_document', label: 'Accidentally found a document or file' },
-  { value: 'other', label: 'Other' },
-]
-
-const DURATION_OPTIONS = [
-  { value: 'once', label: 'Once' },
-  { value: 'one_week', label: 'One week' },
-  { value: '1_to_3_months', label: '1 to 3 months' },
-  { value: '3_months_to_a_year', label: '3 months to a year' },
-  { value: 'more_than_a_year', label: 'More than a year' },
-  { value: 'don_t_know', label: "Don't know" },
-]
 
 export function Incident() {
   const { report, updateReport } = useReport()
@@ -102,13 +84,7 @@ export function Incident() {
           </div>
         </div>
       </div>
-      <FormField
-        label="Full details (violation, witnesses, etc.)"
-        value={report.full_details}
-        onChange={(v) => updateReport({ full_details: v })}
-        type="textarea"
-        rows={20}
-      />
+      <FullDetailsQuestionnaire />
     </>
   )
 }

@@ -65,7 +65,9 @@ class ReportCreate(BaseModel):
     duration: Optional[str] = None
     how_aware: Optional[str] = None
     how_aware_other: Optional[str] = None
-    full_details: Optional[str] = None
+    full_details_q1: Optional[str] = None
+    full_details_q2: Optional[str] = None
+    full_details_q3: Optional[str] = None
     persons_concealing: Optional[str] = None
 
 

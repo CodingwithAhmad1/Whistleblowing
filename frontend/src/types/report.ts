@@ -14,7 +14,7 @@ const PERSON_KEYS = [
   'person_6', 'person_7', 'person_8', 'person_9', 'person_10',
 ] as const
 
-export function personsFromReport(report: Record<string, string | undefined>): PersonRecord[] {
+export function personsFromReport(report: ReportData | Record<string, string | undefined>): PersonRecord[] {
   const persons: PersonRecord[] = []
   for (const key of PERSON_KEYS) {
     const first = report[`${key}_first`] ?? ''
@@ -95,7 +95,11 @@ export interface ReportData {
   duration: string
   how_aware: string
   how_aware_other: string
-  full_details: string
+  full_details_q1: string
+  full_details_q2: string
+  full_details_q2_question: string   // 1st follow-up question text
+  full_details_q3: string
+  full_details_q3_question: string   // 2nd follow-up question text (if any)
   persons_concealing: string
 }
 
@@ -150,6 +154,10 @@ export const initialReportData: ReportData = {
   duration: '',
   how_aware: '',
   how_aware_other: '',
-  full_details: '',
+  full_details_q1: '',
+  full_details_q2: '',
+  full_details_q2_question: '',
+  full_details_q3: '',
+  full_details_q3_question: '',
   persons_concealing: '',
 }

@@ -115,27 +115,6 @@
   outline-offset: 2px;
 }
 
-.radioRow {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-  margin-bottom: var(--space-16);
-}
-
-.radioLabel {
-  display: flex;
-  align-items: center;
-  gap: var(--space-12);
-  cursor: pointer;
-  font-size: var(--text-base);
-}
-
-.radio {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-accent);
-}
-
 .conditionalLabel {
   font-size: var(--text-sm);
   margin: 0 0 var(--space-8);

@@ -1,306 +1,445 @@
 /**
  * Client-side PDF generation for whistleblowing report.
- * Schema-driven: add fields to reportSchema.ts to include in PDF.
+ * Schema-driven for standard fields; Q1/Q2/Q3 rendered as a dedicated Q&A block.
  */
 
 import { jsPDF } from 'jspdf'
 import type { ReportData } from '@/types/report'
 import { personsFromReport } from '@/types/report'
-import {
-  REPORT_SECTIONS,
-  REPORT_FIELDS,
-  type FieldDef,
-} from '@/data/reportSchema'
+import { REPORT_SECTIONS, REPORT_FIELDS, type FieldDef } from '@/data/reportSchema'
+
+// ── Layout constants ──────────────────────────────────────────────────────────
 
 const MARGIN = 20
-const LINE_HEIGHT = 6
-const SECTION_GAP = 10
-const FIELD_GAP = 4
-const FONT_SIZE_NORMAL = 11
-const FONT_SIZE_HEADING = 14
-const FONT_SIZE_SMALL = 9
-const TABLE_PADDING = 2
-const TABLE_ROW_HEIGHT = 7
+const LINE_H = 6        // base line height (mm)
+const SECTION_GAP = 10  // space after section block
+const FIELD_GAP = 5     // space between fields
+const W_NORMAL = 11
+const W_HEADING = 13
+const W_SMALL = 9
+const TABLE_PAD = 2
+const TABLE_ROW_H = 7
 
-function getDisplayValue(
-  report: ReportData,
-  key: string,
-  def: FieldDef
-): string {
-  const raw = (report as unknown as Record<string, string>)[key] ?? ''
-  const trimmed = String(raw).trim()
-  if (!trimmed) return '(No response)'
-  if (def.formatValue) return def.formatValue(trimmed)
-  return trimmed
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function pageW(doc: jsPDF) { return doc.internal.pageSize.width }
+function contentW(doc: jsPDF) { return pageW(doc) - 2 * MARGIN }
+
+function ensureSpace(doc: jsPDF, y: number, needed: number): number {
+  if (y + needed > doc.internal.pageSize.height - MARGIN) {
+    doc.addPage()
+    return MARGIN + 4
+  }
+  return y
 }
 
-function shouldShowField(report: ReportData, def: FieldDef): boolean {
-  if (def.hideWhen?.(report)) return false
-  return true
+function wrap(doc: jsPDF, text: string, maxW: number): string[] {
+  return doc.splitTextToSize(text, maxW)
 }
 
 function isPersonKey(key: string): boolean {
   return /^person_\d+_(first|last|title)$/.test(key)
 }
 
-function addPageIfNeeded(doc: jsPDF, y: number, needed: number): number {
-  const pageHeight = doc.internal.pageSize.height
-  const bottomMargin = 20
-  if (y + needed > pageHeight - bottomMargin) {
-    doc.addPage()
-    return MARGIN
-  }
+const CONTACT_KEYS = new Set([
+  'reporter_first_name', 'reporter_last_name', 'reporter_phone',
+  'reporter_phone_code', 'reporter_email', 'best_time_contact',
+])
+
+const FULL_DETAILS_KEYS = new Set([
+  'full_details_q1', 'full_details_q2', 'full_details_q3',
+  'full_details_q2_question', 'full_details_q3_question',
+])
+
+function getDisplay(report: ReportData, key: string, def: FieldDef): string {
+  const raw = (report as unknown as Record<string, string>)[key] ?? ''
+  const trimmed = raw.trim()
+  if (!trimmed) return 'Not provided'
+  return def.formatValue ? def.formatValue(trimmed) : trimmed
+}
+
+function shouldShow(report: ReportData, def: FieldDef): boolean {
+  return !def.hideWhen?.(report)
+}
+
+// ── Section heading ───────────────────────────────────────────────────────────
+
+function drawSectionHeading(doc: jsPDF, title: string, y: number): number {
+  const cw = contentW(doc)
+  y = ensureSpace(doc, y, LINE_H * 2 + 4)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(W_HEADING)
+  doc.setTextColor(0, 0, 0)
+  doc.text(title.toUpperCase(), MARGIN, y)
+  y += LINE_H - 1
+
+  doc.setDrawColor(180, 180, 180)
+  doc.setLineWidth(0.4)
+  doc.line(MARGIN, y, MARGIN + cw, y)
+  y += 5
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(W_NORMAL)
   return y
 }
 
-function wrapText(doc: jsPDF, text: string, maxWidth: number): string[] {
-  return doc.splitTextToSize(text, maxWidth)
-}
+// ── Standard field ────────────────────────────────────────────────────────────
 
-const CONTACT_TABLE_KEYS = [
-  'reporter_first_name',
-  'reporter_last_name',
-  'reporter_phone',
-  'reporter_email',
-  'best_time_contact',
-] as const
-
-function formatPhoneForPdf(report: ReportData): string {
-  const code = (report as unknown as Record<string, string>).reporter_phone_code ?? ''
-  const num = report.reporter_phone?.trim() ?? ''
-  if (!num) return '(No response)'
-  if (code) return `${code} ${num}`
-  return num
-}
-
-function drawContactTable(
+function drawField(
   doc: jsPDF,
-  report: ReportData,
-  startX: number,
-  startY: number,
-  tableWidth: number
+  label: string,
+  value: string,
+  y: number,
+  dimIfEmpty = true,
 ): number {
-  const rows: Array<[string, string]> = [
-    ['First Name', report.reporter_first_name?.trim() || '—'],
-    ['Last Name', report.reporter_last_name?.trim() || '—'],
-    ['Phone', formatPhoneForPdf(report)],
-    ['Email', report.reporter_email?.trim() || '—'],
-    ['Best time for communication', report.best_time_contact?.trim() || '—'],
-  ]
-
-  const labelColW = tableWidth * 0.35
-  const valueColW = tableWidth * 0.65
+  const cw = contentW(doc)
+  const isBlank = value === 'Not provided'
+  const valueLines = wrap(doc, value, cw - 6)
+  const totalH = LINE_H + valueLines.length * LINE_H
+  y = ensureSpace(doc, y, totalH + FIELD_GAP)
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(FONT_SIZE_SMALL)
-  let y = startY
+  doc.setFontSize(W_NORMAL)
+  doc.setTextColor(0, 0, 0)
+  doc.text(label + ':', MARGIN, y)
+  y += LINE_H
 
-  doc.setDrawColor(0.5, 0.5, 0.5)
-  doc.line(startX, startY, startX + tableWidth, startY)
+  doc.setFont('helvetica', 'normal')
+  if (dimIfEmpty && isBlank) doc.setTextColor(160, 160, 160)
+  for (const line of valueLines) {
+    doc.text(line, MARGIN + 4, y)
+    y += LINE_H
+  }
+  doc.setTextColor(0, 0, 0)
+  y += FIELD_GAP
+  return y
+}
+
+// ── Q&A block (for full details) ──────────────────────────────────────────────
+
+function drawQA(
+  doc: jsPDF,
+  question: string,
+  answer: string,
+  y: number,
+): number {
+  const cw = contentW(doc)
+  const isBlank = !answer.trim()
+
+  // Question
+  const qLines = wrap(doc, question, cw)
+  y = ensureSpace(doc, y, qLines.length * LINE_H + 4)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(W_NORMAL)
+  doc.setTextColor(0, 0, 0)
+  for (const line of qLines) {
+    doc.text(line, MARGIN, y)
+    y += LINE_H
+  }
+  y += 2
+
+  // Answer
+  const aLines = wrap(doc, isBlank ? 'Not provided' : answer.trim(), cw - 6)
+  y = ensureSpace(doc, y, aLines.length * LINE_H + FIELD_GAP)
+  doc.setFont('helvetica', 'normal')
+  if (isBlank) doc.setTextColor(160, 160, 160)
+  for (const line of aLines) {
+    doc.text(line, MARGIN + 4, y)
+    y += LINE_H
+  }
+  doc.setTextColor(0, 0, 0)
+  y += FIELD_GAP + 2
+  return y
+}
+
+// ── Contact table ─────────────────────────────────────────────────────────────
+
+function formatPhone(report: ReportData): string {
+  const code = (report as unknown as Record<string, string>).reporter_phone_code ?? ''
+  const num = report.reporter_phone?.trim() ?? ''
+  if (!num) return 'Not provided'
+  return code ? `${code} ${num}` : num
+}
+
+function drawContactTable(doc: jsPDF, report: ReportData, y: number): number {
+  const cw = contentW(doc)
+  const rows: [string, string][] = [
+    ['First Name', report.reporter_first_name?.trim() || 'Not provided'],
+    ['Last Name', report.reporter_last_name?.trim() || 'Not provided'],
+    ['Phone', formatPhone(report)],
+    ['Email', report.reporter_email?.trim() || 'Not provided'],
+    ['Best time to contact', report.best_time_contact?.trim() || 'Not provided'],
+  ]
+  const labelW = cw * 0.35
+  const valueW = cw * 0.65
+
+  doc.setFontSize(W_SMALL)
+  doc.setDrawColor(180, 180, 180)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN, y, MARGIN + cw, y)
 
   for (const [label, value] of rows) {
-    const valueLines = wrapText(doc, value, valueColW - TABLE_PADDING * 2)
-    const rowH = Math.max(TABLE_ROW_HEIGHT, valueLines.length * LINE_HEIGHT + TABLE_PADDING * 2)
-    const cellY = y + LINE_HEIGHT - 1 + TABLE_PADDING
+    const valueLines = wrap(doc, value, valueW - TABLE_PAD * 2)
+    const rowH = Math.max(TABLE_ROW_H, valueLines.length * LINE_H + TABLE_PAD * 2)
+    const cellY = y + LINE_H - 1 + TABLE_PAD
 
+    const isBlank = value === 'Not provided'
     doc.setFont('helvetica', 'bold')
-    doc.text(label + ':', startX + TABLE_PADDING, cellY)
+    doc.setTextColor(0, 0, 0)
+    doc.text(label + ':', MARGIN + TABLE_PAD, cellY)
+
     doc.setFont('helvetica', 'normal')
+    if (isBlank) doc.setTextColor(160, 160, 160)
     for (let i = 0; i < valueLines.length; i++) {
-      doc.text(valueLines[i], startX + labelColW + TABLE_PADDING, cellY + i * LINE_HEIGHT)
+      doc.text(valueLines[i], MARGIN + labelW + TABLE_PAD, cellY + i * LINE_H)
     }
+    doc.setTextColor(0, 0, 0)
 
-    doc.setDrawColor(0.85, 0.85, 0.85)
-    doc.line(startX, y + rowH, startX + tableWidth, y + rowH)
-
+    doc.setDrawColor(220, 220, 220)
+    doc.line(MARGIN, y + rowH, MARGIN + cw, y + rowH)
     y += rowH
   }
 
-  doc.setDrawColor(0.5, 0.5, 0.5)
-  doc.line(startX + labelColW, startY, startX + labelColW, y)
-
-  doc.line(startX + tableWidth, startY, startX + tableWidth, y)
+  doc.setDrawColor(180, 180, 180)
+  doc.line(MARGIN + labelW, y - rows.length * TABLE_ROW_H, MARGIN + labelW, y)
+  doc.line(MARGIN + cw, y - rows.length * TABLE_ROW_H, MARGIN + cw, y)
   return y
 }
+
+// ── Persons table ─────────────────────────────────────────────────────────────
 
 function drawPersonsTable(
   doc: jsPDF,
   persons: Array<{ first: string; last: string; title: string }>,
-  startX: number,
-  startY: number,
-  tableWidth: number
+  y: number,
 ): number {
-  if (persons.length === 0) return startY
-
-  const colW = [
-    tableWidth * 0.08,  // #
-    tableWidth * 0.28,  // First Name
-    tableWidth * 0.28,  // Last Name
-    tableWidth * 0.36,  // Title
-  ]
-  const headers = ['#', 'First Name', 'Last Name', 'Title']
+  if (persons.length === 0) return y
+  const cw = contentW(doc)
+  const cols = [cw * 0.07, cw * 0.28, cw * 0.28, cw * 0.37]
+  const headers = ['#', 'First Name', 'Last Name', 'Title / Role']
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(FONT_SIZE_SMALL)
-  let y = startY
-  let x = startX
+  doc.setFontSize(W_SMALL)
+  doc.setTextColor(0, 0, 0)
 
-  // Header row + top border
-  doc.setDrawColor(0.5, 0.5, 0.5)
-  doc.line(startX, startY, startX + tableWidth, startY)
+  // Header
+  doc.setDrawColor(180, 180, 180)
+  doc.setLineWidth(0.3)
+  doc.line(MARGIN, y, MARGIN + cw, y)
+
+  let x = MARGIN
   for (let c = 0; c < headers.length; c++) {
-    doc.text(headers[c], x + TABLE_PADDING, y + LINE_HEIGHT - 1)
-    if (c < headers.length - 1) {
-      x += colW[c]
-      doc.line(startX + x, startY, startX + x, y + TABLE_ROW_HEIGHT)
-    } else {
-      x += colW[c]
-    }
+    doc.text(headers[c], x + TABLE_PAD, y + LINE_H - 1)
+    x += cols[c]
   }
-  y += TABLE_ROW_HEIGHT
-  doc.line(startX, y, startX + tableWidth, y)
-  // Vertical lines for header
-  let vx = startX
-  for (let c = 0; c < colW.length; c++) {
-    vx += colW[c]
-    if (c < colW.length - 1) doc.line(vx, startY, vx, y)
+  y += TABLE_ROW_H
+  doc.line(MARGIN, y, MARGIN + cw, y)
+
+  // Vertical dividers for header
+  let vx = MARGIN
+  for (let c = 0; c < cols.length - 1; c++) {
+    vx += cols[c]
+    doc.line(vx, y - TABLE_ROW_H, vx, y)
   }
   y += 2
 
   doc.setFont('helvetica', 'normal')
 
   for (let i = 0; i < persons.length; i++) {
-    const rowTop = y
     const p = persons[i]
-    const firstLines = wrapText(doc, p.first || '—', colW[1] - TABLE_PADDING * 2)
-    const lastLines = wrapText(doc, p.last || '—', colW[2] - TABLE_PADDING * 2)
-    const titleLines = wrapText(doc, p.title || '—', colW[3] - TABLE_PADDING * 2)
-    const rowLines = Math.max(firstLines.length, lastLines.length, titleLines.length, 1)
-    const rowH = LINE_HEIGHT * rowLines + TABLE_PADDING * 2
-    const cellY = y + LINE_HEIGHT - 1 + TABLE_PADDING
+    const rowTop = y
+    const cells = [
+      wrap(doc, String(i + 1), cols[0] - TABLE_PAD * 2),
+      wrap(doc, p.first || '—', cols[1] - TABLE_PAD * 2),
+      wrap(doc, p.last || '—', cols[2] - TABLE_PAD * 2),
+      wrap(doc, p.title || '—', cols[3] - TABLE_PAD * 2),
+    ]
+    const maxLines = Math.max(...cells.map((c) => c.length), 1)
+    const rowH = LINE_H * maxLines + TABLE_PAD * 2
+    const cellY = y + LINE_H - 1 + TABLE_PAD
 
-    // Cell 0: #
-    doc.text(String(i + 1), startX + TABLE_PADDING, cellY)
-    // Cell 1: First Name
-    x = startX + colW[0]
-    for (let L = 0; L < firstLines.length; L++) {
-      doc.text(firstLines[L], x + TABLE_PADDING, cellY + L * LINE_HEIGHT)
-    }
-    // Cell 2: Last Name
-    x += colW[1]
-    for (let L = 0; L < lastLines.length; L++) {
-      doc.text(lastLines[L], x + TABLE_PADDING, cellY + L * LINE_HEIGHT)
-    }
-    // Cell 3: Title
-    x += colW[2]
-    for (let L = 0; L < titleLines.length; L++) {
-      doc.text(titleLines[L], x + TABLE_PADDING, cellY + L * LINE_HEIGHT)
+    x = MARGIN
+    for (let c = 0; c < cells.length; c++) {
+      for (let L = 0; L < cells[c].length; L++) {
+        doc.text(cells[c][L], x + TABLE_PAD, cellY + L * LINE_H)
+      }
+      x += cols[c]
     }
 
     y += rowH
-    doc.setDrawColor(0.85, 0.85, 0.85)
-    doc.line(startX, y, startX + tableWidth, y)
-    vx = startX
-    for (let c = 0; c < colW.length; c++) {
-      vx += colW[c]
-      if (c < colW.length - 1) doc.line(vx, rowTop, vx, y)
+    doc.setDrawColor(220, 220, 220)
+    doc.line(MARGIN, y, MARGIN + cw, y)
+
+    vx = MARGIN
+    for (let c = 0; c < cols.length - 1; c++) {
+      vx += cols[c]
+      doc.line(vx, rowTop, vx, y)
     }
     y += 2
   }
 
-  // Right border
-  doc.setDrawColor(0.5, 0.5, 0.5)
-  doc.line(startX + tableWidth, startY, startX + tableWidth, y - 2)
-
+  doc.setDrawColor(180, 180, 180)
+  doc.line(MARGIN + cw, y - persons.length * (TABLE_ROW_H + 2) - TABLE_ROW_H, MARGIN + cw, y - 2)
   return y
 }
 
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export function generateReportPdf(report: ReportData): void {
   const doc = new jsPDF({ format: 'a4', unit: 'mm' })
-  const pageWidth = doc.internal.pageSize.width
-  const maxTextWidth = pageWidth - 2 * MARGIN
   let y = MARGIN
 
-  // Title
-  doc.setFontSize(FONT_SIZE_HEADING)
+  // ── Header ────────────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold')
-  doc.text('Report - Whistleblowing Submission', MARGIN, y)
-  y += LINE_HEIGHT + 2
+  doc.setFontSize(18)
+  doc.setTextColor(0, 0, 0)
+  doc.text('Whistleblowing Report', MARGIN, y)
+  y += 8
 
-  doc.setFontSize(FONT_SIZE_SMALL)
   doc.setFont('helvetica', 'normal')
-  const generated = new Date().toISOString().slice(0, 10)
-  doc.text(`Generated: ${generated}`, MARGIN, y)
-  y += LINE_HEIGHT + SECTION_GAP
+  doc.setFontSize(W_SMALL)
+  doc.setTextColor(120, 120, 120)
+  const dateStr = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
+  doc.text(`Confidential  ·  Generated ${dateStr}`, MARGIN, y)
+  y += 5
 
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.6)
+  doc.line(MARGIN, y, MARGIN + contentW(doc), y)
+  doc.setTextColor(0, 0, 0)
+  y += SECTION_GAP
+
+  // ── Sections ──────────────────────────────────────────────────────────────
   for (const section of REPORT_SECTIONS) {
-    y = addPageIfNeeded(doc, y, SECTION_GAP + LINE_HEIGHT * 3)
-    doc.setFontSize(FONT_SIZE_HEADING)
-    doc.setFont('helvetica', 'bold')
-    doc.text(`--- ${section.title} ---`, MARGIN, y)
-    y += LINE_HEIGHT + FIELD_GAP
-    doc.setFontSize(FONT_SIZE_NORMAL)
-    doc.setFont('helvetica', 'normal')
+    y = ensureSpace(doc, y, LINE_H * 4)
+    y = drawSectionHeading(doc, section.title, y)
 
+    // ── Persons section ────────────────────────────────────────────────────
     if (section.id === 'persons') {
       const persons = personsFromReport(report as unknown as Record<string, string | undefined>)
-      const filledPersons = persons.filter(
-        (p) => p.first.trim() || p.last.trim() || p.title.trim()
-      )
-      if (filledPersons.length > 0) {
-        const tableWidth = maxTextWidth
-        const estimatedTableH = 12 + filledPersons.length * 12
-        y = addPageIfNeeded(doc, y, estimatedTableH)
+      const filled = persons.filter((p) => p.first.trim() || p.last.trim() || p.title.trim())
+
+      if (filled.length > 0) {
+        y = ensureSpace(doc, y, 14 + filled.length * 10)
         doc.setFont('helvetica', 'bold')
-        doc.text('Person(s) engaged in this behavior:', MARGIN, y)
-        y += LINE_HEIGHT + FIELD_GAP
-        doc.setFont('helvetica', 'normal')
-        y = drawPersonsTable(doc, filledPersons, MARGIN, y, tableWidth)
+        doc.setFontSize(W_NORMAL)
+        doc.text('Person(s) involved:', MARGIN, y)
+        y += LINE_H + 2
+        y = drawPersonsTable(doc, filled, y)
         y += FIELD_GAP
+      } else {
+        y = drawField(doc, 'Person(s) involved', 'Not provided', y)
       }
     }
 
+    // ── Reporter contact table ─────────────────────────────────────────────
     if (section.id === 'reporter' && report.wish_anonymous === 'no') {
-      y = addPageIfNeeded(doc, y, 60)
+      y = ensureSpace(doc, y, 60)
       doc.setFont('helvetica', 'bold')
+      doc.setFontSize(W_NORMAL)
       doc.text('Contact Details:', MARGIN, y)
-      y += LINE_HEIGHT + FIELD_GAP
-      doc.setFont('helvetica', 'normal')
-      y = drawContactTable(doc, report, MARGIN, y, maxTextWidth)
+      y += LINE_H + 2
+      y = drawContactTable(doc, report, y)
       y += FIELD_GAP
     }
 
-    // Standard fields for this section (exclude contact fields when rendered as table)
-    const isContactField = (key: string) => CONTACT_TABLE_KEYS.includes(key as (typeof CONTACT_TABLE_KEYS)[number])
-    const sectionFields = REPORT_FIELDS.filter(
+    // ── Incident: Full Details Q&A block ───────────────────────────────────
+    if (section.id === 'incident') {
+      // Standard incident fields (excluding full_details and persons_concealing)
+      const standardFields = REPORT_FIELDS.filter(
+        (f) =>
+          f.section === 'incident' &&
+          !FULL_DETAILS_KEYS.has(f.key) &&
+          f.key !== 'persons_concealing' &&
+          shouldShow(report, f),
+      )
+      for (const def of standardFields) {
+        y = drawField(doc, def.label, getDisplay(report, def.key, def), y)
+      }
+
+      // Full Details sub-heading
+      y = ensureSpace(doc, y, LINE_H * 3)
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(W_NORMAL)
+      doc.setTextColor(0, 0, 0)
+      doc.text('Full Details', MARGIN, y)
+      y += LINE_H - 1
+      doc.setDrawColor(210, 210, 210)
+      doc.setLineWidth(0.3)
+      doc.line(MARGIN, y, MARGIN + contentW(doc), y)
+      y += 5
+
+      // Q1
+      y = drawQA(
+        doc,
+        'Please describe what happened in your own words.',
+        report.full_details_q1?.trim() ?? '',
+        y,
+      )
+
+      // Q2 — first follow-up question (deterministic intake workflow)
+      const q2Answer = report.full_details_q2?.trim() ?? ''
+      const q2Question = report.full_details_q2_question?.trim()
+      if (q2Question || q2Answer) {
+        y = drawQA(
+          doc,
+          q2Question || 'Follow-up question',
+          q2Answer,
+          y,
+        )
+      }
+
+      // Q3 — second follow-up question (if present)
+      const q3Answer = report.full_details_q3?.trim() ?? ''
+      const q3Question = report.full_details_q3_question?.trim()
+      if (q3Question || q3Answer) {
+        y = drawQA(
+          doc,
+          q3Question || 'Additional follow-up question',
+          q3Answer,
+          y,
+        )
+      }
+
+      // Persons concealing (after Q&A block)
+      const concealingDef = REPORT_FIELDS.find((f) => f.key === 'persons_concealing')
+      if (concealingDef && shouldShow(report, concealingDef)) {
+        y = drawField(
+          doc,
+          concealingDef.label,
+          getDisplay(report, 'persons_concealing', concealingDef),
+          y,
+        )
+      }
+
+      y += SECTION_GAP
+      continue
+    }
+
+    // ── Standard fields for all other sections ─────────────────────────────
+    const skipKeys = new Set([
+      ...(section.id === 'reporter' && report.wish_anonymous === 'no'
+        ? [...CONTACT_KEYS]
+        : []),
+    ])
+
+    const fields = REPORT_FIELDS.filter(
       (f) =>
         f.section === section.id &&
         !isPersonKey(f.key) &&
-        shouldShowField(report, f) &&
-        !(section.id === 'reporter' && report.wish_anonymous === 'no' && isContactField(f.key))
+        !FULL_DETAILS_KEYS.has(f.key) &&
+        !skipKeys.has(f.key) &&
+        shouldShow(report, f),
     )
-    for (const def of sectionFields) {
-      const value = getDisplayValue(report, def.key, def)
-      const labelLine = `${def.label}:`
-      const valueLines = wrapText(doc, value, maxTextWidth - 5)
-
-      const totalH = LINE_HEIGHT + valueLines.length * LINE_HEIGHT
-      y = addPageIfNeeded(doc, y, totalH + FIELD_GAP)
-
-      doc.setFont('helvetica', 'bold')
-      doc.text(labelLine, MARGIN, y)
-      y += LINE_HEIGHT
-      doc.setFont('helvetica', 'normal')
-      for (const l of valueLines) {
-        doc.text(l, MARGIN + 5, y)
-        y += LINE_HEIGHT
-      }
-      y += FIELD_GAP
+    for (const def of fields) {
+      y = drawField(doc, def.label, getDisplay(report, def.key, def), y)
     }
 
     y += SECTION_GAP
   }
 
-  const filename = `report-${new Date().toISOString().slice(0, 10)}.pdf`
-  doc.save(filename)
+  doc.save(`whistleblowing-report-${new Date().toISOString().slice(0, 10)}.pdf`)
 }

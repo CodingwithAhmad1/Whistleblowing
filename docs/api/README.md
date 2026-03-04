@@ -28,7 +28,7 @@ Returns service and LLM provider status.
 
 ### WS /api/chat/{session_id}
 
-Real-time streaming chat. Each `session_id` has its own conversation and report state.
+Real-time streaming chat. Each `session_id` has its own conversation and report state. Uses a two-layer workflow: Layer 1 classifies the user message (max 20 tokens), Layer 2 executes the appropriate prompt and streams the response.
 
 **Connection:**
 ```javascript
@@ -81,7 +81,327 @@ const ws = new WebSocket('ws://localhost:8000/api/chat/my-session-id');
 
 ---
 
-## REST Endpoints
+## Admin Settings
+
+### GET /api/admin/settings
+
+Returns current admin settings plus default prompt templates for display. `apiKey` and `policyExcerpt` are backend-only and are **omitted** from the response.
+
+**Response:**
+```json
+{
+  "q2PromptTemplate": "",
+  "q3PromptTemplate": "",
+  "defaultQ2PromptTemplate": "Generate exactly one short question...",
+  "defaultQ3PromptTemplate": "Generate a random, generic policy quote..."
+}
+```
+
+**Status:** 200 OK
+
+### PUT /api/admin/settings
+
+Update admin settings. Only provided keys are updated; omitted keys are left unchanged.
+
+**Request:**
+```json
+{
+  "q2PromptTemplate": "Custom Q2 prompt with {context} and {word_limit}...",
+  "q3PromptTemplate": "Custom Q3 prompt with {context} and {word_limit}..."
+}
+```
+
+- `q2PromptTemplate` (optional): LLM prompt for Q2 question. Placeholders: `{context}`, `{word_limit}`. Empty string = use default.
+- `q3PromptTemplate` (optional): LLM prompt for Q3 policy excerpt. Placeholders: `{context}`, `{word_limit}`. Empty string = use default.
+- `apiKey` (optional): Gemini API key. Accepted via API but not exposed in the Admin UI. Takes precedence over `GEMINI_API_KEY` env var.
+
+**Response:** Same shape as GET. Returns merged settings with default prompts.
+
+**Status:** 200 OK | 500 Internal Server Error
+
+---
+
+## Admin Usage
+
+### GET /api/admin/usage
+
+Returns per-model daily usage statistics and the currently active model. Refreshed every 30 seconds on the Admin page.
+
+**Response:**
+```json
+{
+  "date": "2026-03-03",
+  "active_model": "gemini-2.5-flash-lite",
+  "models": [
+    {
+      "model": "gemini-2.0-flash",
+      "requests_used": 1500,
+      "requests_limit": 1500,
+      "tokens_used": 320000,
+      "tokens_limit": 1000000,
+      "requests_pct": 100.0,
+      "tokens_pct": 32.0,
+      "exhausted": true
+    },
+    {
+      "model": "gemini-2.5-flash-lite",
+      "requests_used": 42,
+      "requests_limit": 1500,
+      "tokens_used": 9800,
+      "tokens_limit": 1000000,
+      "requests_pct": 2.8,
+      "tokens_pct": 1.0,
+      "exhausted": false
+    },
+    {
+      "model": "gemini-1.5-flash",
+      "requests_used": 0,
+      "requests_limit": 1500,
+      "tokens_used": 0,
+      "tokens_limit": 1000000,
+      "requests_pct": 0.0,
+      "tokens_pct": 0.0,
+      "exhausted": false
+    }
+  ],
+  "cumulative": {
+    "days_stored": 3,
+    "total_requests": 1892,
+    "total_tokens": 874200,
+    "per_model": {
+      "gemini-2.0-flash": { "requests": 1700, "tokens": 810000 },
+      "gemini-2.5-flash-lite": { "requests": 192, "tokens": 64200 },
+      "gemini-1.5-flash": { "requests": 0, "tokens": 0 }
+    }
+  }
+}
+```
+
+- `active_model`: The model that will be used for the next request (first non-exhausted in the fallback chain).
+- `exhausted`: `true` if the model returned a 429 and was marked exhausted today. Resets at UTC midnight.
+- `tokens_used` / `tokens_limit`: Estimated totals (input + output). Tokens estimated as `len(text) // 4` — approximate.
+- `cumulative`: All-time aggregates across stored dates (up to 7 days). `days_stored` shows how many calendar days of data are retained.
+
+**Status:** 200 OK
+
+---
+
+## Intake Analysis (Full Details)
+
+### POST /api/questions/intake/analyze
+
+Runs the 3-layer deterministic intake pipeline on the Q1 free-text narrative. Returns structured extraction data, identified gap ids, and up to 2 follow-up question texts.
+
+**Request:**
+```json
+{
+  "q1_text": "I noticed my manager falsifying expense reports last Tuesday in the finance office."
+}
+```
+
+- `q1_text`: Non-empty string. The user's free-text Q1 narrative.
+
+**Response:**
+```json
+{
+  "extraction": {
+    "summary": "Reporter observed manager falsifying expense reports at the finance office on a specific date.",
+    "dates_mentioned": ["last Tuesday"],
+    "people_mentioned": ["manager"],
+    "locations_mentioned": ["finance office"],
+    "specific_examples_present": true,
+    "evidence_described": false,
+    "timeline_clear": true,
+    "allegation_type": ["financial misconduct"],
+    "length_character_count": 85
+  },
+  "gaps": ["no_evidence", "missing_individuals"],
+  "follow_up_questions": [
+    {
+      "gap_id": "no_evidence",
+      "question_text": "Do you have any documents, emails, screenshots, or other evidence you could reference?"
+    },
+    {
+      "gap_id": "missing_individuals",
+      "question_text": "Could you provide the full name or role of the person(s) directly involved?"
+    }
+  ]
+}
+```
+
+- `extraction`: Layer 1 structured JSON. `length_character_count` is always the actual length of `q1_text` (never from the LLM).
+- `gaps`: Up to 2 gap ids identified by Layer 2 in priority order.
+- `follow_up_questions`: Up to 2 questions generated by Layer 3. May be empty if no gaps were identified.
+
+**Status:**
+- `200 OK` — analysis complete (even if 0 follow-up questions returned)
+- `422 Unprocessable Entity` — `q1_text` is missing or empty
+- `500 Internal Server Error` — unexpected backend error
+
+---
+
+## Question Generation (Full Details — Legacy)
+
+### POST /api/questions/q2/generate
+
+Generates a short follow-up question (~10 words) from incident context. Used for Full Details Q2. The user answers this question.
+
+**Request:**
+```json
+{
+  "report": {
+    "full_details_q1": "User description...",
+    "general_nature": "Financial misconduct",
+    "where_occurred": "Accounting dept",
+    "when_occurred": "Last month"
+  }
+}
+```
+
+Keys used: `full_details_q1`, `general_nature`, `where_occurred`, `when_occurred`. All are optional; at least one incident field must be present.
+
+**Response:**
+```json
+{
+  "content": "What specific financial misconduct did you observe?"
+}
+```
+
+**Status:**
+- `200 OK` — question generated successfully
+- `400 Bad Request` — `report` field is present but is not a JSON object
+- `422 Unprocessable Entity` — no usable incident data in the report, or the custom Q2 prompt template contains an invalid placeholder (only `{context}` and `{word_limit}` are allowed)
+- `502 Bad Gateway` — LLM returned an empty or unusable response
+
+### POST /api/questions/q3/generate
+
+Generates a policy excerpt (~20 words) and a fixed question for Full Details Q3. Always attempts generation even if the report is empty (falls back to a generic "whistleblowing policy" context query).
+
+**Request:**
+```json
+{
+  "report": {
+    "full_details_q1": "User description...",
+    "general_nature": "Financial misconduct",
+    "where_occurred": "Accounting dept"
+  }
+}
+```
+
+Keys used: `full_details_q1`, `general_nature`, `where_occurred`.
+
+**Response:**
+```json
+{
+  "policyExcerpt": "Employees must report financial misconduct through official channels...",
+  "question": "How well does this policy excerpt describe your experience?"
+}
+```
+
+**Status:**
+- `200 OK` — excerpt generated successfully
+- `400 Bad Request` — `report` field is present but is not a JSON object
+- `422 Unprocessable Entity` — the custom Q3 prompt template contains an invalid placeholder (only `{context}` and `{word_limit}` are allowed)
+- `502 Bad Gateway` — LLM returned an empty or unusable response
+
+> **Note:** Neither Q2 nor Q3 use silent fallbacks. If the LLM fails, an error is returned. The frontend (`useQuestionContent`) handles retry logic.
+
+---
+
+---
+
+## Intake Gap Configuration (Admin)
+
+Gaps are ordered by `priority` (ascending). The backend always sorts on read, so the array returned is always in priority order regardless of insertion order.
+
+### GET /api/admin/intake-gaps
+
+Returns the current ordered list of intake gap configurations.
+
+**Response:**
+```json
+{
+  "gaps": [
+    {
+      "id": "timeline_unclear",
+      "label": "Timeline Unclear",
+      "priority": 1,
+      "active": true,
+      "criteria": { "type": "boolean_false", "field": "timeline_clear", "threshold": null },
+      "template": "To clarify the sequence of events...",
+      "template_conditional": "You mentioned {event}. What occurred immediately before and after this?"
+    }
+  ]
+}
+```
+
+**Status:** 200 OK
+
+### PUT /api/admin/intake-gaps
+
+Replace the full ordered gap list. All gaps are validated before saving. Returns the saved list.
+
+**Request:**
+```json
+{
+  "gaps": [ ...full array of gap objects... ]
+}
+```
+
+**Status:** 200 OK | 400 Bad Request (missing `gaps` array) | 422 Unprocessable Entity (validation failure)
+
+### POST /api/admin/intake-gaps
+
+Add a new gap. `id` is auto-generated from `label` as a URL slug if not provided. `priority` defaults to `max_existing + 1`. `active` defaults to `true`. `template_conditional` defaults to `null`.
+
+**Request:**
+```json
+{
+  "label": "Missing Department",
+  "criteria": { "type": "empty_array", "field": "locations_mentioned", "threshold": null },
+  "template": "Which department or team was involved in the incident?"
+}
+```
+
+**Response:** Same shape as GET (full gaps list after insertion).
+
+**Status:** 200 OK | 422 Unprocessable Entity (validation failure)
+
+### PUT /api/admin/intake-gaps/{gap_id}
+
+Update fields on a single gap. Only provided keys are merged; the `id` field is immutable via this endpoint.
+
+**Request:** Partial gap object (any subset of fields except `id`).
+
+**Response:** Same shape as GET (full gaps list after update).
+
+**Status:** 200 OK | 404 Not Found | 422 Unprocessable Entity
+
+### DELETE /api/admin/intake-gaps/{gap_id}
+
+Remove a gap by id. Returns the updated list.
+
+**Response:** Same shape as GET.
+
+**Status:** 200 OK | 404 Not Found
+
+**Gap object fields:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes (auto if omitted on POST) | Unique slug identifier |
+| `label` | string | Yes | Human-readable label for Admin UI |
+| `priority` | integer (≥ 1) | Yes | Evaluation order; lower = higher priority |
+| `active` | boolean | Yes | If `false`, gap is skipped during analysis |
+| `criteria.type` | string | Yes | `"boolean_false"` \| `"empty_array"` \| `"length_threshold"` |
+| `criteria.field` | string | Yes | Layer 1 JSON field to evaluate |
+| `criteria.threshold` | number \| null | Only for `length_threshold` | Minimum character count; gap fires if below |
+| `template` | string | Yes | Question text to use when gap is identified |
+| `template_conditional` | string \| null | No | Alternative template with `{event}` placeholder (only used for `timeline_unclear`) |
+
+---
+
+## REST Endpoints (Chat Session)
 
 ### GET /api/reports/{session_id}
 
@@ -91,8 +411,8 @@ Get current report state for a session.
 ```json
 {
   "session_id": "abc123",
-  "created_at": "2025-03-01T12:00:00",
-  "report": { /* ReportData */ },
+  "created_at": "2026-03-03T12:00:00",
+  "report": { },
   "message_count": 5
 }
 ```
@@ -101,20 +421,20 @@ Get current report state for a session.
 
 ### POST /api/reports/{session_id}/reset
 
-Reset session (clear history and report).
+Reset session (clears conversation history and report data).
 
 **Response:**
 ```json
 {
   "session_id": "abc123",
   "status": "reset",
-  "created_at": "2025-03-01T12:05:00"
+  "created_at": "2026-03-03T12:05:00"
 }
 ```
 
 ### GET /api/sessions/{session_id}/history
 
-Get conversation history.
+Get conversation history for a session.
 
 **Response:**
 ```json
@@ -133,9 +453,22 @@ Get conversation history.
 
 ## Report Data Model
 
-See `frontend/src/types/report.ts` and `backend/app/models.py` for the full schema. Key fields include:
+Defined in `backend/app/models.py` (Pydantic) and `frontend/src/types/report.ts` (TypeScript). All fields are optional strings unless noted. The backend validates updates against this model in `storage.py`.
 
-- **Organization**: organization_tier, country, incident_location
-- **Reporter**: is_employee, wish_anonymous, reporter_first_name, reporter_last_name, reporter_phone_code, reporter_phone, reporter_email, best_time_contact
-- **Persons**: person_1_first, person_1_last, person_1_title, … person_10_*
-- **Incident**: general_nature, where_occurred, when_occurred, duration, how_aware, how_aware_other, persons_concealing, full_details
+**Categories (56 fields total):**
+
+- **Organization** (3): `organization_tier`, `country`, `incident_location`
+- **Reporter** (8): `is_employee`, `wish_anonymous`, `reporter_first_name`, `reporter_last_name`, `reporter_phone_code`, `reporter_phone`, `reporter_email`, `best_time_contact`
+- **Persons** (30): `person_1_first`, `person_1_last`, `person_1_title` … `person_10_first`, `person_10_last`, `person_10_title`
+- **Management** (3): `supervisor_involved`, `supervisor_who`, `management_aware`
+- **Incident** (12): `general_nature`, `where_occurred`, `when_occurred`, `duration`, `how_aware`, `how_aware_other`, `persons_concealing`, `full_details_q1`, `full_details_q2`, `full_details_q3`, `full_details_q2_question`, `full_details_q3_question`
+
+**Full Details field mapping:**
+
+| Field | Source | Description |
+|-------|--------|-------------|
+| `full_details_q1` | User input | Free-text Q1 narrative |
+| `full_details_q2_question` | Intake analysis | 1st follow-up question text (persisted for PDF) |
+| `full_details_q2` | User input | User's answer to 1st follow-up |
+| `full_details_q3_question` | Intake analysis | 2nd follow-up question text (persisted for PDF) |
+| `full_details_q3` | User input | User's answer to 2nd follow-up |

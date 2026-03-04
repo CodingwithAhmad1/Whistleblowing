@@ -30,6 +30,12 @@ export class WebSocketClient {
   private reconnectAttempts = 0
   private maxReconnectAttempts = 3
   private reconnectDelay = 1000
+  private pendingCallbacks: {
+    onToken?: (token: string) => void
+    onDone?: () => void
+    onReportUpdate?: (data: Record<string, string>) => void
+  } | null = null
+  private isBusy = false
 
   constructor(sessionId: string, callbacks: WSClientCallbacks = {}) {
     this.sessionId = sessionId
@@ -44,14 +50,17 @@ export class WebSocketClient {
 
       this.ws.onopen = async () => {
         console.log('WebSocket connected')
+        const wasReconnect = this.reconnectAttempts > 0
         this.reconnectAttempts = 0
-        
+        this.isBusy = false
+        this.pendingCallbacks = null
+
         // Resync state on reconnection
-        if (this.reconnectAttempts > 0) {
+        if (wasReconnect) {
           console.log('Reconnected - resyncing state...')
           await this.resyncState()
         }
-        
+
         this.callbacks.onConnect?.()
         resolve()
       }
@@ -113,23 +122,23 @@ export class WebSocketClient {
   }
 
   private handleMessage(message: WSMessage) {
-    // Use the most recent callbacks (last message sent)
-    // This prevents callback loss but doesn't solve multi-message race condition
-    // For single-user sequential messaging, this is acceptable
+    const cb = this.pendingCallbacks
     switch (message.type) {
       case 'token':
         if (message.content) {
-          this.callbacks.onToken?.(message.content)
+          ;(cb?.onToken ?? this.callbacks.onToken)?.(message.content)
         }
         break
-      
+
       case 'done':
-        this.callbacks.onDone?.()
+        ;(cb?.onDone ?? this.callbacks.onDone)?.()
+        this.pendingCallbacks = null
+        this.isBusy = false
         break
-      
+
       case 'report_update':
         if (message.data) {
-          this.callbacks.onReportUpdate?.(message.data as Record<string, string>)
+          ;(cb?.onReportUpdate ?? this.callbacks.onReportUpdate)?.(message.data as Record<string, string>)
         }
         break
 
@@ -137,19 +146,38 @@ export class WebSocketClient {
         if (message.message) {
           this.callbacks.onError?.(message.message)
         }
+        this.pendingCallbacks = null
+        this.isBusy = false
         break
     }
   }
 
-  sendMessage(content: string): void {
+  sendMessage(
+    content: string,
+    messageCallbacks?: {
+      onToken?: (token: string) => void
+      onDone?: () => void
+      onReportUpdate?: (data: Record<string, string>) => void
+    }
+  ): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('WebSocket is not connected')
     }
+    if (this.isBusy) {
+      throw new Error('A message is already being processed')
+    }
+
+    this.isBusy = true
+    this.pendingCallbacks = messageCallbacks ?? null
 
     this.ws.send(JSON.stringify({
       type: 'message',
       content
     }))
+  }
+
+  get busy(): boolean {
+    return this.isBusy
   }
 
   disconnect(): void {

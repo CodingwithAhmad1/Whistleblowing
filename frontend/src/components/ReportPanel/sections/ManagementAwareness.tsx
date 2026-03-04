@@ -1,31 +1,22 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useReport } from '@/context/ReportContext'
+import { SUPERVISOR_MANAGEMENT_OPTIONS } from '@/data/reportSchema'
 import { FormField } from './FormField'
+import { RadioField } from './RadioField'
 import {
   personsFromReport,
   reportUpdatesFromPersons,
   MAX_PERSONS,
   type PersonRecord,
+  type ReportData,
 } from '@/types/report'
 import styles from './ManagementAwareness.module.css'
-
-const SUPERVISOR_OPTIONS = [
-  { value: 'yes' as const, label: 'Yes' },
-  { value: 'no' as const, label: 'No' },
-  { value: 'do_not_know' as const, label: 'Do Not Know / Do Not Wish To Disclose' },
-]
-
-const MANAGEMENT_OPTIONS = [
-  { value: 'yes' as const, label: 'Yes' },
-  { value: 'no' as const, label: 'No' },
-  { value: 'do_not_know' as const, label: 'Do Not Know / Do Not Wish To Disclose' },
-]
 
 function personHasData(p: PersonRecord): boolean {
   return Boolean(p.first.trim() || p.last.trim() || p.title.trim())
 }
 
-function getMinVisibleFromReport(report: Record<string, string | undefined>): number {
+function getMinVisibleFromReport(report: ReportData | Record<string, string | undefined>): number {
   const persons = personsFromReport(report)
   let lastWithData = -1
   for (let i = 0; i < persons.length; i++) {
@@ -103,7 +94,7 @@ export function ManagementAwareness() {
   const showSupervisorWho = report.supervisor_involved === 'yes'
 
   const minFromReport = useMemo(
-    () => getMinVisibleFromReport(report as unknown as Record<string, string | undefined>),
+    () => getMinVisibleFromReport(report),
     [report]
   )
   const [minVisibleCount, setMinVisibleCount] = useState(minFromReport)
@@ -113,7 +104,7 @@ export function ManagementAwareness() {
   }, [minFromReport])
 
   const visiblePersons = useMemo(() => {
-    const all = personsFromReport(report as unknown as Record<string, string | undefined>)
+    const all = personsFromReport(report)
     const count = Math.min(MAX_PERSONS, Math.max(minVisibleCount, minFromReport))
     return all.slice(0, count)
   }, [report, minVisibleCount, minFromReport])
@@ -191,26 +182,14 @@ export function ManagementAwareness() {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.question}>
-          <span className={styles.questionText}>
-            Do you suspect or know that a supervisor or management is involved?
-          </span>
-        </div>
-        <div className={styles.radioRow}>
-          {SUPERVISOR_OPTIONS.map((opt) => (
-            <label key={opt.value} className={styles.radioLabel}>
-              <input
-                type="radio"
-                name="supervisor_involved"
-                value={opt.value}
-                checked={report.supervisor_involved === opt.value}
-                onChange={() => updateReport({ supervisor_involved: opt.value })}
-                className={styles.radio}
-              />
-              <span>{opt.label}</span>
-            </label>
-          ))}
-        </div>
+        <RadioField
+          name="supervisor_involved"
+          value={report.supervisor_involved}
+          options={SUPERVISOR_MANAGEMENT_OPTIONS}
+          onChange={(v) => updateReport({ supervisor_involved: v as ReportData['supervisor_involved'] })}
+          question="Do you suspect or know that a supervisor or management is involved?"
+          layout="column"
+        />
         {showSupervisorWho && (
           <>
             <p className={styles.conditionalLabel}>If yes, then who?</p>
@@ -229,24 +208,14 @@ export function ManagementAwareness() {
       </div>
 
       <div className={styles.section}>
-        <div className={styles.question}>
-          <span className={styles.questionText}>Is management aware of this problem?</span>
-        </div>
-        <div className={styles.radioRow}>
-          {MANAGEMENT_OPTIONS.map((opt) => (
-            <label key={opt.value} className={styles.radioLabel}>
-              <input
-                type="radio"
-                name="management_aware"
-                value={opt.value}
-                checked={report.management_aware === opt.value}
-                onChange={() => updateReport({ management_aware: opt.value })}
-                className={styles.radio}
-              />
-              <span>{opt.label}</span>
-            </label>
-          ))}
-        </div>
+        <RadioField
+          name="management_aware"
+          value={report.management_aware}
+          options={SUPERVISOR_MANAGEMENT_OPTIONS}
+          onChange={(v) => updateReport({ management_aware: v as ReportData['management_aware'] })}
+          question="Is management aware of this problem?"
+          layout="column"
+        />
       </div>
     </>
   )

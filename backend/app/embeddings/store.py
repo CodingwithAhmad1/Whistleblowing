@@ -1,5 +1,6 @@
 """Document store interface and in-memory implementation."""
 
+import heapq
 import math
 from typing import Any, Optional
 from dataclasses import dataclass
@@ -62,9 +63,8 @@ class InMemoryDocumentStore(DocumentStore):
         query_embedding: list[float],
         top_k: int = 5,
     ) -> list[SearchResult]:
-        results = []
-        for doc_id, text, meta, emb in self._docs:
-            score = _cosine_similarity(query_embedding, emb)
-            results.append(SearchResult(id=doc_id, text=text, metadata=meta, score=score))
-        results.sort(key=lambda r: r.score, reverse=True)
-        return results[:top_k]
+        results = (
+            SearchResult(id=doc_id, text=text, metadata=meta, score=_cosine_similarity(query_embedding, emb))
+            for doc_id, text, meta, emb in self._docs
+        )
+        return heapq.nlargest(top_k, results, key=lambda r: r.score)

@@ -8,7 +8,7 @@ A structured whistleblowing report application. Users complete a multi-section f
 |-------|-------------|
 | Frontend | React 18, TypeScript, Vite |
 | Backend | FastAPI, Pydantic |
-| AI | Gemini 1.5 Flash (default) / Ollama / local Phi |
+| AI | Gemini 1.5 Flash |
 
 ## Quick Start
 
@@ -21,7 +21,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Create `backend/.env` with `GEMINI_API_KEY` (when using `LLM_PROVIDER=gemini`), then:
+Create `backend/.env` with `GEMINI_API_KEY`, then:
 
 ```bash
 uvicorn app.main:app --reload --port 8000
@@ -47,7 +47,7 @@ npm run dev
 │       └── utils/generateReportPdf.ts
 ├── backend/           # FastAPI + LLM
 │   └── app/
-│       ├── llm/       # Gemini, Ollama, local Phi
+│       ├── llm/       # Gemini provider
 │       ├── prompts/   # Two-layer workflow
 │       └── routers/chat.py
 └── docs/

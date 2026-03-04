@@ -72,11 +72,7 @@ export function BackendLLMProvider({ children }: { children: ReactNode }) {
       throw new Error('Not connected to backend')
     }
 
-    wsClient.callbacks.onToken = onToken
-    wsClient.callbacks.onDone = onDone
-    wsClient.callbacks.onReportUpdate = onReportUpdate
-
-    wsClient.sendMessage(message)
+    wsClient.sendMessage(message, { onToken, onDone, onReportUpdate })
   }, [wsClient])
 
   // Don't auto-connect on mount - connection is now lazy

@@ -1,12 +1,10 @@
 import { useReport } from '@/context/ReportContext'
+import type { ReportData } from '@/types/report'
+import { YES_NO_OPTIONS } from '@/data/reportSchema'
 import { FormField } from './FormField'
 import { PhoneWithCodeInput } from './PhoneWithCodeInput'
+import { RadioField } from './RadioField'
 import styles from './ReporterPreferences.module.css'
-
-const YES_NO_OPTIONS = [
-  { value: 'yes' as const, label: 'Yes' },
-  { value: 'no' as const, label: 'No' },
-]
 
 export function ReporterPreferences() {
   const { report, updateReport } = useReport()
@@ -14,43 +12,20 @@ export function ReporterPreferences() {
 
   return (
     <>
-      <div className={styles.question}>
-        <span className={styles.questionText}>Are you an employee of the organization?</span>
-      </div>
-      <div className={styles.radioRow}>
-        {YES_NO_OPTIONS.map((opt) => (
-          <label key={opt.value} className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="is_employee"
-              value={opt.value}
-              checked={report.is_employee === opt.value}
-              onChange={() => updateReport({ is_employee: opt.value })}
-              className={styles.radio}
-            />
-            <span>{opt.label}</span>
-          </label>
-        ))}
-      </div>
-
-      <div className={styles.question}>
-        <span className={styles.questionText}>Do you wish to remain ANONYMOUS for this report?</span>
-      </div>
-      <div className={styles.radioRow}>
-        {YES_NO_OPTIONS.map((opt) => (
-          <label key={opt.value} className={styles.radioLabel}>
-            <input
-              type="radio"
-              name="wish_anonymous"
-              value={opt.value}
-              checked={report.wish_anonymous === opt.value}
-              onChange={() => updateReport({ wish_anonymous: opt.value })}
-              className={styles.radio}
-            />
-            <span>{opt.label}</span>
-          </label>
-        ))}
-      </div>
+      <RadioField
+        name="is_employee"
+        value={report.is_employee}
+        options={YES_NO_OPTIONS}
+        onChange={(v) => updateReport({ is_employee: v as ReportData['is_employee'] })}
+        question="Are you an employee of the organization?"
+      />
+      <RadioField
+        name="wish_anonymous"
+        value={report.wish_anonymous}
+        options={YES_NO_OPTIONS}
+        onChange={(v) => updateReport({ wish_anonymous: v as ReportData['wish_anonymous'] })}
+        question="Do you wish to remain ANONYMOUS for this report?"
+      />
 
       {showContactFields && (
         <div className={styles.conditionalBlock}>

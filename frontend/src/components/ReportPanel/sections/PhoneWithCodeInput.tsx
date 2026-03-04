@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { getPhoneCodeListAsync, getPhoneCodeForCountry, type PhoneCodeOption } from '@/data/phoneCodes'
+import { findOptionByValue } from '@/utils/options'
 import { SearchableSelect } from './SearchableSelect'
-import {
-  getPhoneCodeListAsync,
-  getPhoneCodeForCountry,
-  type PhoneCodeOption,
-} from '@/data/phoneCodes'
 import styles from './PhoneWithCodeInput.module.css'
 
 interface PhoneWithCodeInputProps {
@@ -54,7 +51,7 @@ export function PhoneWithCodeInput({
             label=""
             value={displayCode}
             onChange={(v) => {
-              const opt = options.find((o) => o.value === v || o.label === v)
+              const opt = findOptionByValue(v, options)
               if (opt) onCodeChange(opt.value)
             }}
             options={options}

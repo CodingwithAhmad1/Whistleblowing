@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { findOptionByValue } from '@/utils/options'
 import styles from './SearchableSelect.module.css'
 
 export interface SearchableSelectOption {
@@ -44,7 +45,7 @@ export function SearchableSelect({
       )
 
   useEffect(() => {
-    const opt = options.find((o) => o.value === value || o.label === value)
+    const opt = findOptionByValue(value, options)
     setInputValue(opt ? opt.label : value)
   }, [value, options])
 
@@ -75,7 +76,7 @@ export function SearchableSelect({
     const v = e.target.value
     setInputValue(v)
     setIsOpen(true)
-    const match = options.find((o) => o.label === v)
+    const match = findOptionByValue(v, options)
     if (match) {
       onChange(match.value)
       setIsOpen(false)
@@ -112,7 +113,7 @@ export function SearchableSelect({
       case 'Escape':
         e.preventDefault()
         setIsOpen(false)
-        const opt = options.find((o) => o.value === value || o.label === value)
+        const opt = findOptionByValue(value, options)
         setInputValue(opt ? opt.label : value)
         setTimeout(() => inputRef.current?.blur(), 0)
         break

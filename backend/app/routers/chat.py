@@ -2,10 +2,9 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 import logging
-import asyncio
 
-from ..llm import get_provider
-from ..storage import session_store
+from ..llm import get_provider, collect_stream
+from ..storage import session_store, ChatSession
 from ..prompts import build_system_prompt
 from ..prompts.layer1_classify import build_classify_prompt
 from ..prompts.layer2_execute import build_execution_prompt
@@ -13,6 +12,16 @@ from ..prompts.response_types import normalize_response_type
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+MAX_MESSAGE_LENGTH = 5000
+
+
+def _get_session_or_404(session_id: str) -> ChatSession:
+    """Get session by id or raise 404."""
+    session = session_store.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
 
 
 @router.websocket("/chat/{session_id}")
@@ -42,6 +51,12 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     "message": "Message content cannot be empty."
                 })
                 continue
+            if len(user_message) > MAX_MESSAGE_LENGTH:
+                await websocket.send_json({
+                    "type": "error",
+                    "message": f"Message too long. Maximum {MAX_MESSAGE_LENGTH} characters."
+                })
+                continue
 
             session.add_message("user", user_message)
             provider = get_provider()
@@ -53,9 +68,7 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                     session.report_data,
                     session.conversation_history[-6:],
                 )
-                classification = ""
-                async for token in provider.generate_stream(classify_prompt, max_tokens=20):
-                    classification += token
+                classification = await collect_stream(provider, classify_prompt, max_tokens=20)
                 response_type = normalize_response_type(classification)
                 logger.debug(f"Classified as: {response_type}")
 
@@ -81,7 +94,6 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                             "type": "report_update",
                             "data": extracted["data"]
                         })
-                        await asyncio.sleep(0.001)
 
                 await websocket.send_json({"type": "done"})
 
@@ -101,23 +113,19 @@ async def websocket_chat(websocket: WebSocket, session_id: str):
                 "type": "error",
                 "message": str(e)
             })
-        except:
+        except Exception:
             pass
     finally:
         try:
             await websocket.close()
-        except:
+        except Exception:
             pass
 
 
 @router.get("/reports/{session_id}")
 async def get_report(session_id: str):
     """Get current report state for a session."""
-    session = session_store.get_session(session_id)
-    
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
+    session = _get_session_or_404(session_id)
     return {
         "session_id": session_id,
         "created_at": session.created_at.isoformat(),
@@ -141,11 +149,7 @@ async def reset_report(session_id: str):
 @router.get("/sessions/{session_id}/history")
 async def get_history(session_id: str):
     """Get conversation history for a session."""
-    session = session_store.get_session(session_id)
-    
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
-    
+    session = _get_session_or_404(session_id)
     return {
         "session_id": session_id,
         "history": session.conversation_history
