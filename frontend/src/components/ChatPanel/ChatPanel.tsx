@@ -36,9 +36,18 @@ export function ChatPanel() {
     setIsSubmitting(true)
     setStreamingContent('')
 
+    const resetSubmitting = () => {
+      submittingRef.current = false
+      pendingUserMessageRef.current = null
+      if (isMountedRef.current) {
+        setStreamingContent(null)
+        setIsSubmitting(false)
+      }
+    }
+
     try {
       let accumulated = ''
-      
+
       sendMessage(
         trimmed,
         (token: string) => {
@@ -47,15 +56,14 @@ export function ChatPanel() {
         },
         () => {
           addMessage('ai', accumulated)
-          submittingRef.current = false
-          pendingUserMessageRef.current = null
-          if (isMountedRef.current) {
-            setStreamingContent(null)
-            setIsSubmitting(false)
-          }
+          resetSubmitting()
         },
         (data: Record<string, string>) => {
           updateReport(data)
+        },
+        (error: string) => {
+          addMessage('ai', `Sorry, I encountered an error: ${error}`)
+          resetSubmitting()
         }
       )
     } catch (err) {
@@ -63,9 +71,7 @@ export function ChatPanel() {
         'ai',
         `Sorry, an error occurred: ${err instanceof Error ? err.message : 'Unknown error'}.`
       )
-      setStreamingContent(null)
-      setIsSubmitting(false)
-      submittingRef.current = false
+      resetSubmitting()
     }
   }
 

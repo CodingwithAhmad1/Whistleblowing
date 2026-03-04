@@ -1,7 +1,10 @@
 import { useEffect } from 'react'
+import { Routes, Route } from 'react-router-dom'
 import { ReportProvider } from '@/context/ReportContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { ReportPanel } from '@/components/ReportPanel/ReportPanel'
+import { Navbar } from '@/components/Navbar/Navbar'
+import { HomePage } from '@/pages/HomePage'
+import { AdminPage } from '@/pages/AdminPage'
 import { useWebVitals } from '@/hooks/useWebVitals'
 import styles from './App.module.css'
 
@@ -14,21 +17,18 @@ function AppContent() {
 
   return (
     <div className={styles.app}>
-      <a href="#main-content" className={styles.skipLink}>
-        Skip to report
-      </a>
+      <Navbar />
       <div className={styles.layout}>
-        <main id="main-content" className={styles.reportColumn} tabIndex={-1}>
-          <ErrorBoundary>
-            <ReportPanel />
-          </ErrorBoundary>
-        </main>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/admin" element={<AdminPage />} />
+        </Routes>
       </div>
     </div>
   )
 }
 
-export function App() {
+function App() {
   return (
     <ErrorBoundary>
       <ReportProvider>
@@ -37,3 +37,5 @@ export function App() {
     </ErrorBoundary>
   )
 }
+
+export { App }

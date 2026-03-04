@@ -96,6 +96,11 @@ export interface ReportData {
   how_aware: string
   how_aware_other: string
   full_details: string
+  full_details_q1: string
+  full_details_q2: string
+  full_details_q3: string
+  full_details_q2_question: string
+  full_details_q3_question: string
   persons_concealing: string
 }
 
@@ -151,5 +156,10 @@ export const initialReportData: ReportData = {
   how_aware: '',
   how_aware_other: '',
   full_details: '',
+  full_details_q1: '',
+  full_details_q2: '',
+  full_details_q3: '',
+  full_details_q2_question: '',
+  full_details_q3_question: '',
   persons_concealing: '',
 }

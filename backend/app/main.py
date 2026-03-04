@@ -6,10 +6,10 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from .llm import get_provider
-from .routers import chat
+from .routers import chat, questions, admin
 from .config import settings
 
 # Configure logging
@@ -49,6 +49,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat.router, prefix="/api", tags=["chat"])
+app.include_router(questions.router, prefix="/api", tags=["questions"])
+app.include_router(admin.router, prefix="/api", tags=["admin"])
 
 
 @app.get("/api/health")
@@ -65,10 +67,16 @@ def health():
 # Path to frontend dist (built React app)
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
-# Mount static files when dist exists (production)
+# SPA catch-all for production
 if FRONTEND_DIST.exists():
-    app.mount(
-        "/",
-        StaticFiles(directory=str(FRONTEND_DIST), html=True),
-        name="static",
+    _dist_root = FRONTEND_DIST.resolve()
+    _dist_files: frozenset[str] = frozenset(
+        str(p) for p in _dist_root.rglob("*") if p.is_file()
     )
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str) -> FileResponse:
+        file_path = str((_dist_root / full_path).resolve())
+        if file_path in _dist_files:
+            return FileResponse(file_path)
+        return FileResponse(str(_dist_root / "index.html"))

@@ -8,13 +8,17 @@ from pathlib import Path
 class Settings(BaseSettings):
     """Application settings with efficient defaults for CPU/RAM."""
 
-    # LLM provider: gemini | ollama | local
-    LLM_PROVIDER: Literal["gemini", "ollama", "local"] = "gemini"
+    # LLM provider: gemini | claude | ollama | local
+    LLM_PROVIDER: Literal["gemini", "claude", "ollama", "local"] = "gemini"
 
     # Gemini (required when LLM_PROVIDER=gemini)
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-1.5-flash"
-    GEMINI_EMBEDDING_MODEL: str = "models/embedding-001"  # or "gemini-embedding-001" for newer API
+    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_EMBEDDING_MODEL: str = "models/embedding-001"
+
+    # Anthropic Claude (required when LLM_PROVIDER=claude)
+    ANTHROPIC_API_KEY: Optional[str] = None
+    CLAUDE_MODEL: str = "claude-haiku-4-5-20251001"
 
     # Ollama (when LLM_PROVIDER=ollama)
     OLLAMA_BASE_URL: str = "http://localhost:11434"

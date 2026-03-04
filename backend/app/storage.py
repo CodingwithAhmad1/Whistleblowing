@@ -139,6 +139,21 @@ class SessionStore:
         self.delete_session(session_id)
         return self.create_session(session_id)
 
+    def list_sessions(self) -> list[dict]:
+        """List all sessions with summary info, newest first."""
+        result = []
+        for session_id, session in self._sessions.items():
+            filled_fields = [k for k, v in session.report_data.items() if v and str(v).strip()]
+            result.append({
+                "session_id": session_id,
+                "created_at": session.created_at.isoformat(),
+                "message_count": len(session.conversation_history),
+                "fields_filled": len(filled_fields),
+                "report_data": session.report_data,
+            })
+        result.sort(key=lambda x: x["created_at"], reverse=True)
+        return result
+
 
 # Global instance
 session_store = SessionStore()

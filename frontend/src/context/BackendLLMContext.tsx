@@ -13,7 +13,13 @@ interface BackendLLMContextType {
   errorMessage: string | null
   connect: () => Promise<void>
   disconnect: () => void
-  sendMessage: (message: string, onToken: (token: string) => void, onDone: () => void, onReportUpdate?: (data: Record<string, string>) => void) => void
+  sendMessage: (
+    message: string,
+    onToken: (token: string) => void,
+    onDone: () => void,
+    onReportUpdate?: (data: Record<string, string>) => void,
+    onError?: (error: string) => void
+  ) => void
   isConnected: boolean
 }
 
@@ -39,10 +45,8 @@ export function BackendLLMProvider({ children }: { children: ReactNode }) {
         onDisconnect: () => {
           setLoadStatus('idle')
         },
-        onError: (error) => {
-          setErrorMessage(error)
-          setLoadStatus('error')
-        }
+        // onError here is for connection-level errors only; per-message errors
+        // are forwarded to the caller via sendMessage's onError callback.
       })
 
       await client.connect()
@@ -66,7 +70,8 @@ export function BackendLLMProvider({ children }: { children: ReactNode }) {
     message: string,
     onToken: (token: string) => void,
     onDone: () => void,
-    onReportUpdate?: (data: Record<string, string>) => void
+    onReportUpdate?: (data: Record<string, string>) => void,
+    onError?: (error: string) => void,
   ) => {
     if (!wsClient || !wsClient.isConnected()) {
       throw new Error('Not connected to backend')
@@ -75,11 +80,11 @@ export function BackendLLMProvider({ children }: { children: ReactNode }) {
     wsClient.callbacks.onToken = onToken
     wsClient.callbacks.onDone = onDone
     wsClient.callbacks.onReportUpdate = onReportUpdate
+    // Per-message error goes to caller, not to connection-level error state
+    wsClient.callbacks.onError = onError
 
     wsClient.sendMessage(message)
   }, [wsClient])
-
-  // Don't auto-connect on mount - connection is now lazy
 
   const value: BackendLLMContextType = {
     loadStatus,

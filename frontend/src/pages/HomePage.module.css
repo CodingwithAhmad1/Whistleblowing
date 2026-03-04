@@ -1,8 +1,9 @@
-.app {
+.wrapper {
   position: relative;
-  min-height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .skipLink {
@@ -24,14 +25,7 @@
   outline-offset: 2px;
 }
 
-.layout {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
-.reportColumn {
+.main {
   flex: 1;
   min-width: 0;
   min-height: 0;

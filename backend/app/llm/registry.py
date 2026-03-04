@@ -3,6 +3,7 @@
 import logging
 from .base import LLMProvider
 from .gemini_provider import GeminiProvider
+from .claude_provider import ClaudeProvider
 from .ollama_provider import OllamaProvider
 from .local_phi import LocalPhiProvider
 from ..config import settings
@@ -24,6 +25,13 @@ def get_provider() -> LLMProvider:
                     "Set it in .env or environment."
                 )
             _provider = GeminiProvider()
+        elif provider_name == "claude":
+            if not settings.ANTHROPIC_API_KEY or not settings.ANTHROPIC_API_KEY.strip():
+                raise ValueError(
+                    "ANTHROPIC_API_KEY is required when LLM_PROVIDER=claude. "
+                    "Set it in .env or environment."
+                )
+            _provider = ClaudeProvider()
         elif provider_name == "ollama":
             _provider = OllamaProvider()
         elif provider_name == "local":

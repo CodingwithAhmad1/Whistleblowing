@@ -50,6 +50,17 @@ const DURATION_LABELS: Record<string, string> = {
   don_t_know: "Don't know",
 }
 
+/** Convert label map to { value, label }[] for form selects. */
+function labelsToOptions(labels: Record<string, string>): { value: string; label: string }[] {
+  return Object.entries(labels).map(([value, label]) => ({ value, label }))
+}
+
+/** Form options - single source of truth for UI and PDF labels. */
+export const YES_NO_OPTIONS = labelsToOptions(YES_NO_LABELS)
+export const SUPERVISOR_MANAGEMENT_OPTIONS = labelsToOptions(MANAGEMENT_LABELS)
+export const HOW_AWARE_OPTIONS = labelsToOptions(HOW_AWARE_LABELS)
+export const DURATION_OPTIONS = labelsToOptions(DURATION_LABELS)
+
 export const REPORT_SECTIONS: SectionDef[] = [
   { id: 'organization', title: 'Organization & Context' },
   { id: 'reporter', title: 'Reporter Preferences' },
@@ -141,6 +152,12 @@ export const REPORT_FIELDS: FieldDef[] = [
     formatValue: (v) => HOW_AWARE_LABELS[v] ?? v,
   },
   { key: 'how_aware_other', label: 'If other, how?', section: 'incident' },
-  { key: 'full_details', label: 'Full details (violation, witnesses, etc.)', section: 'incident' },
+  {
+    key: 'full_details_q1',
+    label: 'Please describe what happened in your own words.',
+    section: 'incident',
+  },
+  // full_details_q2, full_details_q3, full_details_q2_question, full_details_q3_question
+  // are rendered as a special Q&A block in the PDF generator — excluded from standard iteration.
   { key: 'persons_concealing', label: 'Persons concealing / steps taken', section: 'incident' },
 ]

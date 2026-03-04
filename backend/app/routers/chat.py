@@ -142,11 +142,50 @@ async def reset_report(session_id: str):
 async def get_history(session_id: str):
     """Get conversation history for a session."""
     session = session_store.get_session(session_id)
-    
+
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    
+
     return {
         "session_id": session_id,
         "history": session.conversation_history
     }
+
+
+# ─── Admin routes ─────────────────────────────────────────────────────────────
+
+@router.get("/admin/sessions")
+async def admin_list_sessions():
+    """Admin: list all sessions with summary info."""
+    return {
+        "sessions": session_store.list_sessions(),
+        "total": len(session_store.list_sessions()),
+    }
+
+
+@router.get("/admin/sessions/{session_id}")
+async def admin_get_session(session_id: str):
+    """Admin: full detail for one session (report + conversation history)."""
+    session = session_store.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    filled_fields = [k for k, v in session.report_data.items() if v and str(v).strip()]
+    return {
+        "session_id": session_id,
+        "created_at": session.created_at.isoformat(),
+        "message_count": len(session.conversation_history),
+        "fields_filled": len(filled_fields),
+        "report_data": session.report_data,
+        "conversation_history": session.conversation_history,
+    }
+
+
+@router.delete("/admin/sessions/{session_id}")
+async def admin_delete_session(session_id: str):
+    """Admin: delete a session."""
+    session = session_store.get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    session_store.delete_session(session_id)
+    return {"status": "deleted", "session_id": session_id}
