@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Navbar } from '@/components/Navbar/Navbar'
 import { HomePage } from '@/pages/HomePage'
 import { AdminPage } from '@/pages/AdminPage'
+import { AnalysisPage } from '@/pages/AnalysisPage'
 import { useWebVitals } from '@/hooks/useWebVitals'
 import styles from './App.module.css'
 
@@ -22,6 +23,7 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/analysis" element={<AnalysisPage />} />
         </Routes>
       </div>
     </div>

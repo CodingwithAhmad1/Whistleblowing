@@ -142,6 +142,39 @@ def _slugify(label: str) -> str:
     return slug or "gap"
 
 
+def get_last_analysis() -> dict | None:
+    """Return the most recently stored intake analysis result, or None if absent."""
+    raw = _read_raw()
+    result = raw.get("lastIntakeAnalysis")
+    if not isinstance(result, dict):
+        return None
+    return result
+
+
+def update_last_analysis(result: dict) -> None:
+    """Persist the latest intake analysis result to settings.json."""
+    lock_path = SETTINGS_FILE.with_suffix(SETTINGS_FILE.suffix + ".lock")
+    lock = FileLock(lock_path)
+    with lock:
+        current = _read_raw()
+        current["lastIntakeAnalysis"] = result
+        _ensure_dir()
+        try:
+            fd, tmp_path = tempfile.mkstemp(
+                dir=str(DATA_DIR), suffix=".tmp", prefix="settings_"
+            )
+            try:
+                with open(fd, "w", encoding="utf-8") as f:
+                    json.dump(current, f, indent=2)
+                Path(tmp_path).replace(SETTINGS_FILE)
+            except BaseException:
+                Path(tmp_path).unlink(missing_ok=True)
+                raise
+        except OSError as e:
+            logger.error(f"Failed to write last intake analysis: {e}")
+            raise
+
+
 def update_settings(updates: dict) -> dict:
     """Update settings and persist to file. Returns merged settings."""
     lock_path = SETTINGS_FILE.with_suffix(SETTINGS_FILE.suffix + ".lock")

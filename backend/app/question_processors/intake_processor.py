@@ -192,7 +192,7 @@ class IntakeLayer2:
 
         identified: list[str] = []
         for gap in active_gaps:
-            if len(identified) >= 2:
+            if len(identified) >= 1:
                 break
             if _evaluate_gap(gap, layer1):
                 identified.append(gap["id"])
@@ -243,7 +243,7 @@ class IntakeLayer3:
         gap_map = {g["id"]: g for g in gaps}
         questions: list[FollowUpQuestion] = []
 
-        for gap_id in identified_gaps[:2]:
+        for gap_id in identified_gaps[:1]:
             gap = gap_map.get(gap_id)
             if not gap:
                 logger.warning(f"Gap id {gap_id!r} not found in config; skipping")

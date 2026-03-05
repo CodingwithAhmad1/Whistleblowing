@@ -18,6 +18,8 @@ export const API_CONFIG = {
     ADMIN_SETTINGS: '/api/admin/settings',
     ADMIN_USAGE: '/api/admin/usage',
     ADMIN_INTAKE_GAPS: '/api/admin/intake-gaps',
+    ADMIN_INTAKE_GAPS_RESET: '/api/admin/intake-gaps/reset',
+    ADMIN_LAST_ANALYSIS: '/api/admin/last-intake-analysis',
   },
 } as const
 

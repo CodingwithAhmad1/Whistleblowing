@@ -62,7 +62,7 @@ REPORT_FIELDS = [
     {"key": "persons_concealing", "label": "Persons concealing / steps taken"},
     {"key": "full_details_q1", "label": "Please describe what happened in your own words."},
     {"key": "full_details_q2", "label": "Answer to AI-generated follow-up question"},
-    {"key": "full_details_q3", "label": "How well does this policy excerpt describe your experience?"},
+    {"key": "full_details_q3", "label": "Answer to 2nd AI-generated follow-up question"},
 ]
 
 

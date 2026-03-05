@@ -18,6 +18,12 @@ export function Navbar() {
         >
           Admin
         </NavLink>
+        <NavLink
+          to="/analysis"
+          className={({ isActive }) => (isActive ? `${styles.link} ${styles.active}` : styles.link)}
+        >
+          Analysis
+        </NavLink>
       </div>
     </nav>
   )

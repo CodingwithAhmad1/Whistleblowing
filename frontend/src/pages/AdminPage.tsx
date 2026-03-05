@@ -334,6 +334,9 @@ function GapConfigSection() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [showResetModal, setShowResetModal] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
+  const [resetError, setResetError] = useState<string | null>(null)
 
   const fetchGaps = useCallback(() => {
     setLoading(true)
@@ -431,11 +434,72 @@ function GapConfigSection() {
     setSaveStatus(null)
   }
 
+  const handleReset = () => {
+    setIsResetting(true)
+    setResetError(null)
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_INTAKE_GAPS_RESET}`, { method: 'POST' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Reset failed: ${r.status}`)
+        return r.json()
+      })
+      .then((data) => {
+        setGaps(data.gaps ?? [])
+        setShowResetModal(false)
+        setSaveStatus('Reset to defaults.')
+        setSaveError(null)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('whistleblow_settingsModified', Date.now().toString())
+        }
+      })
+      .catch((e) => setResetError(e instanceof Error ? e.message : 'Reset failed'))
+      .finally(() => setIsResetting(false))
+  }
+
   if (loading) return <p className={styles.loading}>Loading gap configuration…</p>
   if (loadError) return <p className={styles.error}>{loadError} <button className={styles.editBtn} onClick={fetchGaps}>Retry</button></p>
 
   return (
     <div>
+      {showResetModal && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true" aria-labelledby="reset-modal-title">
+          <div className={styles.modal}>
+            <h3 id="reset-modal-title" className={styles.modalTitle}>Reset gap analysis settings?</h3>
+            <p className={styles.modalText}>
+              Are you sure you want to reset gap analysis settings to default? This will overwrite your current changes.
+            </p>
+            {resetError && <p className={styles.error}>{resetError}</p>}
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={handleReset}
+                disabled={isResetting}
+              >
+                {isResetting ? 'Resetting…' : 'Confirm'}
+              </button>
+              <button
+                type="button"
+                className={styles.editBtn}
+                onClick={() => { setShowResetModal(false); setResetError(null) }}
+                disabled={isResetting}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={styles.gapSectionTopBar}>
+        <button
+          type="button"
+          className={styles.resetBtn}
+          onClick={() => setShowResetModal(true)}
+        >
+          Reset to defaults
+        </button>
+      </div>
+
       <div className={styles.gapList}>
         {gaps.map((gap, idx) => {
           const isExpanded = expandedId === gap.id

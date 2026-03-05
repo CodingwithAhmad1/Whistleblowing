@@ -1,5 +1,6 @@
 """Admin settings endpoints for persistent configuration."""
 
+import copy
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -7,7 +8,8 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Body
 
 from ..prompts.display_content import DEFAULT_Q2_PROMPT_TEMPLATE, DEFAULT_Q3_PROMPT_TEMPLATE
-from ..settings import get_settings, update_settings, get_intake_gaps, update_intake_gaps, _slugify
+from ..prompts.intake_gaps import DEFAULT_INTAKE_GAPS
+from ..settings import get_settings, update_settings, get_intake_gaps, update_intake_gaps, get_last_analysis, _slugify
 from ..llm.usage_tracker import get_tracker
 from ..llm.model_fallback import get_active_model
 
@@ -174,3 +176,20 @@ def admin_delete_intake_gap(gap_id: str):
     except Exception:
         logger.exception("Failed to delete intake gap")
         raise HTTPException(status_code=500, detail="Failed to delete intake gap")
+
+
+@router.post("/admin/intake-gaps/reset")
+def admin_reset_intake_gaps():
+    """Reset intake gap configurations to the original defaults."""
+    try:
+        saved = update_intake_gaps(copy.deepcopy(DEFAULT_INTAKE_GAPS))
+        return {"gaps": saved}
+    except Exception:
+        logger.exception("Failed to reset intake gaps to defaults")
+        raise HTTPException(status_code=500, detail="Failed to reset intake gaps")
+
+
+@router.get("/admin/last-intake-analysis")
+def admin_get_last_intake_analysis():
+    """Return the most recent intake analysis result, or null if none has been run."""
+    return {"result": get_last_analysis()}

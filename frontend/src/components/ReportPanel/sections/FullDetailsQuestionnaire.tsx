@@ -6,14 +6,7 @@ import styles from './FullDetailsQuestionnaire.module.css'
 
 const Q1_LABEL = 'Please describe what happened in your own words.'
 
-type Step = 'q1' | 'analyzing' | 'fq1' | 'fq2' | 'review'
-
-function stepLabel(step: Step, totalFollowUps: number): string {
-  if (step === 'q1') return 'Question 1'
-  if (step === 'fq1') return `Question 2 of ${1 + totalFollowUps}`
-  if (step === 'fq2') return `Question 3 of ${1 + totalFollowUps}`
-  return ''
-}
+type Step = 'q1' | 'analyzing' | 'fq1' | 'review'
 
 export function FullDetailsQuestionnaire() {
   const { report, updateReport } = useReport()
@@ -26,24 +19,21 @@ export function FullDetailsQuestionnaire() {
   const { followUpQuestions, isLoading: isAnalyzing, error: analyzeError } =
     useIntakeAnalysis(report.full_details_q1, analyzeEnabled)
 
-  // Derived: which follow-up steps are available
+  // Derived: only the first follow-up is used (Q3 disabled for now)
   const fq1 = followUpQuestions[0] ?? null
-  const fq2 = followUpQuestions[1] ?? null
-  const totalFollowUps = followUpQuestions.length
 
-  // After analysis completes successfully, persist question texts and advance.
+  // After analysis completes successfully, persist question text and advance.
   // Do NOT advance when there is an error — let the user see the error UI and
   // choose to go Back or Skip manually.
   useEffect(() => {
     if (step !== 'analyzing' || isAnalyzing || analyzeError) return
 
-    // Persist follow-up question texts for PDF generation
-    const updates: Partial<typeof report> = {}
-    if (followUpQuestions[0]) updates.full_details_q2_question = followUpQuestions[0].question_text
-    if (followUpQuestions[1]) updates.full_details_q3_question = followUpQuestions[1].question_text
-    if (Object.keys(updates).length > 0) updateReport(updates)
+    // Persist first follow-up question text for PDF generation
+    if (followUpQuestions[0]) {
+      updateReport({ full_details_q2_question: followUpQuestions[0].question_text })
+    }
 
-    // Advance to first follow-up if any, else review
+    // Advance to follow-up if any, else review
     if (followUpQuestions.length > 0) {
       setStep('fq1')
     } else {
@@ -65,14 +55,8 @@ export function FullDetailsQuestionnaire() {
     setStep('analyzing')
   }
 
-  const handleFq1Next = () => {
-    if (fq2) setStep('fq2')
-    else setStep('review')
-  }
-
   const handleBack = () => {
     if (step === 'fq1') setStep('q1')
-    else if (step === 'fq2') setStep('fq1')
   }
 
   const handleDone = () => setStep('review')
@@ -83,8 +67,7 @@ export function FullDetailsQuestionnaire() {
 
   // ── Review mode ─────────────────────────────────────────────────────────────
   if (step === 'review') {
-    const q1Stored = report.full_details_q2_question
-    const q2Stored = report.full_details_q3_question
+    const fq1Stored = report.full_details_q2_question
 
     const reviewItems: Array<{
       answerKey: keyof typeof report
@@ -92,11 +75,8 @@ export function FullDetailsQuestionnaire() {
       isQ1?: boolean
     }> = [
       { answerKey: 'full_details_q1', question: Q1_LABEL, isQ1: true },
-      ...(fq1 || q1Stored
-        ? [{ answerKey: 'full_details_q2' as const, question: fq1?.question_text || q1Stored || '' }]
-        : []),
-      ...(fq2 || q2Stored
-        ? [{ answerKey: 'full_details_q3' as const, question: fq2?.question_text || q2Stored || '' }]
+      ...(fq1 || fq1Stored
+        ? [{ answerKey: 'full_details_q2' as const, question: fq1?.question_text || fq1Stored || '' }]
         : []),
     ]
 
@@ -204,55 +184,17 @@ export function FullDetailsQuestionnaire() {
     )
   }
 
-  // ── Follow-up step 1 ────────────────────────────────────────────────────────
+  // ── Follow-up step (Q2: AI-generated question) ──────────────────────────────
   if (step === 'fq1' && fq1) {
     return (
       <div ref={stepRef} className={styles.block}>
-        <p className={styles.stepIndicator}>{stepLabel('fq1', totalFollowUps)}</p>
+        <p className={styles.stepIndicator}>Question 2</p>
         <div className={styles.stepContent}>
           <p className={styles.questionText}>{fq1.question_text}</p>
           <FormField
             label=""
             value={report.full_details_q2}
             onChange={(v) => updateReport({ full_details_q2: v })}
-            type="textarea"
-            rows={8}
-            placeholder="Type your answer here…"
-          />
-        </div>
-        <div className={styles.navBar}>
-          <div className={styles.navBarLeft}>
-            <button type="button" onClick={handleBack} className={styles.navBtn} aria-label="Previous question">
-              <span aria-hidden>←</span> Back
-            </button>
-          </div>
-          <div className={styles.navBarRight}>
-            {fq2 ? (
-              <button type="button" onClick={handleFq1Next} className={styles.navBtn} aria-label="Next question">
-                Next <span aria-hidden>→</span>
-              </button>
-            ) : (
-              <button type="button" onClick={handleDone} className={styles.navBtn} aria-label="Finish and review">
-                Done <span aria-hidden>→</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Follow-up step 2 ────────────────────────────────────────────────────────
-  if (step === 'fq2' && fq2) {
-    return (
-      <div ref={stepRef} className={styles.block}>
-        <p className={styles.stepIndicator}>{stepLabel('fq2', totalFollowUps)}</p>
-        <div className={styles.stepContent}>
-          <p className={styles.questionText}>{fq2.question_text}</p>
-          <FormField
-            label=""
-            value={report.full_details_q3}
-            onChange={(v) => updateReport({ full_details_q3: v })}
             type="textarea"
             rows={8}
             placeholder="Type your answer here…"

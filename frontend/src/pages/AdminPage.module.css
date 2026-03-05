@@ -526,3 +526,68 @@
   white-space: nowrap;
   opacity: 0.75;
 }
+
+/* ─── Reset Button & Gap Section Top Bar ─────────────────────────────────── */
+
+.gapSectionTopBar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-12);
+}
+
+.resetBtn {
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  cursor: pointer;
+  color: #b91c1c;
+  transition: background 0.1s;
+}
+
+.resetBtn:hover {
+  background: #fef2f2;
+}
+
+/* ─── Confirmation Modal ──────────────────────────────────────────────────── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--color-surface, #fff);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 12px;
+  padding: var(--space-32);
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.modalTitle {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-12);
+}
+
+.modalText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0 0 var(--space-24);
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--space-8);
+}

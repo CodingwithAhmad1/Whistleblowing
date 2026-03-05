@@ -1,0 +1,349 @@
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-48) var(--space-32);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--color-text);
+  margin: 0 0 var(--space-8);
+}
+
+.subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-48);
+  line-height: 1.5;
+}
+
+.section {
+  margin-bottom: 0;
+}
+
+.sectionHeader {
+  margin-bottom: var(--space-24);
+}
+
+.sectionTitle {
+  font-size: var(--text-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  margin: 0 0 var(--space-8);
+}
+
+.sectionDesc {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: var(--space-48) 0;
+}
+
+.loading {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: #b91c1c;
+  margin: 0;
+}
+
+.retryBtn {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  font-family: inherit;
+}
+
+.timestamp {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-24);
+}
+
+.adminLink {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.adminLink:hover {
+  text-decoration: underline;
+}
+
+/* ── Empty states ──────────────────────────────────────────────────────────── */
+
+.emptyState {
+  padding: var(--space-48) var(--space-32);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+}
+
+.emptyStateText {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-8);
+}
+
+.emptyStateHint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.emptyNote {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+
+.cardStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.cardTitle {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  letter-spacing: 0.01em;
+}
+
+/* ── Field rows ────────────────────────────────────────────────────────────── */
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: var(--space-8) var(--space-16);
+  align-items: baseline;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.fieldRow:last-child {
+  border-bottom: none;
+}
+
+.fieldLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.fieldValue {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* ── Bool badges ───────────────────────────────────────────────────────────── */
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.badgeTrue {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: #16a34a;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.badgeFalse {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: #b91c1c;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+/* ── Gap analysis result list ──────────────────────────────────────────────── */
+
+.gapResultList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gapResultItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gapResultItem:last-child {
+  border-bottom: none;
+}
+
+.gapResultLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.gapResultCriteria {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ── Follow-up question list ───────────────────────────────────────────────── */
+
+.questionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.questionItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.questionItem:last-child {
+  border-bottom: none;
+}
+
+.questionGapTag {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.questionText {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Gap config list (read-only) ───────────────────────────────────────────── */
+
+.gapList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.gapCard {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.gapCardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.gapPriority {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  min-width: 18px;
+  text-align: right;
+}
+
+.gapLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+}
+
+.criteriaBadge {
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.criteriaBadgeBool {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.criteriaBadgeArray {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.criteriaBadgeLength {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.badgeActive {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: #16a34a;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.badgeInactive {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  background: var(--color-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.gapCardBody {
+  padding: 0;
+}
