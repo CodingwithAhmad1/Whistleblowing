@@ -63,6 +63,7 @@ REPORT_FIELDS = [
     {"key": "full_details_q1", "label": "Please describe what happened in your own words."},
     {"key": "full_details_q2", "label": "Answer to AI-generated follow-up question"},
     {"key": "full_details_q3", "label": "Answer to 2nd AI-generated follow-up question"},
+    {"key": "policy_quote_matched", "label": "Matched policy quote from rules book"},
 ]
 
 

@@ -49,6 +49,7 @@ const CONTACT_KEYS = new Set([
 const FULL_DETAILS_KEYS = new Set([
   'full_details_q1', 'full_details_q2', 'full_details_q3',
   'full_details_q2_question', 'full_details_q3_question',
+  'policy_quote_matched',
 ])
 
 function getDisplay(report: ReportData, key: string, def: FieldDef): string {
@@ -392,10 +393,27 @@ export function generateReportPdf(report: ReportData): void {
         )
       }
 
-      // Q3 — second follow-up question (if present)
+      // Q3 — policy-based follow-up question (if present)
       const q3Answer = report.full_details_q3?.trim() ?? ''
       const q3Question = report.full_details_q3_question?.trim()
       if (q3Question || q3Answer) {
+        // Show matched policy quote if available
+        const matchedQuote = report.policy_quote_matched?.trim()
+        if (matchedQuote) {
+          const quoteLines = wrap(doc, `"${matchedQuote}"`, cw - 12)
+          y = ensureSpace(doc, y, quoteLines.length * LINE_H + 6)
+          doc.setFont('helvetica', 'italic')
+          doc.setFontSize(W_SMALL)
+          doc.setTextColor(100, 100, 100)
+          for (const line of quoteLines) {
+            doc.text(line, MARGIN + 6, y)
+            y += LINE_H
+          }
+          doc.setTextColor(0, 0, 0)
+          doc.setFont('helvetica', 'normal')
+          doc.setFontSize(W_NORMAL)
+          y += 3
+        }
         y = drawQA(
           doc,
           q3Question || 'Additional follow-up question',

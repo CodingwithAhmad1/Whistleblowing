@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     # Gemini (required)
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash-lite"
-    GEMINI_EMBEDDING_MODEL: str = "models/text-embedding-004"
+    GEMINI_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
     # Inference settings
     TEMPERATURE: float = 0.7

@@ -100,6 +100,7 @@ export interface ReportData {
   full_details_q2_question: string   // 1st follow-up question text
   full_details_q3: string
   full_details_q3_question: string   // 2nd follow-up question text (if any)
+  policy_quote_matched: string       // matched policy quote from RAG
   persons_concealing: string
 }
 
@@ -159,5 +160,6 @@ export const initialReportData: ReportData = {
   full_details_q2_question: '',
   full_details_q3: '',
   full_details_q3_question: '',
+  policy_quote_matched: '',
   persons_concealing: '',
 }
