@@ -205,11 +205,8 @@ Q1 text
       Evaluates each active gap in priority order.
       Returns list of up to 2 gap ids whose criteria are met.
 
-  → IntakeLayer3 (template lookup; 1 optional LLM call)
-      For each identified gap, resolves its template.
-      Special case: timeline_unclear with template_conditional —
-        if dates or summary present, makes a lightweight LLM call (max_tokens=30)
-        to fill {event} placeholder; falls back to plain template on failure.
+  → IntakeLayer3 (template lookup; no LLM call)
+      For each identified gap, returns its template text.
       Truncates each question to MAX_QUESTION_CHARS (300).
       Returns list of FollowUpQuestion(gap_id, question_text).
 ```
@@ -290,8 +287,7 @@ Gap configs are stored in `settings.json` under the `intakeGaps` key. The 7 defa
     "field": "timeline_clear",
     "threshold": null
   },
-  "template": "To clarify the sequence of events, could you describe what happened first and what happened next?",
-  "template_conditional": "You mentioned {event}. What occurred immediately before and after this?"
+  "template": "To clarify the sequence of events, could you describe what happened first and what happened next?"
 }
 ```
 
@@ -306,8 +302,6 @@ Gap configs are stored in `settings.json` under the `intakeGaps` key. The 7 defa
 | 5 | `missing_individuals` | `empty_array` | `people_mentioned` |
 | 6 | `missing_location` | `empty_array` | `locations_mentioned` |
 | 7 | `narrative_too_short` | `length_threshold` (< 300 chars) | `length_character_count` |
-
-`template_conditional` is optional (only `timeline_unclear` has one). When present and applicable, Layer 3 makes a lightweight LLM call (max 30 tokens) to fill the `{event}` placeholder.
 
 ### Usage Tracker
 

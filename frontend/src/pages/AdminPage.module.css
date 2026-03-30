@@ -83,7 +83,48 @@
   margin: var(--space-48) 0;
 }
 
-/* ─── Model Usage Section ─────────────────────────────────────────────────── */
+/* ─── Gemini Status Section ───────────────────────────────────────────────── */
+
+.geminiStatusCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  padding: var(--space-16);
+}
+
+.geminiIcon {
+  font-size: 24px;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+  line-height: 1;
+}
+
+.geminiIconUntested {
+  color: var(--color-text-muted);
+}
+
+.geminiIconSuccess {
+  color: #16a34a;
+}
+
+.geminiIconError {
+  color: #b91c1c;
+}
+
+.geminiInfo {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.geminiErrorText {
+  color: #b91c1c;
+}
+
+/* ─── Model Info Section ─────────────────────────────────────────────────── */
 
 .usageSection {
   margin-top: 0;
@@ -104,115 +145,28 @@
   line-height: 1.5;
 }
 
-.usageMeta {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-  margin: var(--space-16) 0 var(--space-24);
-}
-
-.modelCards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-16);
-}
-
-.modelCard {
+.modelInfoCard {
   border: 1px solid var(--color-border, #e5e7eb);
   border-radius: 8px;
-  padding: var(--space-16);
+  padding: var(--space-16) var(--space-24);
   display: flex;
   flex-direction: column;
-  gap: var(--space-8);
+  gap: var(--space-12);
 }
 
-.modelCardHeader {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-}
-
-.modelName {
+.modelInfoCard p {
+  margin: 0;
   font-size: var(--text-sm);
-  font-weight: 600;
   color: var(--color-text);
+  line-height: 1.5;
+}
+
+.modelInfoCard code {
   font-family: monospace;
-}
-
-.badgeActive {
-  font-size: 11px;
-  font-weight: 600;
-  color: white;
-  background: #16a34a;
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
-.badgeExhausted {
-  font-size: 11px;
-  font-weight: 600;
-  color: white;
-  background: #b91c1c;
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
-.barGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.barLabel {
   font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.barTrack {
-  height: 8px;
-  background: var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.barFill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease, background-color 0.3s ease;
-}
-
-.cumulativeRow {
-  margin-top: var(--space-16);
-  padding: var(--space-12) var(--space-16);
   background: var(--color-surface-alt, #f9fafb);
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  flex-wrap: wrap;
-}
-
-.cumulativeLabel {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text);
-  flex: 1;
-}
-
-.cumulativeDays {
-  font-weight: 400;
-  color: var(--color-text-muted);
-}
-
-.cumulativeStat {
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-}
-
-.cumulativeDivider {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* ─── Gap Configuration Section ──────────────────────────────────────────── */
@@ -228,6 +182,36 @@
   border-radius: 8px;
   background: var(--color-surface, #fff);
   overflow: hidden;
+  transition: opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.gapCardDragOverBottom {
+  border-bottom: 3px solid var(--color-accent, #2563eb);
+}
+
+.gapCardDragOverTop {
+  border-top: 3px solid var(--color-accent, #2563eb);
+}
+
+.dragHandle {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  font-size: 14px;
+  color: var(--color-text-muted, #9ca3af);
+  padding: 4px 2px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.dragHandle:hover {
+  color: var(--color-text, #111);
+  background: var(--color-border, #e5e7eb);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 .gapCardHeader {
@@ -274,53 +258,6 @@
 .criteriaBadgeLength {
   background: #fef3c7;
   color: #b45309;
-}
-
-.gapActiveToggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  cursor: pointer;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.gapActiveToggle input {
-  cursor: pointer;
-  width: 14px;
-  height: 14px;
-}
-
-.priorityBtns {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.priorityBtn {
-  background: none;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 4px;
-  width: 22px;
-  height: 18px;
-  font-size: 10px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
-  padding: 0;
-  line-height: 1;
-}
-
-.priorityBtn:hover:not(:disabled) {
-  background: var(--color-surface-alt, #f9fafb);
-  color: var(--color-text);
-}
-
-.priorityBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 .editBtn {
@@ -431,59 +368,22 @@
   box-sizing: border-box;
 }
 
+.gapEditStatic {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  padding: var(--space-8) 0;
+}
+
 .gapEditActions {
   display: flex;
   gap: var(--space-8);
 }
 
-.addGapSection {
-  margin-top: var(--space-16);
-  border: 1px dashed var(--color-border, #d1d5db);
-  border-radius: 8px;
-  padding: var(--space-16);
-}
-
-.addGapTitle {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text);
-  margin: 0 0 var(--space-16);
-}
-
-.addGapBtn {
-  background: none;
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 6px;
-  padding: var(--space-8) var(--space-16);
-  font-size: var(--text-sm);
-  font-family: inherit;
-  cursor: pointer;
-  color: var(--color-text);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  transition: background 0.1s;
-}
-
-.addGapBtn:hover {
-  background: var(--color-surface-alt, #f9fafb);
-}
-
-.gapSaveRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-16);
-  margin-top: var(--space-16);
-}
-
-.gapSaveStatus {
+.gapAutoSaveStatus {
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-}
-
-.gapSaveError {
-  font-size: var(--text-sm);
-  color: #b91c1c;
+  display: block;
+  margin-bottom: var(--space-8);
 }
 
 .helperText {
@@ -515,16 +415,6 @@
 .templateEmpty {
   opacity: 0.6;
   font-style: italic;
-}
-
-.templateConditionalPreview {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.75;
 }
 
 /* ─── Reset Button & Gap Section Top Bar ─────────────────────────────────── */
@@ -590,4 +480,204 @@
 .modalActions {
   display: flex;
   gap: var(--space-8);
+}
+
+/* ─── AI Pipeline Diagnostics ────────────────────────────────────────────── */
+
+.diagControls {
+  display: flex;
+  gap: var(--space-12);
+  align-items: center;
+  margin-bottom: var(--space-16);
+}
+
+.diagControls select {
+  max-width: 240px;
+}
+
+.diagRunning {
+  padding: var(--space-16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+}
+
+.diagTimer {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.diagCancelBtn {
+  background: none;
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+  flex-shrink: 0;
+}
+
+.diagCancelBtn:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.loadingText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.diagResultCard {
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 8px;
+  margin-bottom: var(--space-16);
+  overflow: hidden;
+}
+
+.diagResultHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-16);
+  background: var(--color-surface-alt, #f9fafb);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+  font-size: var(--text-sm);
+}
+
+.diagStepCard {
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.diagStepHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-16);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  user-select: none;
+}
+
+.diagStepHeader:hover {
+  background: var(--color-surface-alt, #f9fafb);
+}
+
+.diagStepLabel {
+  flex: 1;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.diagStepTime {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.diagExpandIcon {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+
+.diagStepPass {
+  color: #16a34a;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+.diagStepFail {
+  color: #b91c1c;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+.diagStepSkip {
+  color: var(--color-text-muted);
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+.diagStepDetail {
+  padding: var(--space-8) var(--space-16) var(--space-12);
+  border-top: 1px dashed var(--color-border, #e5e7eb);
+}
+
+.diagError {
+  font-size: var(--text-sm);
+  color: #b91c1c;
+  margin: 0 0 var(--space-8);
+}
+
+.diagViolations {
+  font-size: var(--text-sm);
+  color: #c2410c;
+  margin: 0 0 var(--space-8);
+  padding-left: var(--space-16, 16px);
+  list-style: disc;
+}
+
+.diagViolations li {
+  margin-bottom: 2px;
+}
+
+.diagPre {
+  font-size: 12px;
+  font-family: monospace;
+  background: var(--color-surface-alt, #f9fafb);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  padding: var(--space-8) var(--space-12);
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.diagMuted {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.diagHistoryHeader {
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  margin-top: var(--space-16);
+}
+
+.diagHistoryList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+
+.diagHistoryItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-sm);
+  padding: var(--space-4) var(--space-8);
+  border-radius: 4px;
+}
+
+.diagHistoryItem:nth-child(odd) {
+  background: var(--color-surface-alt, #f9fafb);
 }

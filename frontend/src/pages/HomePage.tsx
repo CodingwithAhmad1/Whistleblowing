@@ -8,7 +8,7 @@ export function HomePage() {
       <a href="#main-content" className={styles.skipLink}>
         Skip to report
       </a>
-      <main id="main-content" className={styles.main} tabIndex={-1}>
+      <main id="main-content" className={styles.main}>
         <ErrorBoundary>
           <ReportPanel />
         </ErrorBoundary>

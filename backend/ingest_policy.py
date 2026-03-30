@@ -1,9 +1,12 @@
 """Ingest 3MRulesBook.pdf into ChromaDB for RAG policy retrieval.
 
+Structure-aware chunking with section/chapter metadata extraction.
+
 Usage:
-    cd backend && python ingest_policy.py
+    cd backend && python ingest_policy.py [--dry-run]
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -11,9 +14,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pdfplumber
-import chromadb
-
-from app.embeddings.service import get_embedding_service
 
 PDF_PATH = Path(__file__).resolve().parent.parent / "3MRulesBook.pdf"
 CHROMA_PATH = str(Path(__file__).resolve().parent / "data" / "chroma")
@@ -23,45 +23,245 @@ COLLECTION_NAME = "whistleblowing_policy"
 MIN_WORDS = 100
 MAX_WORDS = 350
 
+# ── Section header detection ─────────────────────────────────────────────────
 
-def extract_text_from_pdf(pdf_path: Path) -> list[dict]:
-    """Extract text from PDF, returning list of {text, page}."""
+# Known section titles from the 3M Code of Conduct table of contents.
+# These are matched exactly (case-insensitive) for reliability.
+_KNOWN_SECTIONS = {
+    "an introduction to our code",
+    "acting with unwavering integrity",
+    "meet high standards",
+    "escalation requirements",
+    "demonstrate high-integrity leadership",
+    "be good",
+    "act with integrity",
+    "speak up",
+    "be honest",
+    "business courtesies",
+    "interacting with business partners",
+    "bribery",
+    "fair competition",
+    "political activities",
+    "be fair",
+    "conflicts of interest",
+    "3m's assets",
+    "intellectual property",
+    "protecting confidential information",
+    "insider trading",
+    "social media",
+    "speaking for the company",
+    "be accurate",
+    "accurate books and records",
+    "money laundering",
+    "global trade compliance",
+    "be respectful",
+    "harassment and disrespectful behavior",
+    "workplace safety",
+    "sustainability",
+    "be loyal",
+    "integrity in sales and marketing",
+}
+
+# Patterns that signal a section header
+_HEADER_PATTERNS = [
+    # Numbered section: "1.", "1.1", "4.2.1", "Section 3:"
+    re.compile(r"^(?:Section\s+)?\d+(?:\.\d+)*[\.\:\s]", re.IGNORECASE),
+    # Short ALL CAPS lines (likely headers), at least 3 chars
+    re.compile(r"^[A-Z][A-Z\s\-&,/]{2,}$"),
+]
+
+# Lines to skip as headers
+_SKIP_PATTERNS = [
+    re.compile(r"^\d+$"),
+    re.compile(r"^page\s+\d+", re.IGNORECASE),
+    re.compile(r"^Be 3M", re.IGNORECASE),  # Navigation bar line
+]
+
+
+def _is_likely_header(line: str) -> bool:
+    """Heuristic: is this line likely a section header?"""
+    line = line.strip()
+    if not line or len(line) > 120:
+        return False
+    word_count = len(line.split())
+    if word_count > 12:
+        return False
+    for skip in _SKIP_PATTERNS:
+        if skip.match(line):
+            return False
+    # Check known sections first (most reliable)
+    if line.lower() in _KNOWN_SECTIONS:
+        return True
+    for pat in _HEADER_PATTERNS:
+        if pat.match(line):
+            return True
+    return False
+
+
+def _extract_chapter(header: str) -> str | None:
+    """Try to extract a chapter/section number from a header string."""
+    m = re.match(r"^(?:Section\s+)?(\d+(?:\.\d+)*)", header, re.IGNORECASE)
+    if m:
+        return m.group(1)
+    return None
+
+
+# ── Text extraction ──────────────────────────────────────────────────────────
+
+_NAV_BAR_RE = re.compile(
+    r"^Be 3M\s+Be Good\s+Be Honest\s+Be Fair\s+Be Loyal\s+Be Accurate\s+Be Respectful\s*Contents?$",
+    re.IGNORECASE,
+)
+
+# Individual nav bar fragments (when pdfplumber splits across lines)
+_NAV_FRAGMENTS = re.compile(
+    r"^(?:Be 3M|Be Good|Be Honest|Be Fair|Be Loyal|Be Accurate|Be Respectful|Contents)$",
+    re.IGNORECASE,
+)
+
+# Footer / sidebar patterns common in the 3M Code of Conduct PDF
+_ARTIFACT_PATTERNS = [
+    re.compile(r"^Global Code of Conduct\s*$", re.IGNORECASE),
+    re.compile(r"^Ask a question,?\s*raise a concern at 3MEthics\.com\s*$", re.IGNORECASE),
+    re.compile(r"^For more information,?\s*see the following\s*$", re.IGNORECASE),
+    re.compile(r"^resources?:\s*$", re.IGNORECASE),
+    re.compile(r"^\d+\s+Global Code of Conduct", re.IGNORECASE),
+]
+
+
+def _strip_nav_bar(text: str) -> str:
+    """Remove navigation bars, footers, and sidebar artifacts from extracted text."""
+    lines = text.split("\n")
+    cleaned = []
+    for line in lines:
+        stripped = line.strip()
+        if _NAV_BAR_RE.match(stripped):
+            continue
+        if _NAV_FRAGMENTS.match(stripped):
+            continue
+        if any(pat.match(stripped) for pat in _ARTIFACT_PATTERNS):
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
+def extract_pages(pdf_path: Path) -> list[dict]:
+    """Extract text from PDF with page numbers."""
     pages = []
     with pdfplumber.open(pdf_path) as pdf:
         for i, page in enumerate(pdf.pages, start=1):
             text = page.extract_text() or ""
+            text = _strip_nav_bar(text)
             text = text.strip()
             if text:
                 pages.append({"text": text, "page": i})
+
+            # Also try to extract tables
+            tables = page.extract_tables() or []
+            for table in tables:
+                table_text = _format_table(table)
+                if table_text and len(table_text.split()) >= 10:
+                    pages.append({
+                        "text": table_text,
+                        "page": i,
+                        "type": "table",
+                    })
     return pages
 
 
-def chunk_text(pages: list[dict]) -> list[dict]:
-    """Split pages into paragraph-level chunks within word-count range."""
+def _format_table(table: list[list]) -> str:
+    """Convert a pdfplumber table to readable text."""
+    if not table:
+        return ""
+    lines = []
+    for row in table:
+        cells = [str(c).strip() if c else "" for c in row]
+        line = " | ".join(c for c in cells if c)
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+# ── Structure-aware chunking ─────────────────────────────────────────────────
+
+def chunk_pages(pages: list[dict]) -> list[dict]:
+    """Split pages into chunks with section/chapter metadata.
+
+    Each chunk gets: text, page, section_title, chapter, type.
+    """
     chunks = []
+    current_section = "Introduction"
+    current_chapter = None
 
     for page_info in pages:
         text = page_info["text"]
         page_num = page_info["page"]
+        content_type = page_info.get("type", "text")
 
-        # Split by double newlines (paragraph boundaries)
+        # For tables, store as a single chunk with current section context
+        if content_type == "table":
+            chunks.append({
+                "text": text,
+                "page": page_num,
+                "section_title": current_section,
+                "chapter": current_chapter or "",
+                "type": "table",
+            })
+            continue
+
+        # Split by double newlines
         paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
 
-        # Merge short paragraphs, split long ones
         buffer = ""
         for para in paragraphs:
+            # Check for section headers within the paragraph
+            lines = para.split("\n")
+            first_line = lines[0].strip() if lines else ""
+
+            if _is_likely_header(first_line):
+                # Flush buffer before starting new section
+                if buffer.strip() and len(buffer.split()) >= MIN_WORDS:
+                    chunks.append({
+                        "text": buffer.strip(),
+                        "page": page_num,
+                        "section_title": current_section,
+                        "chapter": current_chapter or "",
+                        "type": "text",
+                    })
+                    buffer = ""
+
+                # Update section tracking
+                current_section = first_line.strip()
+                chapter = _extract_chapter(current_section)
+                if chapter:
+                    current_chapter = chapter
+
+                # If header has body text below it, include header as prefix
+                if len(lines) > 1:
+                    body = "\n".join(lines[1:]).strip()
+                    if body:
+                        para = f"{first_line}\n\n{body}"
+                    else:
+                        para = first_line
+                else:
+                    para = first_line
+
+            # Accumulate text
             candidate = (buffer + "\n\n" + para).strip() if buffer else para
             word_count = len(candidate.split())
 
             if word_count > MAX_WORDS:
                 # Flush buffer if it has content
                 if buffer and len(buffer.split()) >= MIN_WORDS:
-                    chunks.append({"text": buffer, "page": page_num})
+                    chunks.append({
+                        "text": buffer.strip(),
+                        "page": page_num,
+                        "section_title": current_section,
+                        "chapter": current_chapter or "",
+                        "type": "text",
+                    })
                     buffer = ""
-                elif buffer:
-                    # Buffer too short, merge with para and split by sentences
-                    candidate = (buffer + "\n\n" + para).strip() if buffer else para
-                    buffer = ""
+                    candidate = para
 
                 # Split long text by sentences
                 sentences = candidate.replace(". ", ".\n").split("\n")
@@ -69,43 +269,93 @@ def chunk_text(pages: list[dict]) -> list[dict]:
                 for sent in sentences:
                     sent_candidate = (sent_buffer + " " + sent).strip() if sent_buffer else sent
                     if len(sent_candidate.split()) > MAX_WORDS and sent_buffer:
-                        chunks.append({"text": sent_buffer.strip(), "page": page_num})
+                        chunks.append({
+                            "text": sent_buffer.strip(),
+                            "page": page_num,
+                            "section_title": current_section,
+                            "chapter": current_chapter or "",
+                            "type": "text",
+                        })
                         sent_buffer = sent
                     else:
                         sent_buffer = sent_candidate
                 if sent_buffer:
                     buffer = sent_buffer
-            elif word_count >= MIN_WORDS:
-                # Good size, could accept more
-                buffer = candidate
             else:
-                # Still short, keep accumulating
                 buffer = candidate
 
         # Flush remaining buffer
         if buffer.strip():
-            # If very short, merge with last chunk from same page
             if len(buffer.split()) < MIN_WORDS and chunks and chunks[-1]["page"] == page_num:
                 chunks[-1]["text"] += "\n\n" + buffer.strip()
             else:
-                chunks.append({"text": buffer.strip(), "page": page_num})
+                chunks.append({
+                    "text": buffer.strip(),
+                    "page": page_num,
+                    "section_title": current_section,
+                    "chapter": current_chapter or "",
+                    "type": "text",
+                })
+
+    # Prepend section header to chunks that start mid-section for better embeddings
+    for chunk in chunks:
+        section = chunk.get("section_title", "")
+        if section and not chunk["text"].startswith(section):
+            chunk["text"] = f"[{section}]\n\n{chunk['text']}"
 
     return chunks
 
 
+# ── Main ─────────────────────────────────────────────────────────────────────
+
 def main():
+    dry_run = "--dry-run" in sys.argv
+
     if not PDF_PATH.exists():
         print(f"ERROR: PDF not found at {PDF_PATH}")
         sys.exit(1)
 
     print(f"Reading PDF: {PDF_PATH}")
-    pages = extract_text_from_pdf(PDF_PATH)
-    print(f"Extracted text from {len(pages)} pages")
+    pages = extract_pages(PDF_PATH)
+    text_pages = [p for p in pages if p.get("type") != "table"]
+    table_pages = [p for p in pages if p.get("type") == "table"]
+    print(f"Extracted text from {len(text_pages)} pages + {len(table_pages)} tables")
 
-    chunks = chunk_text(pages)
+    chunks = chunk_pages(pages)
     print(f"Created {len(chunks)} chunks")
 
+    # Chunk stats
+    text_chunks = [c for c in chunks if c["type"] == "text"]
+    table_chunks = [c for c in chunks if c["type"] == "table"]
+    sections = set(c["section_title"] for c in chunks if c.get("section_title"))
+    word_counts = [len(c["text"].split()) for c in chunks]
+
+    print(f"  Text chunks: {len(text_chunks)}")
+    print(f"  Table chunks: {len(table_chunks)}")
+    print(f"  Unique sections: {len(sections)}")
+    if word_counts:
+        print(f"  Word count range: {min(word_counts)} - {max(word_counts)} (avg {sum(word_counts)//len(word_counts)})")
+
+    if dry_run:
+        print("\n── Dry run: chunk details ──")
+        for i, chunk in enumerate(chunks):
+            section = chunk.get("section_title", "?")
+            chapter = chunk.get("chapter", "")
+            page = chunk.get("page", "?")
+            ctype = chunk.get("type", "text")
+            words = len(chunk["text"].split())
+            preview = chunk["text"][:80].replace("\n", " ")
+            print(f"  [{i:3d}] p{page:>2} ch{chapter:<5} ({ctype:>5}, {words:>3}w) {section[:40]:<40}  {preview}…")
+        print(f"\n── Sections detected ──")
+        for s in sorted(sections):
+            print(f"  - {s}")
+        print("\nDry run complete. No data written.")
+        return
+
     # Initialize ChromaDB
+    import chromadb
+    from app.embeddings.service import get_embedding_service
+
     client = chromadb.PersistentClient(path=CHROMA_PATH)
 
     # Delete and recreate collection (idempotent)
@@ -124,13 +374,23 @@ def main():
     embedding_service = get_embedding_service()
 
     for i, chunk in enumerate(chunks):
-        print(f"  Embedding chunk {i + 1}/{len(chunks)} (page {chunk['page']}, {len(chunk['text'].split())} words)...")
+        section = chunk.get("section_title", "")
+        chapter = chunk.get("chapter", "")
+        ctype = chunk.get("type", "text")
+        words = len(chunk["text"].split())
+        print(f"  Embedding chunk {i + 1}/{len(chunks)} (p{chunk['page']}, {words}w, {section[:30]})...")
+
         embedding = embedding_service.embed_text(chunk["text"])
         collection.add(
             ids=[f"chunk_{i}"],
             documents=[chunk["text"]],
             embeddings=[embedding],
-            metadatas=[{"page": str(chunk["page"])}],
+            metadatas=[{
+                "page": str(chunk["page"]),
+                "section_title": section,
+                "chapter": chapter,
+                "type": ctype,
+            }],
         )
 
     print(f"\nDone! Stored {collection.count()} chunks in ChromaDB at {CHROMA_PATH}")

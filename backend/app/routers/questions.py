@@ -77,8 +77,11 @@ async def intake_analyze(body: dict[str, Any] = Body(default_factory=dict)):
     q1_text = body.get("q1_text", "")
     if not isinstance(q1_text, str) or not q1_text.strip():
         raise HTTPException(status_code=422, detail="q1_text must be a non-empty string")
+    form_data = body.get("form_data")
+    if form_data is not None and not isinstance(form_data, dict):
+        form_data = None
     try:
-        result = await _intake_processor.process(q1_text.strip())
+        result = await _intake_processor.process(q1_text.strip(), form_data)
         # Persist result for the Analysis page (best-effort — never blocks response)
         try:
             stamped = dict(result)

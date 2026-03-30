@@ -49,7 +49,7 @@ const CONTACT_KEYS = new Set([
 const FULL_DETAILS_KEYS = new Set([
   'full_details_q1', 'full_details_q2', 'full_details_q3',
   'full_details_q2_question', 'full_details_q3_question',
-  'policy_quote_matched',
+  'policy_quote_matched', 'policy_section_matched',
 ])
 
 function getDisplay(report: ReportData, key: string, def: FieldDef): string {
@@ -400,13 +400,23 @@ export function generateReportPdf(report: ReportData): void {
         // Show matched policy quote if available
         const matchedQuote = report.policy_quote_matched?.trim()
         if (matchedQuote) {
-          const quoteLines = wrap(doc, `"${matchedQuote}"`, cw - 12)
+          const quoteLines = wrap(doc, `"${matchedQuote}"`, contentW(doc) - 12)
           y = ensureSpace(doc, y, quoteLines.length * LINE_H + 6)
           doc.setFont('helvetica', 'italic')
           doc.setFontSize(W_SMALL)
           doc.setTextColor(100, 100, 100)
           for (const line of quoteLines) {
             doc.text(line, MARGIN + 6, y)
+            y += LINE_H
+          }
+          // Section citation below the quote
+          const matchedSection = (report as unknown as Record<string, string>).policy_section_matched?.trim()
+          if (matchedSection) {
+            const citeLine = `— ${matchedSection}`
+            doc.setFont('helvetica', 'italic')
+            doc.setFontSize(W_SMALL - 1)
+            doc.setTextColor(140, 140, 140)
+            doc.text(citeLine, MARGIN + 6, y)
             y += LINE_H
           }
           doc.setTextColor(0, 0, 0)
@@ -416,7 +426,7 @@ export function generateReportPdf(report: ReportData): void {
         }
         y = drawQA(
           doc,
-          q3Question || 'Additional follow-up question',
+          q3Question || 'How closely does this policy match your incident?',
           q3Answer,
           y,
         )

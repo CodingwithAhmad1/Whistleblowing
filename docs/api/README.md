@@ -328,8 +328,7 @@ Returns the current ordered list of intake gap configurations.
       "priority": 1,
       "active": true,
       "criteria": { "type": "boolean_false", "field": "timeline_clear", "threshold": null },
-      "template": "To clarify the sequence of events...",
-      "template_conditional": "You mentioned {event}. What occurred immediately before and after this?"
+      "template": "To clarify the sequence of events..."
     }
   ]
 }
@@ -352,7 +351,7 @@ Replace the full ordered gap list. All gaps are validated before saving. Returns
 
 ### POST /api/admin/intake-gaps
 
-Add a new gap. `id` is auto-generated from `label` as a URL slug if not provided. `priority` defaults to `max_existing + 1`. `active` defaults to `true`. `template_conditional` defaults to `null`.
+Add a new gap. `id` is auto-generated from `label` as a URL slug if not provided. `priority` defaults to `max_existing + 1`. `active` defaults to `true`.
 
 **Request:**
 ```json
@@ -397,7 +396,6 @@ Remove a gap by id. Returns the updated list.
 | `criteria.field` | string | Yes | Layer 1 JSON field to evaluate |
 | `criteria.threshold` | number \| null | Only for `length_threshold` | Minimum character count; gap fires if below |
 | `template` | string | Yes | Question text to use when gap is identified |
-| `template_conditional` | string \| null | No | Alternative template with `{event}` placeholder (only used for `timeline_unclear`) |
 
 ---
 

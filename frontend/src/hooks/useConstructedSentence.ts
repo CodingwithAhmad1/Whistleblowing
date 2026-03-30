@@ -2,23 +2,20 @@ import { useState, useEffect, useRef } from 'react'
 import { API_CONFIG } from '@/config'
 import type { ReportData } from '@/types/report'
 
-interface PolicyQuoteResult {
-  quote: string | null
-  section: string | null
+interface ConstructedSentenceResult {
+  sentence: string | null
   isLoading: boolean
   error: string | null
   reset: () => void
 }
 
-const TIMEOUT_MS = 8000
+const TIMEOUT_MS = 10000
 
-export function usePolicyQuote(
+export function useConstructedSentence(
   formData: Partial<ReportData>,
   enabled: boolean,
-  constructedSentence?: string | null,
-): PolicyQuoteResult {
-  const [quote, setQuote] = useState<string | null>(null)
-  const [section, setSection] = useState<string | null>(null)
+): ConstructedSentenceResult {
+  const [sentence, setSentence] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
@@ -39,26 +36,21 @@ export function usePolicyQuote(
 
     setIsLoading(true)
     setError(null)
-    setQuote(null)
-    setSection(null)
+    setSentence(null)
 
-    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RAG_POLICY_QUOTE}`, {
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RAG_CONSTRUCT_SENTENCE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        form_data: formData,
-        ...(constructedSentence ? { constructed_sentence: constructedSentence } : {}),
-      }),
+      body: JSON.stringify({ form_data: formData }),
       signal: ac.signal,
     })
       .then(async (r) => {
         if (!r.ok) throw new Error(`Request failed: ${r.status}`)
         return r.json()
       })
-      .then((res: { quote: string | null; section: string | null; error?: string }) => {
-        setQuote(res.quote)
-        setSection(res.section)
-        if (res.error && !res.quote) {
+      .then((res: { sentence: string; error?: string }) => {
+        setSentence(res.sentence || null)
+        if (res.error && !res.sentence) {
           setError(res.error)
         }
       })
@@ -66,7 +58,7 @@ export function usePolicyQuote(
         if (timedOutRef.current) {
           setError('Request timed out')
         } else if (e?.name !== 'AbortError') {
-          setError(e instanceof Error ? e.message : 'Failed to retrieve policy quote')
+          setError(e instanceof Error ? e.message : 'Failed to build case summary')
         }
       })
       .finally(() => {
@@ -83,11 +75,10 @@ export function usePolicyQuote(
 
   const reset = () => {
     abortRef.current?.abort()
-    setQuote(null)
-    setSection(null)
+    setSentence(null)
     setIsLoading(false)
     setError(null)
   }
 
-  return { quote, section, isLoading, error, reset }
+  return { sentence, isLoading, error, reset }
 }

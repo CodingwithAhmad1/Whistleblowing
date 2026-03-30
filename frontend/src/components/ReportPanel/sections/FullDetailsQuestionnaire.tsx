@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useReport } from '@/context/ReportContext'
 import { useIntakeAnalysis } from '@/hooks/useIntakeAnalysis'
+import { useConstructedSentence } from '@/hooks/useConstructedSentence'
 import { usePolicyQuote } from '@/hooks/usePolicyQuote'
 import { FormField } from './FormField'
 import styles from './FullDetailsQuestionnaire.module.css'
@@ -8,23 +9,29 @@ import styles from './FullDetailsQuestionnaire.module.css'
 const Q1_LABEL = 'Please describe what happened in your own words.'
 const Q3_QUESTION = 'How closely does this policy match your incident?'
 
-type Step = 'q1' | 'analyzing' | 'fq1' | 'policyLoading' | 'policyQuestion' | 'review'
+type Step = 'q1' | 'analyzing' | 'fq1' | 'constructing' | 'policyLoading' | 'policyQuestion' | 'review'
 
 export function FullDetailsQuestionnaire() {
   const { report, updateReport } = useReport()
   const [step, setStep] = useState<Step>('q1')
   const stepRef = useRef<HTMLDivElement>(null)
-  const hasMounted = useRef(false)
+  const prevStepRef = useRef<Step>(step)
+  const fq1WasShownRef = useRef(false)
 
   // Intake analysis is enabled only when we move to 'analyzing' step
   const [analyzeEnabled, setAnalyzeEnabled] = useState(false)
-  const { followUpQuestions, isLoading: isAnalyzing, hasAnalyzed, error: analyzeError } =
-    useIntakeAnalysis(report.full_details_q1, analyzeEnabled)
+  const { followUpQuestions, isLoading: isAnalyzing, hasAnalyzed, error: analyzeError, reset: resetIntake } =
+    useIntakeAnalysis(report.full_details_q1, analyzeEnabled, report as unknown as Record<string, string>)
+
+  // Constructed sentence is enabled only when we move to 'constructing' step
+  const [constructEnabled, setConstructEnabled] = useState(false)
+  const { sentence: constructedSentence, isLoading: isConstructing, error: constructError, reset: resetConstruct } =
+    useConstructedSentence(report, constructEnabled)
 
   // Policy quote is enabled only when we move to 'policyLoading' step
   const [policyEnabled, setPolicyEnabled] = useState(false)
-  const { quote: policyQuote, section: policySection, isLoading: isPolicyLoading, error: policyError } =
-    usePolicyQuote(report, policyEnabled)
+  const { quote: policyQuote, section: policySection, isLoading: isPolicyLoading, error: policyError, reset: resetPolicy } =
+    usePolicyQuote(report, policyEnabled, constructedSentence)
 
   // Derived: only the first follow-up is used
   const fq1 = followUpQuestions[0] ?? null
@@ -38,36 +45,46 @@ export function FullDetailsQuestionnaire() {
       updateReport({ full_details_q2_question: followUpQuestions[0].question_text })
     }
 
-    // Advance to follow-up if any, else policy loading
+    // Advance to follow-up if any, else construct sentence and load policy
     if (followUpQuestions.length > 0) {
+      fq1WasShownRef.current = true
       setStep('fq1')
     } else {
-      setPolicyEnabled(true)
-      setStep('policyLoading')
+      setConstructEnabled(true)
+      setStep('constructing')
     }
   }, [step, isAnalyzing, analyzeError, hasAnalyzed, followUpQuestions])
+
+  // After constructed sentence completes, persist and advance to policy loading
+  useEffect(() => {
+    if (step !== 'constructing' || isConstructing) return
+
+    if (constructedSentence) {
+      updateReport({ constructed_sentence: constructedSentence })
+    }
+
+    setPolicyEnabled(true)
+    setStep('policyLoading')
+  }, [step, isConstructing, constructedSentence])
 
   // After policy quote loading completes, persist and advance
   useEffect(() => {
     if (step !== 'policyLoading' || isPolicyLoading) return
 
-    // Persist the quote and question text
-    if (policyQuote) {
-      updateReport({
-        policy_quote_matched: policyQuote,
-        full_details_q3_question: Q3_QUESTION,
-      })
-    }
+    // Always persist Q3 question text; persist quote + section only if available
+    updateReport({
+      full_details_q3_question: Q3_QUESTION,
+      ...(policyQuote ? { policy_quote_matched: policyQuote } : {}),
+      ...(policySection ? { policy_section_matched: policySection } : {}),
+    })
 
     setStep('policyQuestion')
-  }, [step, isPolicyLoading, policyQuote])
+  }, [step, isPolicyLoading, policyQuote, policySection])
 
-  // Scroll to top of component on step change
+  // Scroll to top of component on step change (but not on initial mount)
   useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true
-      return
-    }
+    if (prevStepRef.current === step) return
+    prevStepRef.current = step
     stepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [step])
 
@@ -78,19 +95,24 @@ export function FullDetailsQuestionnaire() {
 
   const handleBack = () => {
     if (step === 'fq1') setStep('q1')
-    if (step === 'policyQuestion') setStep('fq1')
+    if (step === 'policyQuestion') setStep(fq1WasShownRef.current ? 'fq1' : 'q1')
   }
 
   const handleFq1Done = () => {
-    setPolicyEnabled(true)
-    setStep('policyLoading')
+    setConstructEnabled(true)
+    setStep('constructing')
   }
 
   const handleDone = () => setStep('review')
   const handleRestart = () => {
     setStep('q1')
     setAnalyzeEnabled(false)
+    setConstructEnabled(false)
     setPolicyEnabled(false)
+    resetIntake()
+    resetConstruct()
+    resetPolicy()
+    fq1WasShownRef.current = false
   }
 
   // ── Review mode ─────────────────────────────────────────────────────────────
@@ -103,6 +125,7 @@ export function FullDetailsQuestionnaire() {
       question: string
       isQ1?: boolean
       policyQuote?: string
+      policySection?: string
     }> = [
       { answerKey: 'full_details_q1', question: Q1_LABEL, isQ1: true },
       ...(fq1 || fq1Stored
@@ -112,7 +135,8 @@ export function FullDetailsQuestionnaire() {
         ? [{
             answerKey: 'full_details_q3' as const,
             question: q3Stored || Q3_QUESTION,
-            policyQuote: report.policy_quote_matched || undefined,
+            policyQuote: report.policy_quote_matched || policyQuote || undefined,
+            policySection: report.policy_section_matched || policySection || undefined,
           }]
         : []),
     ]
@@ -139,6 +163,9 @@ export function FullDetailsQuestionnaire() {
             {item.policyQuote && (
               <blockquote className={styles.policyCallout}>
                 {item.policyQuote}
+                {item.policySection && (
+                  <cite className={styles.policyCite}>— {item.policySection}</cite>
+                )}
               </blockquote>
             )}
             <div className={styles.reviewField}>
@@ -180,6 +207,45 @@ export function FullDetailsQuestionnaire() {
                   <button
                     type="button"
                     onClick={() => {
+                      setConstructEnabled(true)
+                      setStep('constructing')
+                    }}
+                    className={styles.navBtn}
+                  >
+                    Skip &amp; Continue <span aria-hidden>→</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Constructing sentence step ──────────────────────────────────────────────
+  if (step === 'constructing') {
+    return (
+      <div ref={stepRef} className={styles.block}>
+        <div className={styles.stepContent}>
+          {isConstructing && (
+            <p className={styles.loadingText}>Building case summary…</p>
+          )}
+          {constructError && !isConstructing && (
+            <>
+              <p className={styles.errorText} role="alert">
+                Could not build case summary: {constructError}
+              </p>
+              <div className={styles.navBar}>
+                <div className={styles.navBarLeft}>
+                  <button type="button" onClick={() => setStep(fq1WasShownRef.current ? 'fq1' : 'q1')} className={styles.navBtn}>
+                    <span aria-hidden>←</span> Back
+                  </button>
+                </div>
+                <div className={styles.navBarRight}>
+                  <button
+                    type="button"
+                    onClick={() => {
                       setPolicyEnabled(true)
                       setStep('policyLoading')
                     }}
@@ -201,7 +267,32 @@ export function FullDetailsQuestionnaire() {
     return (
       <div ref={stepRef} className={styles.block}>
         <div className={styles.stepContent}>
-          <p className={styles.loadingText}>Finding relevant policy…</p>
+          {isPolicyLoading && (
+            <p className={styles.loadingText}>Finding relevant policy…</p>
+          )}
+          {policyError && !isPolicyLoading && (
+            <>
+              <p className={styles.errorText} role="alert">
+                Could not find relevant policy: {policyError}
+              </p>
+              <div className={styles.navBar}>
+                <div className={styles.navBarLeft}>
+                  <button type="button" onClick={() => setStep(fq1WasShownRef.current ? 'fq1' : 'q1')} className={styles.navBtn}>
+                    <span aria-hidden>←</span> Back
+                  </button>
+                </div>
+                <div className={styles.navBarRight}>
+                  <button
+                    type="button"
+                    onClick={() => setStep('policyQuestion')}
+                    className={styles.navBtn}
+                  >
+                    Skip &amp; Continue <span aria-hidden>→</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )
@@ -263,7 +354,7 @@ export function FullDetailsQuestionnaire() {
             </button>
           </div>
           <div className={styles.navBarRight}>
-            <button type="button" onClick={handleFq1Done} className={styles.navBtn} aria-label="Next question">
+            <button type="button" onClick={handleFq1Done} className={styles.navBtn} disabled={!report.full_details_q2?.trim()} aria-label="Next question">
               Next <span aria-hidden>→</span>
             </button>
           </div>

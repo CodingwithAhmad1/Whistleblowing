@@ -21,6 +21,11 @@ export const API_CONFIG = {
     ADMIN_INTAKE_GAPS_RESET: '/api/admin/intake-gaps/reset',
     ADMIN_LAST_ANALYSIS: '/api/admin/last-intake-analysis',
     RAG_POLICY_QUOTE: '/api/rag/policy-quote',
+    RAG_CONSTRUCT_SENTENCE: '/api/rag/construct-sentence',
+    ADMIN_GEMINI_TEST: '/api/admin/gemini-test',
+    ADMIN_TEST_PIPELINE: '/api/admin/test/ai-pipeline',
+    ADMIN_TEST_HISTORY: '/api/admin/test/history',
+    ADMIN_TEST_FIXTURES: '/api/admin/test/fixtures',
   },
 } as const
 

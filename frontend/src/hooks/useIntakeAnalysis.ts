@@ -24,14 +24,17 @@ function cacheKey(q1Text: string): string {
 export function useIntakeAnalysis(
   q1Text: string,
   enabled: boolean,
+  formData?: Record<string, string>,
 ): {
   followUpQuestions: FollowUpQuestion[]
   isLoading: boolean
+  hasAnalyzed: boolean
   error: string | null
   reset: () => void
 } {
   const [followUpQuestions, setFollowUpQuestions] = useState<FollowUpQuestion[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [hasAnalyzed, setHasAnalyzed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const cacheRef = useRef<Map<string, FollowUpQuestion[]>>(new Map())
   const abortRef = useRef<AbortController | null>(null)
@@ -44,6 +47,7 @@ export function useIntakeAnalysis(
     if (cached) {
       setFollowUpQuestions(cached)
       setIsLoading(false)
+      setHasAnalyzed(true)
       setError(null)
       return
     }
@@ -60,7 +64,10 @@ export function useIntakeAnalysis(
     fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.INTAKE_ANALYZE}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ q1_text: q1Text }),
+      body: JSON.stringify({
+        q1_text: q1Text,
+        ...(formData ? { form_data: formData } : {}),
+      }),
       signal: ac.signal,
     })
       .then(async (r) => {
@@ -71,6 +78,7 @@ export function useIntakeAnalysis(
         const questions = res?.follow_up_questions ?? []
         cacheRef.current.set(key, questions)
         setFollowUpQuestions(questions)
+        setHasAnalyzed(true)
       })
       .catch((e) => {
         if (e?.name !== 'AbortError') {
@@ -89,9 +97,10 @@ export function useIntakeAnalysis(
     abortRef.current?.abort()
     setFollowUpQuestions([])
     setIsLoading(false)
+    setHasAnalyzed(false)
     setError(null)
     cacheRef.current.clear()
   }
 
-  return { followUpQuestions, isLoading, error, reset }
+  return { followUpQuestions, isLoading, hasAnalyzed, error, reset }
 }

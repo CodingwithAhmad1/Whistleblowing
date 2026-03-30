@@ -123,10 +123,6 @@ def admin_add_intake_gap(body: dict[str, Any] = Body(default_factory=dict)):
     # Default active to True
     if "active" not in gap:
         gap["active"] = True
-    # Default template_conditional to None
-    if "template_conditional" not in gap:
-        gap["template_conditional"] = None
-
     current.append(gap)
     try:
         saved = update_intake_gaps(current)
@@ -189,7 +185,95 @@ def admin_reset_intake_gaps():
         raise HTTPException(status_code=500, detail="Failed to reset intake gaps")
 
 
+@router.post("/admin/gemini-test")
+def admin_gemini_test():
+    """Test the Gemini API connection by making a minimal LLM call."""
+    try:
+        from ..llm.genai_config import get_client
+        from google.genai import types
+
+        model = get_active_model()
+        client = get_client()
+        response = client.models.generate_content(
+            model=model,
+            contents="Say hi",
+            config=types.GenerateContentConfig(max_output_tokens=5),
+        )
+        text = response.text or ""
+        return {"success": True, "model": model, "response": text.strip(), "error": None}
+    except Exception as e:
+        error_msg = str(e)
+        # Sanitize: strip API key from error message if present
+        try:
+            from ..llm.genai_config import _last_configured_key
+            if _last_configured_key and _last_configured_key in error_msg:
+                error_msg = error_msg.replace(_last_configured_key, "***")
+        except Exception:
+            pass
+        logger.warning(f"Gemini test failed: {error_msg}")
+        return {"success": False, "model": None, "response": None, "error": error_msg}
+
+
 @router.get("/admin/last-intake-analysis")
 def admin_get_last_intake_analysis():
     """Return the most recent intake analysis result, or null if none has been run."""
     return {"result": get_last_analysis()}
+
+
+# ── AI Pipeline Diagnostics ──────────────────────────────────────────────────
+
+@router.get("/admin/test/fixtures")
+def admin_get_test_fixtures():
+    """Return available test fixtures for the AI pipeline test."""
+    from ..testing.fixtures import TEST_FIXTURES
+    return {"fixtures": TEST_FIXTURES}
+
+
+@router.post("/admin/test/ai-pipeline")
+async def admin_run_pipeline_test(body: dict[str, Any] = Body(default_factory=dict)):
+    """Run the AI pipeline test for one or all fixtures.
+
+    Body: { "fixture_id"?: str }
+    If fixture_id is provided, run only that fixture. Otherwise run all.
+    """
+    from ..testing.fixtures import TEST_FIXTURES
+    from ..testing.pipeline_runner import run_pipeline_test
+    from ..testing.history import append_test_result
+
+    fixture_id = body.get("fixture_id")
+
+    if fixture_id:
+        fixture = next((f for f in TEST_FIXTURES if f["id"] == fixture_id), None)
+        if not fixture:
+            raise HTTPException(status_code=404, detail=f"Fixture '{fixture_id}' not found")
+        fixtures_to_run = [fixture]
+    else:
+        fixtures_to_run = TEST_FIXTURES
+
+    results = []
+    for fixture in fixtures_to_run:
+        result = await run_pipeline_test(fixture)
+        results.append(result)
+        # Persist each result
+        try:
+            append_test_result(result)
+        except Exception:
+            logger.warning("Failed to persist test result", exc_info=True)
+
+    overall = "pass" if all(r["overall_status"] == "pass" for r in results) else "fail"
+    return {"overall_status": overall, "results": results}
+
+
+@router.get("/admin/test/history")
+def admin_get_test_history():
+    """Return stored test history."""
+    from ..testing.history import read_test_history
+    return {"history": read_test_history()}
+
+
+@router.delete("/admin/test/history")
+def admin_clear_test_history():
+    """Clear all test history."""
+    from ..testing.history import clear_test_history
+    clear_test_history()
+    return {"cleared": True}

@@ -8,8 +8,6 @@ Each gap defines:
 - active: whether gap is evaluated by default
 - criteria: deterministic check against Layer 1 extraction JSON
 - template: standard question text
-- template_conditional: optional variant (e.g. timeline with event reference);
-  may contain {event} placeholder filled via lightweight LLM call
 """
 
 DEFAULT_INTAKE_GAPS: list[dict] = [
@@ -27,10 +25,6 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "To clarify the sequence of events, could you describe what happened "
             "first and what happened next?"
         ),
-        "template_conditional": (
-            "To clarify the sequence of events, you mentioned {event}. "
-            "What occurred immediately before and after this?"
-        ),
     },
     {
         "id": "no_specific_example",
@@ -46,7 +40,7 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "For documentation purposes, could you provide a specific example "
             "of when this occurred?"
         ),
-        "template_conditional": None,
+
     },
     {
         "id": "no_evidence",
@@ -62,7 +56,7 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "To ensure accurate review, do you have any documents, emails, screenshots, "
             "or other materials related to this?"
         ),
-        "template_conditional": None,
+
     },
     {
         "id": "missing_date",
@@ -78,7 +72,7 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "To clarify timing, do you recall approximately when this occurred "
             "(month and year if possible)?"
         ),
-        "template_conditional": None,
+
     },
     {
         "id": "missing_individuals",
@@ -94,7 +88,7 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "For documentation purposes, were any specific individuals involved "
             "that you can name?"
         ),
-        "template_conditional": None,
+
     },
     {
         "id": "missing_location",
@@ -107,7 +101,7 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "threshold": None,
         },
         "template": "To ensure accurate review, where did this take place?",
-        "template_conditional": None,
+
     },
     {
         "id": "narrative_too_short",
@@ -123,7 +117,7 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "To better understand your report, could you provide more detail "
             "about what occurred?"
         ),
-        "template_conditional": None,
+
     },
 ]
 

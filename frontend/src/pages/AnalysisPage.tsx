@@ -48,9 +48,19 @@ interface IntakeGap {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const CRITERIA_TYPE_LABELS: Record<string, string> = {
-  boolean_false: 'Bool flag',
-  empty_array: 'Array empty',
-  length_threshold: 'Min length',
+  boolean_false: 'True/False Check',
+  empty_array: 'List Check',
+  length_threshold: 'Minimum Length',
+}
+
+const FIELD_DESCRIPTIONS: Record<string, string> = {
+  timeline_clear: 'Timeline clarity',
+  specific_examples_present: 'Specific examples',
+  evidence_described: 'Evidence described',
+  dates_mentioned: 'Dates mentioned',
+  people_mentioned: 'People mentioned',
+  locations_mentioned: 'Locations mentioned',
+  length_character_count: 'Narrative length',
 }
 
 const CRITERIA_TYPE_BADGE_CLASS: Record<string, string> = {
@@ -72,9 +82,10 @@ function formatTimestamp(iso: string): string {
 }
 
 function criteriaDescription(criteria: GapCriteria): string {
-  if (criteria.type === 'boolean_false') return `"${criteria.field}" is false`
-  if (criteria.type === 'empty_array') return `"${criteria.field}" is empty`
-  if (criteria.type === 'length_threshold') return `"${criteria.field}" < ${criteria.threshold} chars`
+  const fieldLabel = FIELD_DESCRIPTIONS[criteria.field] ?? criteria.field
+  if (criteria.type === 'boolean_false') return `${fieldLabel}: Not present`
+  if (criteria.type === 'empty_array') return `${fieldLabel}: None provided`
+  if (criteria.type === 'length_threshold') return `${fieldLabel}: Below ${criteria.threshold} characters`
   return criteria.type
 }
 
@@ -199,9 +210,6 @@ function GapConfigCard({ gap }: { gap: IntakeGap }) {
         <span className={styles.gapLabel}>{gap.label}</span>
         <span className={`${styles.criteriaBadge} ${badgeClass}`}>
           {CRITERIA_TYPE_LABELS[gap.criteria.type] ?? gap.criteria.type}
-        </span>
-        <span className={gap.active ? styles.badgeActive : styles.badgeInactive}>
-          {gap.active ? 'Active' : 'Off'}
         </span>
       </div>
       <div className={styles.gapCardBody}>

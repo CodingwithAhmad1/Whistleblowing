@@ -326,24 +326,6 @@
   color: #b45309;
 }
 
-.badgeActive {
-  font-size: 11px;
-  font-weight: 600;
-  color: white;
-  background: #16a34a;
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
-.badgeInactive {
-  font-size: 11px;
-  font-weight: 600;
-  color: #6b7280;
-  background: var(--color-border);
-  border-radius: 4px;
-  padding: 2px 6px;
-}
-
 .gapCardBody {
   padding: 0;
 }

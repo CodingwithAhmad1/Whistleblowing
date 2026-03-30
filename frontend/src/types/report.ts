@@ -101,6 +101,8 @@ export interface ReportData {
   full_details_q3: string
   full_details_q3_question: string   // 2nd follow-up question text (if any)
   policy_quote_matched: string       // matched policy quote from RAG
+  policy_section_matched: string     // section citation for matched policy quote
+  constructed_sentence: string       // LLM-generated summary for RAG query
   persons_concealing: string
 }
 
@@ -161,5 +163,7 @@ export const initialReportData: ReportData = {
   full_details_q3: '',
   full_details_q3_question: '',
   policy_quote_matched: '',
+  policy_section_matched: '',
+  constructed_sentence: '',
   persons_concealing: '',
 }

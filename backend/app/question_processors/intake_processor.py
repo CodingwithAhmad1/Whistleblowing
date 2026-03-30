@@ -3,7 +3,7 @@ Deterministic AI intake workflow – 3-layer pipeline for Full Details Q1 analys
 
 Layer 1: LLM extracts structured JSON from Q1 narrative.
 Layer 2: Deterministic gap analysis using Layer 1 JSON and gap configs (no LLM).
-Layer 3: Template-based question generation (one optional LLM call for conditional timeline).
+Layer 3: Template-based question generation.
 """
 
 import json
@@ -76,12 +76,43 @@ Output ONLY valid JSON matching this exact schema. No other text:
 
 Input text:
 {q1_text}
-
+{form_context}
 JSON output:"""
 
+# Fields from the form that provide useful context for extraction
+_CONTEXT_FIELDS: list[tuple[str, str]] = [
+    ("general_nature", "General nature of the issue"),
+    ("where_occurred", "Where the incident occurred"),
+    ("when_occurred", "When the incident occurred"),
+    ("duration", "Duration"),
+    ("how_aware", "How the reporter became aware"),
+    ("organization_tier", "Organization tier"),
+    ("country", "Country"),
+    ("incident_location", "Incident location"),
+    ("supervisor_involved", "Supervisor involvement"),
+    ("management_aware", "Management awareness"),
+]
 
-def _build_layer1_prompt(q1_text: str) -> str:
-    return _LAYER1_PROMPT_TEMPLATE.format(schema=_LAYER1_SCHEMA, q1_text=q1_text)
+
+def _build_form_context(form_data: dict | None) -> str:
+    """Build additional context from form fields for Layer 1 prompt."""
+    if not form_data:
+        return ""
+    lines: list[str] = []
+    for key, label in _CONTEXT_FIELDS:
+        val = form_data.get(key, "")
+        if val and isinstance(val, str) and val.strip():
+            lines.append(f"- {label}: {val.strip()}")
+    if not lines:
+        return ""
+    return "\nAdditional context from form fields (use only to disambiguate, not as primary source):\n" + "\n".join(lines) + "\n"
+
+
+def _build_layer1_prompt(q1_text: str, form_data: dict | None = None) -> str:
+    form_context = _build_form_context(form_data)
+    return _LAYER1_PROMPT_TEMPLATE.format(
+        schema=_LAYER1_SCHEMA, q1_text=q1_text, form_context=form_context
+    )
 
 
 def _parse_layer1_json(raw: str, q1_text: str) -> Layer1Result:
@@ -137,13 +168,17 @@ def _safe_layer1_defaults(q1_text: str) -> Layer1Result:
 class IntakeLayer1:
     """Layer 1: LLM extracts structured JSON from Q1 narrative."""
 
-    async def extract(self, q1_text: str) -> Layer1Result:
-        """Run Layer 1 extraction. Returns normalized Layer1Result."""
+    async def extract(self, q1_text: str, form_data: dict | None = None) -> Layer1Result:
+        """Run Layer 1 extraction. Returns normalized Layer1Result.
+
+        If form_data is provided, additional form fields are included as context
+        to help disambiguate the extraction (but Q1 text remains the primary source).
+        """
         q1_text = q1_text.strip()
         if not q1_text:
             raise ValueError("Q1 text is empty; cannot run intake analysis")
 
-        prompt = _build_layer1_prompt(q1_text)
+        prompt = _build_layer1_prompt(q1_text, form_data)
         provider = get_provider()
         raw = await collect_stream(provider, prompt, max_tokens=512)
         return _parse_layer1_json(raw, q1_text)
@@ -202,39 +237,16 @@ class IntakeLayer2:
 
 # ── Layer 3 – Template-based Question Generation ──────────────────────────────
 
-_TIMELINE_CONDITIONAL_PROMPT = """Given this whistleblowing narrative, identify the single most specific event mentioned.
-Output ONLY the event as a short noun phrase (5-10 words max). No quotes, no punctuation at the end.
-
-Narrative: {q1_text}
-
-Event:"""
-
-
-async def _fill_timeline_event(q1_text: str) -> str | None:
-    """Use lightweight LLM call to extract a specific event from Q1 for timeline template."""
-    prompt = _TIMELINE_CONDITIONAL_PROMPT.format(q1_text=q1_text[:800])
-    try:
-        provider = get_provider()
-        raw = await collect_stream(provider, prompt, max_tokens=30)
-        event = raw.strip().split("\n")[0].strip().rstrip(".")
-        return event if event else None
-    except Exception as e:
-        logger.warning(f"Timeline event extraction failed: {e}")
-        return None
-
-
 class IntakeLayer3:
-    """Layer 3: Template-based question generation with optional LLM for timeline conditional."""
+    """Layer 3: Template-based question generation."""
 
-    async def generate(
+    def generate(
         self,
-        q1_text: str,
-        layer1: Layer1Result,
         identified_gaps: list[str],
         gaps: list[dict] | None = None,
     ) -> list[FollowUpQuestion]:
         """
-        Generate up to 2 follow-up questions from gap templates.
+        Generate follow-up question from the top gap template.
         Returns list of FollowUpQuestion dicts.
         """
         if gaps is None:
@@ -249,32 +261,10 @@ class IntakeLayer3:
                 logger.warning(f"Gap id {gap_id!r} not found in config; skipping")
                 continue
 
-            question_text = await self._resolve_template(q1_text, layer1, gap)
-            question_text = question_text[:MAX_QUESTION_CHARS]
+            question_text = gap.get("template", "")[:MAX_QUESTION_CHARS]
             questions.append(FollowUpQuestion(gap_id=gap_id, question_text=question_text))
 
         return questions
-
-    async def _resolve_template(
-        self, q1_text: str, layer1: Layer1Result, gap: dict
-    ) -> str:
-        """Resolve the question text for a gap, using conditional template if applicable."""
-        template = gap.get("template", "")
-        template_conditional = gap.get("template_conditional")
-
-        # Only use conditional template for timeline_unclear when the gap has one
-        # and there is a partial timeline signal in Layer 1
-        if (
-            gap.get("id") == "timeline_unclear"
-            and template_conditional
-            and "{event}" in template_conditional
-            and (layer1.get("dates_mentioned") or layer1.get("summary"))
-        ):
-            event = await _fill_timeline_event(q1_text)
-            if event:
-                return template_conditional.replace("{event}", event)
-
-        return template
 
 
 # ── Orchestrator ──────────────────────────────────────────────────────────────
@@ -287,15 +277,17 @@ class IntakeProcessor:
         self._layer2 = IntakeLayer2()
         self._layer3 = IntakeLayer3()
 
-    async def process(self, q1_text: str) -> IntakeResult:
-        """Run full 3-layer pipeline on Q1 text. Returns combined IntakeResult."""
+    async def process(self, q1_text: str, form_data: dict | None = None) -> IntakeResult:
+        """Run full 3-layer pipeline on Q1 text. Returns combined IntakeResult.
+
+        If form_data is provided, additional form fields are passed to Layer 1
+        to enrich the extraction context.
+        """
         gaps = get_intake_gaps()
 
-        layer1_result = await self._layer1.extract(q1_text)
+        layer1_result = await self._layer1.extract(q1_text, form_data)
         identified_gaps = self._layer2.analyze(layer1_result, gaps)
-        follow_up_questions = await self._layer3.generate(
-            q1_text, layer1_result, identified_gaps, gaps
-        )
+        follow_up_questions = self._layer3.generate(identified_gaps, gaps)
 
         return IntakeResult(
             extraction=layer1_result,

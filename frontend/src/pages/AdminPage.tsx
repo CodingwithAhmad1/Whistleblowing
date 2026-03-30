@@ -1,147 +1,32 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { API_CONFIG } from '@/config'
 import styles from './AdminPage.module.css'
 
-// ─── Model Usage Types ───────────────────────────────────────────────────────
+// ─── Model Info Section (static) ────────────────────────────────────────────
 
-interface ModelUsageStat {
-  model: string
-  requests_used: number
-  requests_limit: number
-  tokens_used: number
-  tokens_limit: number
-  requests_pct: number
-  tokens_pct: number
-  exhausted: boolean
-}
-
-interface CumulativeSummary {
-  days_stored: number
-  total_requests: number
-  total_tokens: number
-  per_model: Record<string, { requests: number; tokens: number }>
-}
-
-interface UsageSummary {
-  date: string
-  active_model: string
-  models: ModelUsageStat[]
-  cumulative: CumulativeSummary
-}
-
-// ─── ModelCard ───────────────────────────────────────────────────────────────
-
-function barColor(pct: number): string {
-  if (pct >= 90) return '#b91c1c'
-  if (pct >= 70) return '#d97706'
-  return '#16a34a'
-}
-
-function ModelCard({ stat, isActive }: { stat: ModelUsageStat; isActive: boolean }) {
-  return (
-    <div className={styles.modelCard}>
-      <div className={styles.modelCardHeader}>
-        <span className={styles.modelName}>{stat.model}</span>
-        {stat.exhausted && <span className={styles.badgeExhausted}>Exhausted</span>}
-        {isActive && !stat.exhausted && <span className={styles.badgeActive}>Active</span>}
-      </div>
-      <div className={styles.barGroup}>
-        <span className={styles.barLabel}>
-          Requests: {stat.requests_used.toLocaleString()} / {stat.requests_limit.toLocaleString()} ({stat.requests_pct}%)
-        </span>
-        <div className={styles.barTrack}>
-          <div
-            className={styles.barFill}
-            style={{ width: `${Math.min(stat.requests_pct, 100)}%`, backgroundColor: barColor(stat.requests_pct) }}
-          />
-        </div>
-      </div>
-      <div className={styles.barGroup}>
-        <span className={styles.barLabel}>
-          Tokens (est.): {stat.tokens_used.toLocaleString()} / {stat.tokens_limit.toLocaleString()} ({stat.tokens_pct}%)
-        </span>
-        <div className={styles.barTrack}>
-          <div
-            className={styles.barFill}
-            style={{ width: `${Math.min(stat.tokens_pct, 100)}%`, backgroundColor: barColor(stat.tokens_pct) }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── CumulativeRow ───────────────────────────────────────────────────────────
-
-function CumulativeRow({ cumulative }: { cumulative: CumulativeSummary }) {
-  return (
-    <div className={styles.cumulativeRow}>
-      <span className={styles.cumulativeLabel}>
-        All-time total <span className={styles.cumulativeDays}>({cumulative.days_stored} day{cumulative.days_stored !== 1 ? 's' : ''} stored)</span>
-      </span>
-      <span className={styles.cumulativeStat}>
-        {cumulative.total_requests.toLocaleString()} requests
-      </span>
-      <span className={styles.cumulativeDivider}>·</span>
-      <span className={styles.cumulativeStat}>
-        {cumulative.total_tokens.toLocaleString()} tokens (est.)
-      </span>
-    </div>
-  )
-}
-
-// ─── ModelUsageSection ───────────────────────────────────────────────────────
-
-function ModelUsageSection() {
-  const [usage, setUsage] = useState<UsageSummary | null>(null)
-  const [usageError, setUsageError] = useState<string | null>(null)
-
-  const fetchUsage = () => {
-    const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_USAGE}`
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`Usage fetch failed: ${r.status}`)
-        return r.json()
-      })
-      .then((data: UsageSummary) => {
-        setUsage(data)
-        setUsageError(null)
-      })
-      .catch((e) => {
-        setUsageError(e instanceof Error ? e.message : 'Failed to load usage')
-      })
-  }
-
-  useEffect(() => {
-    fetchUsage()
-    const interval = setInterval(fetchUsage, 30_000)
-    return () => clearInterval(interval)
-  }, [])
-
+function ModelInfoSection() {
   return (
     <section className={styles.usageSection}>
       <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Model Usage</h2>
+        <h2 className={styles.sectionTitle}>Model Configuration</h2>
         <p className={styles.sectionDesc}>
-          Daily free-tier quota per model. The system automatically falls back to the next
-          model when one is exhausted. Refreshes every 30 seconds.
+          Automatic model fallback for free-tier quota management.
         </p>
       </div>
-      {usageError && <p className={styles.error}>{usageError}</p>}
-      {!usageError && !usage && <p className={styles.loading}>Loading usage…</p>}
-      {usage && (
-        <>
-          <p className={styles.usageMeta}>
-            {usage.date} &mdash; Active: <strong>{usage.active_model}</strong>
-          </p>
-          <div className={styles.modelCards}>
-            {usage.models.map((m) => (
-              <ModelCard key={m.model} stat={m} isActive={m.model === usage.active_model} />
-            ))}
-          </div>
-          <CumulativeRow cumulative={usage.cumulative} />
-        </>
-      )}
+      <div className={styles.modelInfoCard}>
+        <p>
+          <strong>Default model:</strong>{' '}
+          <code>gemini-2.5-flash-lite</code>
+        </p>
+        <p>
+          <strong>Fallback chain:</strong>{' '}
+          <code>gemini-2.0-flash</code> &rarr; <code>gemini-2.5-flash-lite</code> &rarr; <code>gemini-2.5-flash</code>
+        </p>
+        <p className={styles.sectionDesc} style={{ margin: 0 }}>
+          When the current model's daily free-tier quota is exhausted, the system automatically
+          falls back to the next available model. No manual intervention is required.
+        </p>
+      </div>
     </section>
   )
 }
@@ -161,7 +46,6 @@ interface IntakeGap {
   active: boolean
   criteria: GapCriteria
   template: string
-  template_conditional: string | null
 }
 
 const CRITERIA_TYPE_LABELS: Record<string, string> = {
@@ -170,41 +54,31 @@ const CRITERIA_TYPE_LABELS: Record<string, string> = {
   length_threshold: 'Min length',
 }
 
+const CRITERIA_FRIENDLY_LABELS: Record<string, string> = {
+  boolean_false: 'True/False Check',
+  empty_array: 'List Check',
+  length_threshold: 'Minimum Length',
+}
+
 const CRITERIA_TYPE_BADGE_CLASS: Record<string, string> = {
   boolean_false: styles.criteriaBadgeBool,
   empty_array: styles.criteriaBadgeArray,
   length_threshold: styles.criteriaBadgeLength,
 }
 
-const EMPTY_GAP: Omit<IntakeGap, 'id' | 'priority'> = {
-  label: '',
-  active: true,
-  criteria: { type: 'boolean_false', field: '', threshold: null },
-  template: '',
-  template_conditional: null,
-}
-
 function GapEditForm({
   gap,
   onSave,
   onCancel,
-  isNew,
 }: {
   gap: Partial<IntakeGap>
   onSave: (updated: Partial<IntakeGap>) => void
   onCancel: () => void
-  isNew?: boolean
 }) {
   const [local, setLocal] = useState<Partial<IntakeGap>>({ ...gap })
 
   const set = (key: keyof IntakeGap, value: unknown) =>
     setLocal((prev) => ({ ...prev, [key]: value }))
-
-  const setCriteria = (key: keyof GapCriteria, value: unknown) =>
-    setLocal((prev) => ({
-      ...prev,
-      criteria: { ...(prev.criteria ?? { type: 'boolean_false', field: '', threshold: null }), [key]: value },
-    }))
 
   const criteria = local.criteria ?? { type: 'boolean_false', field: '', threshold: null }
 
@@ -220,61 +94,21 @@ function GapEditForm({
             placeholder="e.g. Timeline Unclear"
           />
         </div>
-        <div className={styles.gapEditField} style={{ maxWidth: 80 }}>
-          <label className={styles.gapEditLabel}>Priority</label>
-          <input
-            className={styles.gapEditInput}
-            type="number"
-            min={1}
-            value={local.priority ?? ''}
-            onChange={(e) => set('priority', parseInt(e.target.value, 10) || 1)}
-          />
-        </div>
-        <div className={styles.gapEditField} style={{ maxWidth: 120 }}>
-          <label className={styles.gapEditLabel}>Active</label>
-          <label className={styles.gapActiveToggle} style={{ marginTop: 8 }}>
-            <input
-              type="checkbox"
-              checked={local.active ?? true}
-              onChange={(e) => set('active', e.target.checked)}
-            />
-            {local.active ? 'Yes' : 'No'}
-          </label>
-        </div>
       </div>
 
       <div className={styles.gapEditRow}>
         <div className={styles.gapEditField}>
           <label className={styles.gapEditLabel}>Criteria type</label>
-          <select
-            className={styles.gapEditSelect}
-            value={criteria.type}
-            onChange={(e) => setCriteria('type', e.target.value)}
-          >
-            <option value="boolean_false">Bool flag (field is false)</option>
-            <option value="empty_array">Array empty (array has no items)</option>
-            <option value="length_threshold">Min length (count &lt; threshold)</option>
-          </select>
-        </div>
-        <div className={styles.gapEditField}>
-          <label className={styles.gapEditLabel}>Layer 1 JSON field</label>
-          <input
-            className={styles.gapEditInput}
-            value={criteria.field}
-            onChange={(e) => setCriteria('field', e.target.value)}
-            placeholder="e.g. timeline_clear"
-          />
+          <span className={styles.gapEditStatic}>
+            {CRITERIA_FRIENDLY_LABELS[criteria.type] ?? criteria.type}
+          </span>
         </div>
         {criteria.type === 'length_threshold' && (
           <div className={styles.gapEditField} style={{ maxWidth: 100 }}>
             <label className={styles.gapEditLabel}>Threshold</label>
-            <input
-              className={styles.gapEditInput}
-              type="number"
-              min={0}
-              value={criteria.threshold ?? ''}
-              onChange={(e) => setCriteria('threshold', parseInt(e.target.value, 10) || 0)}
-            />
+            <span className={styles.gapEditStatic}>
+              {criteria.threshold ?? 0}
+            </span>
           </div>
         )}
       </div>
@@ -293,20 +127,6 @@ function GapEditForm({
         </span>
       </div>
 
-      <div className={styles.gapEditField}>
-        <label className={styles.gapEditLabel}>Conditional template (optional)</label>
-        <textarea
-          className={styles.gapEditTextarea}
-          value={local.template_conditional ?? ''}
-          onChange={(e) => set('template_conditional', e.target.value || null)}
-          placeholder="For timeline gap: use {event} placeholder. Leave empty to use main template only."
-          rows={3}
-        />
-        <span className={styles.helperText}>
-          Use <code>{'{event}'}</code> placeholder for AI-filled event reference. Only used for timeline-type gaps.
-        </span>
-      </div>
-
       <div className={styles.gapEditActions}>
         <button
           type="button"
@@ -314,7 +134,7 @@ function GapEditForm({
           onClick={() => onSave(local)}
           style={{ marginTop: 0 }}
         >
-          {isNew ? 'Add gap' : 'Save gap'}
+          Save
         </button>
         <button type="button" className={styles.editBtn} onClick={onCancel}>
           Cancel
@@ -332,11 +152,56 @@ function GapConfigSection() {
   const [saveStatus, setSaveStatus] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [showAddForm, setShowAddForm] = useState(false)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const [showResetModal, setShowResetModal] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   const [resetError, setResetError] = useState<string | null>(null)
+  // ── Pointer-based vertical drag-to-reorder ──
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const cardRectsRef = useRef<DOMRect[]>([])
+
+  const startDrag = (idx: number, e: ReactPointerEvent) => {
+    e.preventDefault()
+    const listEl = listRef.current
+    if (!listEl) return
+    const cards = Array.from(listEl.children) as HTMLElement[]
+    cardRectsRef.current = cards.map((c) => c.getBoundingClientRect())
+    setDragIdx(idx)
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const moveDrag = (e: ReactPointerEvent) => {
+    if (dragIdx === null) return
+    const rects = cardRectsRef.current
+    if (!rects.length) return
+    const currentY = e.clientY
+    // Find which card the pointer has crossed the midpoint of
+    let overIdx: number | null = null
+    for (let i = 0; i < rects.length; i++) {
+      if (i === dragIdx) continue
+      const mid = rects[i].top + rects[i].height / 2
+      // Only trigger when pointer crosses past the midpoint
+      if (i < dragIdx && currentY < mid) { overIdx = i; break }
+      if (i > dragIdx && currentY > mid) { overIdx = i }
+    }
+    setDragOverIdx(overIdx)
+  }
+
+  const endDrag = () => {
+    if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+      const next = [...gaps]
+      const [moved] = next.splice(dragIdx, 1)
+      next.splice(dragOverIdx, 0, moved)
+      const reordered = next.map((g, i) => ({ ...g, priority: i + 1 }))
+      setGaps(reordered)
+      saveGaps(reordered, true)
+    }
+    setDragIdx(null)
+    setDragOverIdx(null)
+    cardRectsRef.current = []
+  }
 
   const fetchGaps = useCallback(() => {
     setLoading(true)
@@ -355,8 +220,8 @@ function GapConfigSection() {
 
   useEffect(() => { fetchGaps() }, [fetchGaps])
 
-  const saveGaps = (nextGaps: IntakeGap[]) => {
-    setSaving(true)
+  const saveGaps = (nextGaps: IntakeGap[], silent = false) => {
+    if (!silent) setSaving(true)
     setSaveStatus(null)
     setSaveError(null)
     fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_INTAKE_GAPS}`, {
@@ -370,68 +235,35 @@ function GapConfigSection() {
       })
       .then((data) => {
         setGaps(data.gaps ?? nextGaps)
-        // Invalidate useIntakeAnalysis cache so subsequent report submissions
-        // pick up the new gap templates.
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('whistleblow_settingsModified', Date.now().toString())
         }
-        setSaveStatus('Saved.')
+        if (!silent) {
+          setSaveStatus('Saved.')
+          setTimeout(() => setSaveStatus(null), 2000)
+        }
       })
       .catch((e) => setSaveError(e instanceof Error ? e.message : 'Failed to save'))
-      .finally(() => setSaving(false))
-  }
-
-  const moveGap = (idx: number, dir: -1 | 1) => {
-    const next = [...gaps]
-    const target = idx + dir
-    if (target < 0 || target >= next.length) return
-    // Capture both originals before any mutation
-    const a = next[idx]
-    const b = next[target]
-    // Swap array positions while exchanging their priority values so the backend
-    // sort order stays consistent with what the user sees.
-    next[idx] = { ...b, priority: a.priority }
-    next[target] = { ...a, priority: b.priority }
-    setGaps(next)
-    setSaveStatus(null)
+      .finally(() => { if (!silent) setSaving(false) })
   }
 
   const handleEditSave = (id: string, updated: Partial<IntakeGap>) => {
-    const next = gaps.map((g) => (g.id === id ? { ...g, ...updated, id } : g))
+    const next = gaps.map((g) => (g.id === id ? { ...g, ...updated, active: true, id } : g))
     setGaps(next)
     setExpandedId(null)
-    setSaveStatus(null)
-  }
-
-  const handleToggleActive = (id: string) => {
-    setGaps((prev) => prev.map((g) => g.id === id ? { ...g, active: !g.active } : g))
-    setSaveStatus(null)
+    saveGaps(next)
   }
 
   const handleDelete = (id: string) => {
     if (pendingDeleteId === id) {
-      setGaps((prev) => prev.filter((g) => g.id !== id))
+      const next = gaps.filter((g) => g.id !== id)
+      setGaps(next)
       setPendingDeleteId(null)
       setSaveStatus(null)
+      saveGaps(next)
     } else {
       setPendingDeleteId(id)
     }
-  }
-
-  const handleAddSave = (newGap: Partial<IntakeGap>) => {
-    const maxPriority = Math.max(0, ...gaps.map((g) => g.priority))
-    const gap: IntakeGap = {
-      id: `gap_${Date.now()}`,
-      label: newGap.label ?? 'New Gap',
-      priority: maxPriority + 1,
-      active: newGap.active ?? true,
-      criteria: newGap.criteria ?? { type: 'boolean_false', field: '', threshold: null },
-      template: newGap.template ?? '',
-      template_conditional: newGap.template_conditional ?? null,
-    }
-    setGaps((prev) => [...prev, gap])
-    setShowAddForm(false)
-    setSaveStatus(null)
   }
 
   const handleReset = () => {
@@ -445,7 +277,7 @@ function GapConfigSection() {
       .then((data) => {
         setGaps(data.gaps ?? [])
         setShowResetModal(false)
-        setSaveStatus('Reset to defaults.')
+        setSaveStatus(null)
         setSaveError(null)
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('whistleblow_settingsModified', Date.now().toString())
@@ -454,6 +286,7 @@ function GapConfigSection() {
       .catch((e) => setResetError(e instanceof Error ? e.message : 'Reset failed'))
       .finally(() => setIsResetting(false))
   }
+
 
   if (loading) return <p className={styles.loading}>Loading gap configuration…</p>
   if (loadError) return <p className={styles.error}>{loadError} <button className={styles.editBtn} onClick={fetchGaps}>Retry</button></p>
@@ -475,7 +308,7 @@ function GapConfigSection() {
                 onClick={handleReset}
                 disabled={isResetting}
               >
-                {isResetting ? 'Resetting…' : 'Confirm'}
+                {isResetting ? 'Resetting\u2026' : 'Confirm'}
               </button>
               <button
                 type="button"
@@ -500,15 +333,36 @@ function GapConfigSection() {
         </button>
       </div>
 
-      <div className={styles.gapList}>
+      {saving && <span className={styles.gapAutoSaveStatus}>Saving...</span>}
+      {saveStatus && <span className={styles.gapAutoSaveStatus}>{saveStatus}</span>}
+      {saveError && <span className={styles.error}>{saveError}</span>}
+
+      <div
+        className={styles.gapList}
+        ref={listRef}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+      >
         {gaps.map((gap, idx) => {
           const isExpanded = expandedId === gap.id
           const badgeClass = CRITERIA_TYPE_BADGE_CLASS[gap.criteria.type] ?? ''
           const isPendingDelete = pendingDeleteId === gap.id
+          const isDragOver = dragOverIdx === idx && dragIdx !== null && dragIdx !== idx
+          const dragDirection = isDragOver ? (dragIdx < idx ? 'down' : 'up') : null
 
           return (
-            <div key={gap.id} className={styles.gapCard}>
+            <div
+              key={gap.id}
+              className={`${styles.gapCard}${dragDirection === 'down' ? ` ${styles.gapCardDragOverBottom}` : ''}${dragDirection === 'up' ? ` ${styles.gapCardDragOverTop}` : ''}`}
+            >
               <div className={styles.gapCardHeader}>
+                <span
+                  className={styles.dragHandle}
+                  onPointerDown={(e) => startDrag(idx, e)}
+                  title="Drag to reorder"
+                >
+                  &#x2630;
+                </span>
                 <span className={styles.gapPriority}>{gap.priority}</span>
 
                 <span className={styles.gapLabel}>{gap.label || <em>Untitled gap</em>}</span>
@@ -516,32 +370,6 @@ function GapConfigSection() {
                 <span className={`${styles.criteriaBadge} ${badgeClass}`}>
                   {CRITERIA_TYPE_LABELS[gap.criteria.type] ?? gap.criteria.type}
                 </span>
-
-                <label className={styles.gapActiveToggle}>
-                  <input
-                    type="checkbox"
-                    checked={gap.active}
-                    onChange={() => handleToggleActive(gap.id)}
-                  />
-                  {gap.active ? 'Active' : 'Off'}
-                </label>
-
-                <div className={styles.priorityBtns}>
-                  <button
-                    className={styles.priorityBtn}
-                    onClick={() => moveGap(idx, -1)}
-                    disabled={idx === 0}
-                    aria-label="Move up"
-                    title="Move up"
-                  >▲</button>
-                  <button
-                    className={styles.priorityBtn}
-                    onClick={() => moveGap(idx, 1)}
-                    disabled={idx === gaps.length - 1}
-                    aria-label="Move down"
-                    title="Move down"
-                  >▼</button>
-                </div>
 
                 <button
                   className={styles.editBtn}
@@ -571,11 +399,6 @@ function GapConfigSection() {
                   <span className={styles.templatePreviewText}>
                     {gap.template || <em className={styles.templateEmpty}>No template set</em>}
                   </span>
-                  {gap.template_conditional && (
-                    <span className={styles.templateConditionalPreview}>
-                      Conditional: {gap.template_conditional}
-                    </span>
-                  )}
                 </div>
               )}
 
@@ -590,39 +413,359 @@ function GapConfigSection() {
           )
         })}
       </div>
+    </div>
+  )
+}
 
-      {showAddForm ? (
-        <div className={styles.addGapSection}>
-          <p className={styles.addGapTitle}>Add new gap</p>
-          <GapEditForm
-            gap={{ ...EMPTY_GAP, priority: Math.max(0, ...gaps.map((g) => g.priority)) + 1 }}
-            onSave={handleAddSave}
-            onCancel={() => setShowAddForm(false)}
-            isNew
-          />
+// ─── Gemini Status Section ───────────────────────────────────────────────────
+
+function GeminiStatusSection() {
+  const [status, setStatus] = useState<'untested' | 'success' | 'error'>('untested')
+  const [testing, setTesting] = useState(false)
+  const [model, setModel] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const handleTest = () => {
+    setTesting(true)
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_GEMINI_TEST}`, { method: 'POST' })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Request failed: ${r.status}`)
+        return r.json()
+      })
+      .then((data: { success: boolean; model: string | null; error: string | null }) => {
+        if (data.success) {
+          setStatus('success')
+          setModel(data.model)
+          setErrorMsg(null)
+        } else {
+          setStatus('error')
+          setModel(null)
+          setErrorMsg(data.error || 'Unknown error')
+        }
+      })
+      .catch((e) => {
+        setStatus('error')
+        setModel(null)
+        setErrorMsg(e instanceof Error ? e.message : 'Network error')
+      })
+      .finally(() => setTesting(false))
+  }
+
+  const iconClass =
+    status === 'success'
+      ? styles.geminiIconSuccess
+      : status === 'error'
+        ? styles.geminiIconError
+        : styles.geminiIconUntested
+
+  return (
+    <section>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>Gemini Activated</h2>
+        <p className={styles.sectionDesc}>Test the live connection to the Gemini API.</p>
+      </div>
+      <div className={styles.geminiStatusCard}>
+        <span className={`${styles.geminiIcon} ${iconClass}`}>
+          {status === 'untested' && '\u2014'}
+          {status === 'success' && '\u2713'}
+          {status === 'error' && '\u2717'}
+        </span>
+        <div className={styles.geminiInfo}>
+          {status === 'untested' && <span>Not tested yet</span>}
+          {status === 'success' && <span>Connected &mdash; <strong>{model}</strong></span>}
+          {status === 'error' && <span className={styles.geminiErrorText}>{errorMsg}</span>}
         </div>
-      ) : (
-        <div style={{ marginTop: 'var(--space-12)' }}>
-          <button className={styles.addGapBtn} onClick={() => setShowAddForm(true)}>
-            + Add gap
+        <button
+          type="button"
+          className={styles.editBtn}
+          onClick={handleTest}
+          disabled={testing}
+        >
+          {testing ? 'Testing\u2026' : 'Test'}
+        </button>
+      </div>
+    </section>
+  )
+}
+
+// ─── AI Pipeline Diagnostics ────────────────────────────────────────────────
+
+interface TestFixture {
+  id: string
+  label: string
+  description: string
+  form_data: Record<string, string>
+}
+
+interface StepResult {
+  status: 'pass' | 'fail' | 'skip'
+  result: unknown
+  time_ms: number
+  error: string | null
+  violations?: string[]
+}
+
+interface TestResult {
+  fixture_id: string
+  fixture_label: string
+  timestamp: string
+  overall_status: 'pass' | 'fail' | 'partial'
+  total_time_ms: number
+  steps: {
+    intake_layer1_extraction: StepResult
+    intake_layer2_gaps: StepResult
+    intake_layer3_questions: StepResult
+    constructed_sentence: StepResult
+    rag_retrieval: StepResult
+  }
+}
+
+interface TestRunResponse {
+  overall_status: string
+  results: TestResult[]
+}
+
+const STEP_LABELS: Record<string, string> = {
+  intake_layer1_extraction: 'Step 1: Intake Extraction (Layer 1)',
+  intake_layer2_gaps: 'Step 2: Gap Analysis (Layer 2)',
+  intake_layer3_questions: 'Step 3: Question Generation (Layer 3)',
+  constructed_sentence: 'Step 4: Constructed Sentence',
+  rag_retrieval: 'Step 5: RAG Retrieval + Reranking',
+}
+
+function StepResultCard({ stepKey, step }: { stepKey: string; step: StepResult }) {
+  const [expanded, setExpanded] = useState(false)
+  const icon = step.status === 'pass' ? '\u2713' : step.status === 'fail' ? '\u2717' : '\u2014'
+  const colorClass = step.status === 'pass'
+    ? styles.diagStepPass
+    : step.status === 'fail'
+      ? styles.diagStepFail
+      : styles.diagStepSkip
+
+  return (
+    <div className={styles.diagStepCard}>
+      <div className={styles.diagStepHeader} onClick={() => setExpanded(!expanded)}>
+        <span className={colorClass}>{icon}</span>
+        <span className={styles.diagStepLabel}>{STEP_LABELS[stepKey] ?? stepKey}</span>
+        <span className={styles.diagStepTime}>{step.time_ms}ms</span>
+        <span className={styles.diagExpandIcon}>{expanded ? '\u25B2' : '\u25BC'}</span>
+      </div>
+      {expanded && (
+        <div className={styles.diagStepDetail}>
+          {step.error && <p className={styles.diagError}>Error: {step.error}</p>}
+          {step.violations && step.violations.length > 0 && (
+            <ul className={styles.diagViolations}>
+              {step.violations.map((v, i) => <li key={i}>{v}</li>)}
+            </ul>
+          )}
+          {step.result != null && (
+            <pre className={styles.diagPre}>
+              {typeof step.result === 'string' ? step.result : JSON.stringify(step.result, null, 2)}
+            </pre>
+          )}
+          {!step.error && step.result == null && !step.violations?.length && (
+            <p className={styles.diagMuted}>No output</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DiagnosticsSection() {
+  const [fixtures, setFixtures] = useState<TestFixture[]>([])
+  const [selectedFixture, setSelectedFixture] = useState<string>('__all__')
+  const [running, setRunning] = useState(false)
+  const [results, setResults] = useState<TestResult[] | null>(null)
+  const [runError, setRunError] = useState<string | null>(null)
+  const [history, setHistory] = useState<TestResult[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [elapsedMs, setElapsedMs] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current)
+      timerRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_TEST_FIXTURES}`)
+      .then((r) => r.json())
+      .then((data) => setFixtures(data.fixtures ?? []))
+      .catch(() => {})
+  }, [])
+
+  const fetchHistory = useCallback(() => {
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_TEST_HISTORY}`)
+      .then((r) => r.json())
+      .then((data) => setHistory((data.history ?? []).reverse()))
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => { fetchHistory() }, [fetchHistory])
+
+  useEffect(() => () => { stopTimer(); abortRef.current?.abort() }, [])
+
+  const handleRun = () => {
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    setRunning(true)
+    setResults(null)
+    setRunError(null)
+    setElapsedMs(0)
+
+    const start = Date.now()
+    timerRef.current = setInterval(() => setElapsedMs(Date.now() - start), 100)
+
+    const body = selectedFixture === '__all__' ? {} : { fixture_id: selectedFixture }
+
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_TEST_PIPELINE}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Test failed: ${r.status}`)
+        return r.json()
+      })
+      .then((data: TestRunResponse) => {
+        setResults(data.results)
+        fetchHistory()
+      })
+      .catch((e) => {
+        if (e instanceof DOMException && e.name === 'AbortError') {
+          setRunError('Test cancelled.')
+        } else {
+          setRunError(e instanceof Error ? e.message : 'Test run failed')
+        }
+      })
+      .finally(() => {
+        stopTimer()
+        setRunning(false)
+      })
+  }
+
+  const handleCancel = () => {
+    abortRef.current?.abort()
+  }
+
+  const handleClearHistory = () => {
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_TEST_HISTORY}`, { method: 'DELETE' })
+      .then(() => setHistory([]))
+      .catch(() => {})
+  }
+
+  return (
+    <section>
+      <div className={styles.sectionHeader}>
+        <h2 className={styles.sectionTitle}>AI Pipeline Diagnostics</h2>
+        <p className={styles.sectionDesc}>
+          Run an end-to-end test of the 5-step AI pipeline: intake extraction, gap analysis, question generation, constructed sentence, and RAG retrieval.
+        </p>
+      </div>
+
+      <div className={styles.diagControls}>
+        <select
+          className={styles.gapEditSelect}
+          value={selectedFixture}
+          onChange={(e) => setSelectedFixture(e.target.value)}
+          disabled={running}
+        >
+          <option value="__all__">Run all fixtures</option>
+          {fixtures.map((f) => (
+            <option key={f.id} value={f.id}>{f.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className={styles.saveBtn}
+          onClick={handleRun}
+          disabled={running}
+          style={{ marginTop: 0 }}
+        >
+          {running ? 'Running\u2026' : 'Run Test'}
+        </button>
+      </div>
+
+      {runError && <p className={styles.error}>{runError}</p>}
+
+      {running && (
+        <div className={styles.diagRunning}>
+          <p className={styles.loadingText}>
+            Running AI pipeline test… <span className={styles.diagTimer}>{(elapsedMs / 1000).toFixed(1)}s</span>
+          </p>
+          <button
+            type="button"
+            className={styles.diagCancelBtn}
+            onClick={handleCancel}
+            aria-label="Cancel test"
+            title="Cancel test"
+          >
+            &times;
           </button>
         </div>
       )}
 
-      <div className={styles.gapSaveRow}>
+      {results && results.map((result) => (
+        <div key={result.fixture_id} className={styles.diagResultCard}>
+          <div className={styles.diagResultHeader}>
+            <span className={
+              result.overall_status === 'pass' ? styles.diagStepPass
+                : result.overall_status === 'fail' ? styles.diagStepFail
+                  : styles.diagStepSkip
+            }>
+              {result.overall_status === 'pass' ? '\u2713' : result.overall_status === 'fail' ? '\u2717' : '\u2014'}
+            </span>
+            <strong>{result.fixture_label}</strong>
+            <span className={styles.diagStepTime}>{result.total_time_ms}ms total</span>
+          </div>
+          {Object.entries(result.steps).map(([key, step]) => (
+            <StepResultCard key={key} stepKey={key} step={step} />
+          ))}
+        </div>
+      ))}
+
+      <div className={styles.diagHistoryHeader}>
         <button
           type="button"
-          className={styles.saveBtn}
-          onClick={() => saveGaps(gaps)}
-          disabled={saving}
-          style={{ marginTop: 0 }}
+          className={styles.editBtn}
+          onClick={() => setShowHistory(!showHistory)}
         >
-          {saving ? 'Saving…' : 'Save gap changes'}
+          {showHistory ? 'Hide history' : `Show history (${history.length})`}
         </button>
-        {saveStatus && <span className={styles.gapSaveStatus}>{saveStatus}</span>}
-        {saveError && <span className={styles.gapSaveError}>{saveError}</span>}
+        {showHistory && history.length > 0 && (
+          <button type="button" className={styles.deleteBtn} onClick={handleClearHistory}>
+            Clear history
+          </button>
+        )}
       </div>
-    </div>
+
+      {showHistory && (
+        <div className={styles.diagHistoryList}>
+          {history.length === 0 && <p className={styles.diagMuted}>No test history yet.</p>}
+          {history.map((h, i) => (
+            <div key={i} className={styles.diagHistoryItem}>
+              <span className={
+                h.overall_status === 'pass' ? styles.diagStepPass : styles.diagStepFail
+              }>
+                {h.overall_status === 'pass' ? '\u2713' : '\u2717'}
+              </span>
+              <span>{h.fixture_label}</span>
+              <span className={styles.diagStepTime}>{h.total_time_ms}ms</span>
+              <span className={styles.diagMuted}>
+                {new Date(h.timestamp).toLocaleString()}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -631,8 +774,15 @@ export function AdminPage() {
     <div className={styles.container}>
       <h1 className={styles.title}>Admin Settings</h1>
       <p className={styles.subtitle}>
-        Configure intake gap types and monitor AI model quota usage.
+        Configure intake gap types and monitor AI model configuration.
       </p>
+
+      <GeminiStatusSection />
+
+      <hr className={styles.divider} />
+      <DiagnosticsSection />
+
+      <hr className={styles.divider} />
 
       <section>
         <div className={styles.sectionHeader}>
@@ -640,14 +790,14 @@ export function AdminPage() {
           <p className={styles.sectionDesc}>
             Define the gaps evaluated after Q1. The system selects the top 2 active gaps
             (by priority) and generates follow-up questions using the templates below.
-            Changes are staged locally — click <strong>Save gap changes</strong> to persist.
+            Changes save automatically. Drag cards to reorder priorities.
           </p>
         </div>
         <GapConfigSection />
       </section>
 
       <hr className={styles.divider} />
-      <ModelUsageSection />
+      <ModelInfoSection />
     </div>
   )
 }

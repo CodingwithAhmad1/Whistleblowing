@@ -1,18 +1,23 @@
-"""RAG endpoint for policy quote retrieval."""
+"""RAG endpoints for policy quote retrieval and constructed sentence generation."""
 
 import logging
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from ..rag.service import get_policy_rag_service
+from ..rag.sentence_builder import build_constructed_sentence
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/rag", tags=["rag"])
 
 
+# ── Request / Response models ────────────────────────────────────────────────
+
+
 class PolicyQuoteRequest(BaseModel):
     form_data: dict
+    constructed_sentence: str | None = None
 
 
 class PolicyQuoteResponse(BaseModel):
@@ -21,20 +26,53 @@ class PolicyQuoteResponse(BaseModel):
     error: str | None = None
 
 
+class ConstructSentenceRequest(BaseModel):
+    form_data: dict
+
+
+class ConstructSentenceResponse(BaseModel):
+    sentence: str
+    error: str | None = None
+
+
+# ── Endpoints ────────────────────────────────────────────────────────────────
+
+
+@router.post("/construct-sentence", response_model=ConstructSentenceResponse)
+def construct_sentence(req: ConstructSentenceRequest):
+    """Generate a constructed sentence from form data using Gemini LLM."""
+    try:
+        sentence = build_constructed_sentence(req.form_data)
+        if not sentence:
+            return ConstructSentenceResponse(sentence="", error="no_form_data")
+        return ConstructSentenceResponse(sentence=sentence)
+    except Exception as e:
+        logger.error(f"Construct sentence endpoint failed: {e}")
+        return ConstructSentenceResponse(sentence="", error=str(e))
+
+
 @router.post("/policy-quote", response_model=PolicyQuoteResponse)
-async def get_policy_quote(req: PolicyQuoteRequest):
-    """Retrieve the most relevant policy quote for the given form data."""
-    # Build query from semantic fields
-    parts = []
-    for key in ("full_details_q1", "full_details_q2", "general_nature", "where_occurred"):
-        val = req.form_data.get(key, "")
-        if val and isinstance(val, str) and val.strip():
-            parts.append(val.strip())
+def get_policy_quote(req: PolicyQuoteRequest):
+    """Retrieve the most relevant policy quote for the given form data.
 
-    if not parts:
-        return PolicyQuoteResponse(error="no_query_text")
+    If `constructed_sentence` is provided, uses it as the query.
+    Otherwise falls back to naive concatenation of semantic fields.
+    """
+    # Use constructed sentence if provided, otherwise build query from fields
+    if req.constructed_sentence and req.constructed_sentence.strip():
+        query_text = req.constructed_sentence.strip()
+    else:
+        parts = []
+        for key in ("full_details_q1", "full_details_q2", "general_nature", "where_occurred"):
+            val = req.form_data.get(key, "")
+            if val and isinstance(val, str) and val.strip():
+                parts.append(val.strip())
 
-    query_text = " ".join(parts)
+        if not parts:
+            return PolicyQuoteResponse(error="no_query_text")
+
+        query_text = " ".join(parts)
+
     service = get_policy_rag_service()
     result = service.query(query_text)
 

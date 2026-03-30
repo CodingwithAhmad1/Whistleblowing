@@ -264,7 +264,6 @@ valid_gap = {
     "active": True,
     "criteria": {"type": "boolean_false", "field": "timeline_clear", "threshold": None},
     "template": "Can you describe the timeline?",
-    "template_conditional": None,
 }
 try:
     _validate_gap(valid_gap)
@@ -335,10 +334,8 @@ async def test_layer3_truncation():
         "active": True,
         "criteria": {"type": "boolean_false", "field": "timeline_clear", "threshold": None},
         "template": "X" * 500,  # over limit
-        "template_conditional": None,
     }
-    layer1 = _safe_layer1_defaults("short q1")
-    questions = await layer3.generate("short q1", layer1, ["long_gap"], [long_gap])
+    questions = layer3.generate(["long_gap"], [long_gap])
     assert len(questions) == 1
     assert len(questions[0]["question_text"]) <= MAX_QUESTION_CHARS
     return f"Question truncated to {len(questions[0]['question_text'])} chars"
