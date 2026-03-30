@@ -2,35 +2,6 @@ import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPoi
 import { API_CONFIG } from '@/config'
 import styles from './AdminPage.module.css'
 
-// ─── Model Info Section (static) ────────────────────────────────────────────
-
-function ModelInfoSection() {
-  return (
-    <section className={styles.usageSection}>
-      <div className={styles.sectionHeader}>
-        <h2 className={styles.sectionTitle}>Model Configuration</h2>
-        <p className={styles.sectionDesc}>
-          Automatic model fallback for free-tier quota management.
-        </p>
-      </div>
-      <div className={styles.modelInfoCard}>
-        <p>
-          <strong>Default model:</strong>{' '}
-          <code>gemini-2.5-flash-lite</code>
-        </p>
-        <p>
-          <strong>Fallback chain:</strong>{' '}
-          <code>gemini-2.0-flash</code> &rarr; <code>gemini-2.5-flash-lite</code> &rarr; <code>gemini-2.5-flash</code>
-        </p>
-        <p className={styles.sectionDesc} style={{ margin: 0 }}>
-          When the current model's daily free-tier quota is exhausted, the system automatically
-          falls back to the next available model. No manual intervention is required.
-        </p>
-      </div>
-    </section>
-  )
-}
-
 // ─── Intake Gap Configuration ─────────────────────────────────────────────────
 
 interface GapCriteria {
@@ -104,11 +75,17 @@ function GapEditForm({
           </span>
         </div>
         {criteria.type === 'length_threshold' && (
-          <div className={styles.gapEditField} style={{ maxWidth: 100 }}>
-            <label className={styles.gapEditLabel}>Threshold</label>
-            <span className={styles.gapEditStatic}>
-              {criteria.threshold ?? 0}
-            </span>
+          <div className={styles.gapEditField} style={{ maxWidth: 120 }}>
+            <label className={styles.gapEditLabel}>Min characters</label>
+            <input
+              type="number"
+              className={styles.gapEditInput}
+              min={1}
+              value={criteria.threshold ?? 0}
+              onChange={(e) =>
+                set('criteria', { ...criteria, threshold: Math.max(1, parseInt(e.target.value, 10) || 0) })
+              }
+            />
           </div>
         )}
       </div>
@@ -279,6 +256,8 @@ function GapConfigSection() {
         setShowResetModal(false)
         setSaveStatus(null)
         setSaveError(null)
+        setExpandedId(null)
+        setPendingDeleteId(null)
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('whistleblow_settingsModified', Date.now().toString())
         }
@@ -304,19 +283,19 @@ function GapConfigSection() {
             <div className={styles.modalActions}>
               <button
                 type="button"
-                className={styles.deleteBtn}
-                onClick={handleReset}
-                disabled={isResetting}
-              >
-                {isResetting ? 'Resetting\u2026' : 'Confirm'}
-              </button>
-              <button
-                type="button"
                 className={styles.editBtn}
                 onClick={() => { setShowResetModal(false); setResetError(null) }}
                 disabled={isResetting}
               >
                 Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.modalConfirmBtn}
+                onClick={handleReset}
+                disabled={isResetting}
+              >
+                {isResetting ? 'Resetting\u2026' : 'Confirm'}
               </button>
             </div>
           </div>
@@ -774,7 +753,7 @@ export function AdminPage() {
     <div className={styles.container}>
       <h1 className={styles.title}>Admin Settings</h1>
       <p className={styles.subtitle}>
-        Configure intake gap types and monitor AI model configuration.
+        Configure intake gap types and monitor AI pipeline health.
       </p>
 
       <GeminiStatusSection />
@@ -796,8 +775,6 @@ export function AdminPage() {
         <GapConfigSection />
       </section>
 
-      <hr className={styles.divider} />
-      <ModelInfoSection />
     </div>
   )
 }

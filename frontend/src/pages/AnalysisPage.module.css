@@ -326,6 +326,28 @@
   color: #b45309;
 }
 
+/* ── Gap status badges ─────────────────────────────────────────────────────── */
+
+.gapStatusTrue {
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  background: #dcfce7;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-left: auto;
+}
+
+.gapStatusFalse {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b91c1c;
+  background: #fee2e2;
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-left: auto;
+}
+
 .gapCardBody {
   padding: 0;
 }

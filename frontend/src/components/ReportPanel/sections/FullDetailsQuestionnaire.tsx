@@ -7,7 +7,7 @@ import { FormField } from './FormField'
 import styles from './FullDetailsQuestionnaire.module.css'
 
 const Q1_LABEL = 'Please describe what happened in your own words.'
-const Q3_QUESTION = 'How closely does this policy match your incident?'
+const Q3_QUESTION = 'Do you believe this policy has been violated? If Yes, to what extent?'
 
 type Step = 'q1' | 'analyzing' | 'fq1' | 'constructing' | 'policyLoading' | 'policyQuestion' | 'review'
 

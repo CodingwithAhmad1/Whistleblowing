@@ -52,10 +52,12 @@ _KNOWN_SECTIONS = {
     "speaking for the company",
     "be accurate",
     "accurate books and records",
+    "discrimination",
     "money laundering",
     "global trade compliance",
     "be respectful",
     "harassment and disrespectful behavior",
+    "forced labor and human trafficking",
     "workplace safety",
     "sustainability",
     "be loyal",
@@ -132,15 +134,21 @@ _ARTIFACT_PATTERNS = [
 def _strip_nav_bar(text: str) -> str:
     """Remove navigation bars, footers, and sidebar artifacts from extracted text."""
     lines = text.split("\n")
+    is_nav = [bool(_NAV_FRAGMENTS.match(l.strip())) for l in lines]
     cleaned = []
-    for line in lines:
+    for i, line in enumerate(lines):
         stripped = line.strip()
         if _NAV_BAR_RE.match(stripped):
             continue
-        if _NAV_FRAGMENTS.match(stripped):
-            continue
         if any(pat.match(stripped) for pat in _ARTIFACT_PATTERNS):
             continue
+        # Only strip nav fragment lines that appear adjacent to other nav fragments
+        # (i.e. part of the sidebar cluster). An isolated "Be Respectful" that
+        # appears after real content is a genuine section header — keep it.
+        if is_nav[i]:
+            adjacent = (i > 0 and is_nav[i - 1]) or (i < len(lines) - 1 and is_nav[i + 1])
+            if adjacent:
+                continue
         cleaned.append(line)
     return "\n".join(cleaned)
 
@@ -217,6 +225,23 @@ def chunk_pages(pages: list[dict]) -> list[dict]:
             # Check for section headers within the paragraph
             lines = para.split("\n")
             first_line = lines[0].strip() if lines else ""
+
+            # Also try joining the first two lines — the PDF sometimes wraps
+            # section titles across lines (e.g. "Harassment and \nDisrespectful Behavior")
+            if not _is_likely_header(first_line) and len(lines) > 1:
+                combined = (first_line + " " + lines[1].strip()).strip()
+                if combined.lower() in _KNOWN_SECTIONS:
+                    first_line = combined
+                    lines = [combined] + lines[2:]
+
+            # Scan remaining lines for a known section header embedded mid-paragraph.
+            # This handles pages where a sidebar precedes the real section heading,
+            # causing pdfplumber to merge both into one block (e.g. page 50 "Be Respectful").
+            if not _is_likely_header(first_line):
+                for ln in lines[1:]:
+                    if ln.strip().lower() in _KNOWN_SECTIONS:
+                        first_line = ln.strip()
+                        break
 
             if _is_likely_header(first_line):
                 # Flush buffer before starting new section

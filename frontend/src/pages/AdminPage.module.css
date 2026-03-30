@@ -124,12 +124,6 @@
   color: #b91c1c;
 }
 
-/* ─── Model Info Section ─────────────────────────────────────────────────── */
-
-.usageSection {
-  margin-top: 0;
-}
-
 .sectionTitle {
   font-size: var(--text-md);
   font-weight: 600;
@@ -143,30 +137,6 @@
   color: var(--color-text-muted);
   margin: 0;
   line-height: 1.5;
-}
-
-.modelInfoCard {
-  border: 1px solid var(--color-border, #e5e7eb);
-  border-radius: 8px;
-  padding: var(--space-16) var(--space-24);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-12);
-}
-
-.modelInfoCard p {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text);
-  line-height: 1.5;
-}
-
-.modelInfoCard code {
-  font-family: monospace;
-  font-size: var(--text-sm);
-  background: var(--color-surface-alt, #f9fafb);
-  padding: 2px 6px;
-  border-radius: 4px;
 }
 
 /* ─── Gap Configuration Section ──────────────────────────────────────────── */
@@ -480,6 +450,28 @@
 .modalActions {
   display: flex;
   gap: var(--space-8);
+}
+
+.modalConfirmBtn {
+  background: none;
+  border: 1px solid var(--color-accent, #2563eb);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-accent, #2563eb);
+  transition: background 0.1s;
+}
+
+.modalConfirmBtn:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.modalConfirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ─── AI Pipeline Diagnostics ────────────────────────────────────────────── */

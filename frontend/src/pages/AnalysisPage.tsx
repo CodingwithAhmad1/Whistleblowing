@@ -153,6 +153,14 @@ function Layer1Card({ extraction }: { extraction: Layer1Extraction }) {
   )
 }
 
+function formatGapId(id: string): string {
+  // Turn slug IDs like "timeline_unclear" or "gap_1772801924087" into readable labels
+  return id
+    .replace(/^gap_\d+$/, 'Unknown Gap')
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 function Layer2Card({ gapIds, gapMap }: { gapIds: string[]; gapMap: Map<string, IntakeGap> }) {
   return (
     <Card title="Layer 2 — Gap Analysis">
@@ -164,10 +172,14 @@ function Layer2Card({ gapIds, gapMap }: { gapIds: string[]; gapMap: Map<string, 
             const gap = gapMap.get(id)
             return (
               <li key={id} className={styles.gapResultItem}>
-                <span className={styles.gapResultLabel}>{gap?.label ?? id}</span>
-                {gap && (
+                <span className={styles.gapResultLabel}>{gap?.label ?? formatGapId(id)}</span>
+                {gap ? (
                   <span className={styles.gapResultCriteria}>
                     Triggered because: {criteriaDescription(gap.criteria)}
+                  </span>
+                ) : (
+                  <span className={styles.gapResultCriteria}>
+                    Gap config no longer exists — re-run analysis for updated results.
                   </span>
                 )}
               </li>
@@ -190,7 +202,7 @@ function Layer3Card({ questions, gapMap }: { questions: FollowUpQuestion[]; gapM
             const gap = gapMap.get(q.gap_id)
             return (
               <li key={q.gap_id} className={styles.questionItem}>
-                <span className={styles.questionGapTag}>{gap?.label ?? q.gap_id}</span>
+                <span className={styles.questionGapTag}>{gap?.label ?? formatGapId(q.gap_id)}</span>
                 <p className={styles.questionText}>{q.question_text}</p>
               </li>
             )
@@ -201,7 +213,46 @@ function Layer3Card({ questions, gapMap }: { questions: FollowUpQuestion[]; gapM
   )
 }
 
-function GapConfigCard({ gap }: { gap: IntakeGap }) {
+function GapStatusBadge({ gap, extraction }: { gap: IntakeGap; extraction: Layer1Extraction | null }) {
+  if (!extraction) return null
+
+  const field = gap.criteria.field as keyof Layer1Extraction
+  const value = extraction[field]
+
+  if (gap.criteria.type === 'boolean_false') {
+    const boolVal = value as boolean
+    return (
+      <span className={boolVal ? styles.gapStatusTrue : styles.gapStatusFalse}>
+        {boolVal ? 'True' : 'False'}
+      </span>
+    )
+  }
+
+  if (gap.criteria.type === 'empty_array') {
+    const arr = value as string[]
+    const present = arr && arr.length > 0
+    return (
+      <span className={present ? styles.gapStatusTrue : styles.gapStatusFalse}>
+        {present ? 'Present' : 'Not Present'}
+      </span>
+    )
+  }
+
+  if (gap.criteria.type === 'length_threshold') {
+    const count = value as number
+    const threshold = gap.criteria.threshold ?? 0
+    const passing = count >= threshold
+    return (
+      <span className={passing ? styles.gapStatusTrue : styles.gapStatusFalse}>
+        {count} {passing ? '≥' : '<'} {threshold}
+      </span>
+    )
+  }
+
+  return null
+}
+
+function GapConfigCard({ gap, extraction }: { gap: IntakeGap; extraction: Layer1Extraction | null }) {
   const badgeClass = CRITERIA_TYPE_BADGE_CLASS[gap.criteria.type] ?? ''
   return (
     <div className={styles.gapCard}>
@@ -211,6 +262,7 @@ function GapConfigCard({ gap }: { gap: IntakeGap }) {
         <span className={`${styles.criteriaBadge} ${badgeClass}`}>
           {CRITERIA_TYPE_LABELS[gap.criteria.type] ?? gap.criteria.type}
         </span>
+        <GapStatusBadge gap={gap} extraction={extraction} />
       </div>
       <div className={styles.gapCardBody}>
         <div className={styles.fieldRow}>
@@ -349,7 +401,7 @@ export function AnalysisPage() {
         )}
         {!gapsLoading && !gapsError && gaps.length > 0 && (
           <div className={styles.gapList}>
-            {gaps.map((gap) => <GapConfigCard key={gap.id} gap={gap} />)}
+            {gaps.map((gap) => <GapConfigCard key={gap.id} gap={gap} extraction={analysisResult?.extraction ?? null} />)}
           </div>
         )}
       </section>

@@ -426,7 +426,7 @@ export function generateReportPdf(report: ReportData): void {
         }
         y = drawQA(
           doc,
-          q3Question || 'How closely does this policy match your incident?',
+          q3Question || 'Do you believe this policy has been violated? If Yes, to what extent?',
           q3Answer,
           y,
         )
