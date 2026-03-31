@@ -10,7 +10,13 @@ from pathlib import Path
 from filelock import FileLock
 
 from ..prompts.display_content import FULL_DETAILS_Q3_POLICY_EXCERPT
-from ..prompts.intake_gaps import DEFAULT_INTAKE_GAPS, VALID_CRITERIA_TYPES
+from ..prompts.intake_gaps import (
+    CRITERIA_FIELD_COMPAT,
+    DEFAULT_INTAKE_GAPS,
+    LAYER1_FIELD_TYPES,
+    VALID_CRITERIA_TYPES,
+    VALID_LAYER1_FIELDS,
+)
 from ..question_processors.report_utils import has_value
 
 logger = logging.getLogger(__name__)
@@ -91,6 +97,19 @@ def _validate_gap(gap: dict) -> None:
         raise ValueError(f"Gap criteria 'type' must be one of: {VALID_CRITERIA_TYPES}")
     if not isinstance(criteria.get("field"), str) or not criteria["field"].strip():
         raise ValueError("Gap criteria 'field' must be a non-empty string")
+    if criteria["field"] not in VALID_LAYER1_FIELDS:
+        raise ValueError(
+            f"Gap criteria 'field' must be one of: {sorted(VALID_LAYER1_FIELDS)}"
+        )
+    # Validate criteria type is compatible with the field's logical type
+    field_type = LAYER1_FIELD_TYPES.get(criteria["field"])
+    allowed_field_types = CRITERIA_FIELD_COMPAT.get(criteria["type"], set())
+    if field_type and allowed_field_types and field_type not in allowed_field_types:
+        raise ValueError(
+            f"Criteria type {criteria['type']!r} is not compatible with field "
+            f"{criteria['field']!r} (type {field_type!r}). "
+            f"Compatible field types: {sorted(allowed_field_types)}"
+        )
     if criteria["type"] == "length_threshold":
         threshold = criteria.get("threshold")
         if not isinstance(threshold, (int, float)) or threshold < 0:
@@ -104,12 +123,17 @@ def update_intake_gaps(gaps: list[dict]) -> list[dict]:
     if not isinstance(gaps, list):
         raise ValueError("gaps must be a list")
     ids_seen: set[str] = set()
+    priorities_seen: set[int] = set()
     for gap in gaps:
         _validate_gap(gap)
         gid = gap["id"]
         if gid in ids_seen:
             raise ValueError(f"Duplicate gap id: {gid!r}")
         ids_seen.add(gid)
+        pri = gap["priority"]
+        if pri in priorities_seen:
+            raise ValueError(f"Duplicate gap priority: {pri}")
+        priorities_seen.add(pri)
 
     lock_path = SETTINGS_FILE.with_suffix(SETTINGS_FILE.suffix + ".lock")
     lock = FileLock(lock_path)

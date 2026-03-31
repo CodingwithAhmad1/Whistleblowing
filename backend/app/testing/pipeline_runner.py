@@ -125,9 +125,9 @@ async def run_pipeline_test(fixture: dict) -> dict:
 
     # Step 3: Intake Layer 3 — Question Generation
     if extraction and identified_gaps:
-        step3 = await _run_step_async(
+        step3 = _run_step(
             "intake_layer3_questions",
-            _intake_processor._layer3.generate(q1_text, extraction, identified_gaps, gaps_config),
+            lambda: _intake_processor._layer3.generate(identified_gaps, gaps_config),
         )
         # Serialize TypedDicts
         if step3["result"] is not None:

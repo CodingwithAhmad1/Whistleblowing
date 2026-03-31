@@ -7,8 +7,18 @@ import { useReport } from '@/context/ReportContext'
 import { generateReportPdf } from '@/utils/generateReportPdf'
 import styles from './ReportPanel.module.css'
 
+const PIPELINE_LABELS: Record<string, string> = {
+  analyzing: 'Analyzing your report\u2026',
+  constructing: 'Building case summary\u2026',
+  policyLoading: 'Finding relevant policy\u2026',
+}
+
 export function ReportPanel() {
-  const { report } = useReport()
+  const { report, pipelineStatus } = useReport()
+
+  const isProcessing = pipelineStatus === 'analyzing' || pipelineStatus === 'constructing' || pipelineStatus === 'policyLoading'
+  const hasError = pipelineStatus === 'error'
+  const canSubmit = !isProcessing && !hasError
 
   const handleSubmit = () => {
     generateReportPdf(report)
@@ -49,13 +59,24 @@ export function ReportPanel() {
             <Incident />
           </FormSection>
 
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className={styles.submitButton}
-          >
-            Submit
-          </button>
+          <div className={styles.submitArea}>
+            {isProcessing && (
+              <p className={styles.statusText}>{PIPELINE_LABELS[pipelineStatus]}</p>
+            )}
+            {hasError && (
+              <p className={styles.statusError}>
+                A pipeline step encountered an error. Please resolve or skip it in the questionnaire above.
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className={styles.submitButton}
+              disabled={!canSubmit}
+            >
+              Submit
+            </button>
+          </div>
         </div>
       </div>
     </div>

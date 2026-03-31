@@ -25,17 +25,29 @@ const CRITERIA_TYPE_LABELS: Record<string, string> = {
   length_threshold: 'Min length',
 }
 
-const CRITERIA_FRIENDLY_LABELS: Record<string, string> = {
-  boolean_false: 'True/False Check',
-  empty_array: 'List Check',
-  length_threshold: 'Minimum Length',
-}
-
 const CRITERIA_TYPE_BADGE_CLASS: Record<string, string> = {
   boolean_false: styles.criteriaBadgeBool,
   empty_array: styles.criteriaBadgeArray,
   length_threshold: styles.criteriaBadgeLength,
 }
+
+const LAYER1_FIELDS: { value: string; label: string }[] = [
+  { value: 'summary', label: 'Summary (string)' },
+  { value: 'dates_mentioned', label: 'Dates mentioned (array)' },
+  { value: 'people_mentioned', label: 'People mentioned (array)' },
+  { value: 'locations_mentioned', label: 'Locations mentioned (array)' },
+  { value: 'specific_examples_present', label: 'Specific examples present (bool)' },
+  { value: 'evidence_described', label: 'Evidence described (bool)' },
+  { value: 'timeline_clear', label: 'Timeline clear (bool)' },
+  { value: 'allegation_type', label: 'Allegation type (array)' },
+  { value: 'length_character_count', label: 'Character count (number)' },
+]
+
+const CRITERIA_TYPES: { value: GapCriteria['type']; label: string }[] = [
+  { value: 'boolean_false', label: 'True/False Check' },
+  { value: 'empty_array', label: 'List Check' },
+  { value: 'length_threshold', label: 'Minimum Length' },
+]
 
 function GapEditForm({
   gap,
@@ -70,9 +82,34 @@ function GapEditForm({
       <div className={styles.gapEditRow}>
         <div className={styles.gapEditField}>
           <label className={styles.gapEditLabel}>Criteria type</label>
-          <span className={styles.gapEditStatic}>
-            {CRITERIA_FRIENDLY_LABELS[criteria.type] ?? criteria.type}
-          </span>
+          <select
+            className={styles.gapEditInput}
+            value={criteria.type}
+            onChange={(e) =>
+              set('criteria', {
+                ...criteria,
+                type: e.target.value as GapCriteria['type'],
+                threshold: e.target.value === 'length_threshold' ? (criteria.threshold ?? 300) : null,
+              })
+            }
+          >
+            {CRITERIA_TYPES.map((ct) => (
+              <option key={ct.value} value={ct.value}>{ct.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.gapEditField}>
+          <label className={styles.gapEditLabel}>Target field</label>
+          <select
+            className={styles.gapEditInput}
+            value={criteria.field}
+            onChange={(e) => set('criteria', { ...criteria, field: e.target.value })}
+          >
+            <option value="">— select field —</option>
+            {LAYER1_FIELDS.map((f) => (
+              <option key={f.value} value={f.value}>{f.label}</option>
+            ))}
+          </select>
         </div>
         {criteria.type === 'length_threshold' && (
           <div className={styles.gapEditField} style={{ maxWidth: 120 }}>
@@ -767,8 +804,8 @@ export function AdminPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Gap Configuration</h2>
           <p className={styles.sectionDesc}>
-            Define the gaps evaluated after Q1. The system selects the top 2 active gaps
-            (by priority) and generates follow-up questions using the templates below.
+            Define the gaps evaluated after Q1. The system selects the top 1 active gap
+            (by priority) and generates a follow-up question using the template below.
             Changes save automatically. Drag cards to reorder priorities.
           </p>
         </div>

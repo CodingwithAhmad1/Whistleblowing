@@ -147,11 +147,16 @@ from app.prompts.intake_gaps import DEFAULT_INTAKE_GAPS
 
 layer2 = IntakeLayer2()
 
-# Test: empty narrative → top 2 priority gaps (timeline_unclear + no_specific_example)
-empty_layer1 = _safe_layer1_defaults("short")
+# Test: empty narrative → top priority gap (timeline_unclear)
+# Note: use explicit Layer1Result, not _safe_layer1_defaults() which sets _used_defaults=True
+empty_layer1 = Layer1Result(
+    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
+    specific_examples_present=False, evidence_described=False, timeline_clear=False,
+    allegation_type=[], length_character_count=len("short"), _used_defaults=False,
+)
 gaps = layer2.analyze(empty_layer1, DEFAULT_INTAKE_GAPS)
-assert gaps == ["timeline_unclear", "no_specific_example"], f"Unexpected gaps: {gaps}"
-ok("Empty narrative returns top-2 priority gaps", str(gaps))
+assert gaps == ["timeline_unclear"], f"Unexpected gaps: {gaps}"
+ok("Empty narrative returns top-priority gap", str(gaps))
 
 # Test: complete narrative → no gaps
 full_layer1 = Layer1Result(
@@ -164,6 +169,7 @@ full_layer1 = Layer1Result(
     timeline_clear=True,
     allegation_type=["fraud"],
     length_character_count=500,
+    _used_defaults=False,
 )
 gaps = layer2.analyze(full_layer1, DEFAULT_INTAKE_GAPS)
 assert gaps == [], f"Expected no gaps, got {gaps}"
@@ -180,31 +186,64 @@ short_but_detailed = Layer1Result(
     timeline_clear=True,
     allegation_type=[],
     length_character_count=100,  # under 300 threshold
+    _used_defaults=False,
 )
 gaps = layer2.analyze(short_but_detailed, DEFAULT_INTAKE_GAPS)
 assert "narrative_too_short" in gaps, f"Expected narrative_too_short, got {gaps}"
 ok("Short but detailed narrative triggers narrative_too_short gap")
 
-# Test: max 2 gaps returned regardless of how many exist
-all_missing = _safe_layer1_defaults("x" * 50)  # also triggers length_threshold
+# Test: max 1 gap returned regardless of how many exist
+all_missing = Layer1Result(
+    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
+    specific_examples_present=False, evidence_described=False, timeline_clear=False,
+    allegation_type=[], length_character_count=50, _used_defaults=False,
+)
 gaps = layer2.analyze(all_missing, DEFAULT_INTAKE_GAPS)
-assert len(gaps) <= 2, f"More than 2 gaps returned: {gaps}"
-ok("Layer 2 never returns more than 2 gaps", f"returned: {gaps}")
+assert len(gaps) == 1, f"Expected exactly 1 gap, got: {gaps}"
+ok("Layer 2 returns at most 1 gap", f"returned: {gaps}")
 
 # Test: inactive gaps are skipped
 custom_gaps = [
     {**g, "active": False} if g["id"] == "timeline_unclear" else g
     for g in DEFAULT_INTAKE_GAPS
 ]
-gaps = layer2.analyze(_safe_layer1_defaults("x"), custom_gaps)
+inactive_test_layer1 = Layer1Result(
+    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
+    specific_examples_present=False, evidence_described=False, timeline_clear=False,
+    allegation_type=[], length_character_count=500, _used_defaults=False,
+)
+gaps = layer2.analyze(inactive_test_layer1, custom_gaps)
 assert "timeline_unclear" not in gaps, f"Inactive gap should be skipped: {gaps}"
 ok("Inactive gaps are excluded from analysis")
 
 # Test: priority ordering respected
 reordered_gaps = sorted(DEFAULT_INTAKE_GAPS, key=lambda g: -g["priority"])  # reversed priority
-gaps = layer2.analyze(_safe_layer1_defaults("x"), reordered_gaps)
-assert gaps == ["timeline_unclear", "no_specific_example"], f"Priority sort should override list order: {gaps}"
+gaps = layer2.analyze(inactive_test_layer1, reordered_gaps)
+assert gaps == ["timeline_unclear"], f"Priority sort should override list order: {gaps}"
 ok("Priority ordering overrides list order in analysis")
+
+# Test: _used_defaults=True causes empty gap list (LLM parse failure protection)
+defaults_layer1 = _safe_layer1_defaults("x")
+assert defaults_layer1["_used_defaults"] is True
+gaps = layer2.analyze(defaults_layer1, DEFAULT_INTAKE_GAPS)
+assert gaps == [], f"Expected empty gaps for parse-failure defaults, got: {gaps}"
+ok("LLM parse failure (safe defaults) returns no gaps")
+
+# Test: form_data suppresses redundant gaps
+form_suppression_layer1 = Layer1Result(
+    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
+    specific_examples_present=True, evidence_described=True, timeline_clear=True,
+    allegation_type=[], length_character_count=500, _used_defaults=False,
+)
+# Without form_data: missing_date should fire (first gap that matches)
+gaps = layer2.analyze(form_suppression_layer1, DEFAULT_INTAKE_GAPS)
+assert gaps == ["missing_date"], f"Expected missing_date, got: {gaps}"
+ok("missing_date fires when no form context")
+
+# With form_data containing when_occurred: missing_date should be suppressed
+gaps = layer2.analyze(form_suppression_layer1, DEFAULT_INTAKE_GAPS, form_data={"when_occurred": "January 2026"})
+assert "missing_date" not in gaps, f"missing_date should be suppressed by form_data: {gaps}"
+ok("Form context (when_occurred) suppresses missing_date gap")
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n=== 4. Settings Store ===")
@@ -278,6 +317,38 @@ try:
 except ValueError as e:
     ok("Duplicate gap IDs are rejected", str(e)[:40])
 
+# Test: duplicate priorities are rejected
+try:
+    gap_a = {**valid_gap, "id": "gap_a", "priority": 1}
+    gap_b = {**valid_gap, "id": "gap_b", "priority": 1}
+    update_intake_gaps([gap_a, gap_b])
+    fail("Duplicate priorities should be rejected")
+except ValueError as e:
+    ok("Duplicate gap priorities are rejected", str(e)[:40])
+
+# Test: criteria type / field type compatibility validation
+incompatible_gap = {
+    "id": "bad_gap", "label": "Bad Gap", "priority": 1, "active": True,
+    "criteria": {"type": "boolean_false", "field": "dates_mentioned"},
+    "template": "Bad question",
+}
+try:
+    _validate_gap(incompatible_gap)
+    fail("Should reject boolean_false on array field")
+except ValueError:
+    ok("Rejects boolean_false criteria on array field (dates_mentioned)")
+
+incompatible_gap2 = {
+    "id": "bad_gap2", "label": "Bad Gap 2", "priority": 1, "active": True,
+    "criteria": {"type": "empty_array", "field": "timeline_clear"},
+    "template": "Bad question",
+}
+try:
+    _validate_gap(incompatible_gap2)
+    fail("Should reject empty_array on boolean field")
+except ValueError:
+    ok("Rejects empty_array criteria on boolean field (timeline_clear)")
+
 # Test: _slugify
 assert _slugify("Timeline Unclear") == "timeline_unclear"
 assert _slugify("  My Gap!! ") == "my_gap"
@@ -291,36 +362,16 @@ print("\n=== 5. Layer 3 Template Resolution (sync, no LLM) ===")
 import inspect
 
 # Test: non-timeline gaps use plain template, no LLM
-async def test_layer3_templates():
-    layer3 = IntakeLayer3()
-    from app.prompts.intake_gaps import DEFAULT_INTAKE_GAPS as dg
+# Test: Layer 3 generates question from gap template
+layer3 = IntakeLayer3()
+from app.prompts.intake_gaps import DEFAULT_INTAKE_GAPS as dg_for_l3
 
-    gaps_by_id = {g["id"]: g for g in dg}
-
-    # Non-timeline gap: no_evidence → should use plain template
-    layer1_no_evidence = Layer1Result(
-        summary="Summary",
-        dates_mentioned=[],
-        people_mentioned=[],
-        locations_mentioned=[],
-        specific_examples_present=False,
-        evidence_described=False,
-        timeline_clear=True,
-        allegation_type=[],
-        length_character_count=400,
-    )
-
-    # Patch: resolve_template with known gap (no LLM needed for non-conditional)
-    no_evidence_gap = gaps_by_id["no_evidence"]
-    result = await layer3._resolve_template("some q1", layer1_no_evidence, no_evidence_gap)
-    assert result == no_evidence_gap["template"], f"Expected plain template, got: {result!r}"
-    return "no_evidence_gap plain template used correctly"
-
-try:
-    msg = asyncio.run(test_layer3_templates())
-    ok(msg)
-except Exception as e:
-    fail("Layer3 template resolution error", str(e))
+gaps_by_id = {g["id"]: g for g in dg_for_l3}
+no_evidence_gap = gaps_by_id["no_evidence"]
+questions = layer3.generate(["no_evidence"], dg_for_l3)
+assert len(questions) == 1
+assert questions[0]["question_text"] == no_evidence_gap["template"], f"Expected plain template, got: {questions[0]['question_text']!r}"
+ok("Layer 3 generates correct template for no_evidence gap")
 
 # Test: question text is truncated to MAX_QUESTION_CHARS
 async def test_layer3_truncation():
@@ -370,7 +421,7 @@ else:
         assert "gaps" in result
         assert "follow_up_questions" in result
         assert isinstance(result["gaps"], list)
-        assert len(result["gaps"]) <= 2
+        assert len(result["gaps"]) <= 1
         assert isinstance(result["follow_up_questions"], list)
         assert all("question_text" in q for q in result["follow_up_questions"])
         return result

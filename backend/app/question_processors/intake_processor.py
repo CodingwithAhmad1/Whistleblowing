@@ -31,6 +31,7 @@ class Layer1Result(TypedDict):
     timeline_clear: bool
     allegation_type: list[str]
     length_character_count: int
+    _used_defaults: bool  # True if LLM parse failed and safe defaults were used
 
 
 class FollowUpQuestion(TypedDict):
@@ -148,6 +149,7 @@ def _normalize_layer1(data: dict, q1_text: str) -> Layer1Result:
         timeline_clear=bool(data.get("timeline_clear", False)),
         allegation_type=as_str_list(data.get("allegation_type")),
         length_character_count=len(q1_text),  # always use actual length, never trust LLM
+        _used_defaults=False,
     )
 
 
@@ -162,6 +164,7 @@ def _safe_layer1_defaults(q1_text: str) -> Layer1Result:
         timeline_clear=False,
         allegation_type=[],
         length_character_count=len(q1_text),
+        _used_defaults=True,
     )
 
 
@@ -211,17 +214,55 @@ def _evaluate_gap(gap: dict, layer1: Layer1Result) -> bool:
     return False
 
 
+# Maps form_data keys to gap IDs they make redundant.
+# If the form field has a non-empty value, the corresponding gap is suppressed
+# because the user already provided that information outside Q1 text.
+_FORM_FIELD_GAP_SUPPRESSION: dict[str, str] = {
+    "when_occurred": "missing_date",
+    "incident_location": "missing_location",
+    "where_occurred": "missing_location",
+}
+
+
+def _suppressed_gaps(form_data: dict | None) -> set[str]:
+    """Return set of gap IDs that should be suppressed based on form field values."""
+    if not form_data:
+        return set()
+    suppressed: set[str] = set()
+    for field_key, gap_id in _FORM_FIELD_GAP_SUPPRESSION.items():
+        val = form_data.get(field_key, "")
+        if val and isinstance(val, str) and val.strip():
+            suppressed.add(gap_id)
+    return suppressed
+
+
 class IntakeLayer2:
     """Layer 2: Deterministic gap analysis. No LLM involved."""
 
-    def analyze(self, layer1: Layer1Result, gaps: list[dict] | None = None) -> list[str]:
+    def analyze(
+        self,
+        layer1: Layer1Result,
+        gaps: list[dict] | None = None,
+        form_data: dict | None = None,
+    ) -> list[str]:
         """
         Evaluate active gaps against Layer 1 JSON.
-        Returns list of up to 2 gap ids (in priority order).
+        Returns list of up to 1 gap id (highest-priority match).
+
+        If form_data is provided, gaps already answered by form fields are suppressed
+        to avoid asking the user for information they already provided.
+
+        If Layer 1 used safe defaults (LLM parse failure), returns empty list
+        instead of evaluating meaningless default values.
         """
         if gaps is None:
             gaps = get_intake_gaps()
 
+        if layer1.get("_used_defaults", False):
+            logger.warning("Layer 1 used safe defaults (LLM parse failure); skipping gap evaluation")
+            return []
+
+        suppressed = _suppressed_gaps(form_data)
         active_gaps = [g for g in gaps if g.get("active", True)]
         active_gaps.sort(key=lambda g: g.get("priority", 999))
 
@@ -229,6 +270,8 @@ class IntakeLayer2:
         for gap in active_gaps:
             if len(identified) >= 1:
                 break
+            if gap["id"] in suppressed:
+                continue
             if _evaluate_gap(gap, layer1):
                 identified.append(gap["id"])
 
@@ -286,7 +329,7 @@ class IntakeProcessor:
         gaps = get_intake_gaps()
 
         layer1_result = await self._layer1.extract(q1_text, form_data)
-        identified_gaps = self._layer2.analyze(layer1_result, gaps)
+        identified_gaps = self._layer2.analyze(layer1_result, gaps, form_data)
         follow_up_questions = self._layer3.generate(identified_gaps, gaps)
 
         return IntakeResult(

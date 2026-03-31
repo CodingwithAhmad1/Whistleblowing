@@ -9,10 +9,11 @@ from ..prompts.quote_extractor import QUOTE_EXTRACTOR_PROMPT
 logger = logging.getLogger(__name__)
 
 
-def extract_clean_quote(query: str, raw_text: str) -> str:
+def extract_clean_quote(query: str, raw_text: str) -> str | None:
     """Use Gemini to extract a clean policy quote from a raw PDF chunk.
 
-    Falls back to the raw text if LLM extraction fails.
+    Returns None if the chunk is mostly noise (NO_QUOTE) or on LLM failure.
+    This is a fallback path — the re-ranker now extracts quotes inline.
     """
     try:
         from google.genai import types
@@ -32,12 +33,12 @@ def extract_clean_quote(query: str, raw_text: str) -> str:
         result = (response.text or "").strip()
 
         if not result or result == "NO_QUOTE":
-            logger.info("Quote extraction returned no usable quote, using raw text")
-            return raw_text
+            logger.info("Quote extraction returned no usable quote")
+            return None
 
         logger.info(f"Clean quote extracted ({len(result)} chars from {len(raw_text)} chars raw)")
         return result
 
     except Exception as e:
-        logger.warning(f"Quote extraction failed: {e}, using raw text")
-        return raw_text
+        logger.warning(f"Quote extraction failed: {e}")
+        return None

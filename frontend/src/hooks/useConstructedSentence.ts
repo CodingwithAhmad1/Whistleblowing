@@ -28,6 +28,7 @@ export function useConstructedSentence(
     const ac = new AbortController()
     abortRef.current = ac
     timedOutRef.current = false
+    let active = true
 
     const timeout = setTimeout(() => {
       timedOutRef.current = true
@@ -49,12 +50,14 @@ export function useConstructedSentence(
         return r.json()
       })
       .then((res: { sentence: string; error?: string }) => {
+        if (!active) return
         setSentence(res.sentence || null)
         if (res.error && !res.sentence) {
           setError(res.error)
         }
       })
       .catch((e) => {
+        if (!active) return
         if (timedOutRef.current) {
           setError('Request timed out')
         } else if (e?.name !== 'AbortError') {
@@ -63,10 +66,11 @@ export function useConstructedSentence(
       })
       .finally(() => {
         clearTimeout(timeout)
-        setIsLoading(false)
+        if (active) setIsLoading(false)
       })
 
     return () => {
+      active = false
       clearTimeout(timeout)
       ac.abort()
     }

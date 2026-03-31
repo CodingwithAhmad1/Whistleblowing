@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from .reranker import rerank_candidates, _format_section
+from .reranker import rerank_candidates, format_section
 from .quote_extractor import extract_clean_quote
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class PolicyRAGService:
         candidates = []
         for i, doc in enumerate(results["documents"][0]):
             distance = results["distances"][0][i] if results["distances"] else 1.0
-            similarity = 1.0 - distance
+            similarity = max(0.0, 1.0 - distance)  # clamp to avoid negative values
             metadata = results["metadatas"][0][i] if results["metadatas"] else {}
 
             if similarity >= MIN_SIMILARITY:
@@ -80,35 +80,40 @@ class PolicyRAGService:
         if not self._available or not self._collection:
             return None
 
-        try:
-            candidates = self._retrieve_candidates(query_text)
+        candidates = self._retrieve_candidates(query_text)
 
-            if not candidates:
-                logger.info("PolicyRAG: no candidates above similarity threshold")
-                return None
-
-            # Re-rank using LLM (returns filtered + sorted list)
-            ranked = rerank_candidates(query_text, candidates)
-
-            if not ranked:
-                logger.info("PolicyRAG: no candidates passed LLM re-ranking threshold")
-                return None
-
-            best = ranked[0]
-            section = _format_section(best["metadata"])
-
-            # Extract a clean quote from the raw chunk text
-            clean_quote = extract_clean_quote(query_text, best["text"])
-
-            return {
-                "quote": clean_quote,
-                "section": section,
-                "similarity": best["similarity"],
-                "relevance_score": best.get("relevance_score"),
-            }
-        except Exception as e:
-            logger.error(f"PolicyRAG query failed: {e}")
+        if not candidates:
+            logger.info("PolicyRAG: no candidates above similarity threshold")
             return None
+
+        # Re-rank using LLM (returns filtered + sorted list, top candidate may have clean_quote)
+        ranked = rerank_candidates(query_text, candidates)
+
+        if not ranked:
+            logger.info("PolicyRAG: no candidates passed LLM re-ranking threshold")
+            return None
+
+        # Try to get a clean quote, iterating through ranked candidates
+        for candidate in ranked:
+            section = format_section(candidate["metadata"])
+
+            # Prefer the inline clean_quote from the re-ranker (no extra LLM call)
+            clean_quote = candidate.get("clean_quote")
+
+            if not clean_quote:
+                # Fallback: use the dedicated quote extractor (extra LLM call)
+                clean_quote = extract_clean_quote(query_text, candidate["text"])
+
+            if clean_quote:
+                return {
+                    "quote": clean_quote,
+                    "section": section,
+                    "similarity": candidate["similarity"],
+                    "relevance_score": candidate.get("relevance_score"),
+                }
+
+        logger.info("PolicyRAG: all ranked candidates produced no usable quote")
+        return None
 
 
 def get_policy_rag_service() -> PolicyRAGService:

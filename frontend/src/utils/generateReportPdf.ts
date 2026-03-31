@@ -354,7 +354,6 @@ export function generateReportPdf(report: ReportData): void {
         (f) =>
           f.section === 'incident' &&
           !FULL_DETAILS_KEYS.has(f.key) &&
-          f.key !== 'persons_concealing' &&
           shouldShow(report, f),
       )
       for (const def of standardFields) {
@@ -428,17 +427,6 @@ export function generateReportPdf(report: ReportData): void {
           doc,
           q3Question || 'Do you believe this policy has been violated? If Yes, to what extent?',
           q3Answer,
-          y,
-        )
-      }
-
-      // Persons concealing (after Q&A block)
-      const concealingDef = REPORT_FIELDS.find((f) => f.key === 'persons_concealing')
-      if (concealingDef && shouldShow(report, concealingDef)) {
-        y = drawField(
-          doc,
-          concealingDef.label,
-          getDisplay(report, 'persons_concealing', concealingDef),
           y,
         )
       }

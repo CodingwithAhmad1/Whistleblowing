@@ -17,21 +17,16 @@ def rerank_candidates(query: str, candidates: list[dict]) -> list[dict]:
 
     Each candidate dict has: {"text": str, "metadata": dict, "similarity": float}.
     Returns candidates sorted by LLM relevance score (descending), filtered by MIN_RELEVANCE_SCORE.
-    Falls back to similarity-sorted input on LLM failure.
+    The top candidate includes a "clean_quote" field extracted by the LLM.
+    Returns empty list on LLM failure (fail closed).
     """
     if not candidates:
-        return []
-
-    if len(candidates) == 1:
-        # Single candidate — skip LLM call, but apply stricter similarity check
-        if candidates[0].get("similarity", 0) >= 0.5:
-            return [dict(candidates[0])]
         return []
 
     # Build numbered candidate list for the prompt
     numbered = []
     for i, c in enumerate(candidates):
-        section = _format_section(c["metadata"])
+        section = format_section(c["metadata"])
         numbered.append(f"[{i}] ({section}) {c['text'][:500]}")
     numbered_text = "\n\n".join(numbered)
 
@@ -51,18 +46,33 @@ def rerank_candidates(query: str, candidates: list[dict]) -> list[dict]:
             contents=prompt,
             config=types.GenerateContentConfig(
                 temperature=0.1,
-                max_output_tokens=256,
+                max_output_tokens=512,
             ),
         )
         text = (response.text or "").strip()
 
-        # Parse JSON scores
         # Handle markdown-wrapped JSON (```json ... ```)
         if text.startswith("```"):
             text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
-        scores = json.loads(text)
-        score_map = {item["index"]: item["score"] for item in scores}
+        parsed = json.loads(text)
+
+        # Support both old format (array) and new format (object with scores/best_quote)
+        if isinstance(parsed, list):
+            scores_list = parsed
+            best_quote = None
+        elif isinstance(parsed, dict):
+            scores_list = parsed.get("scores", [])
+            best_quote = parsed.get("best_quote")
+            if best_quote and isinstance(best_quote, str):
+                best_quote = best_quote.strip() or None
+            else:
+                best_quote = None
+        else:
+            logger.warning("Re-ranking: unexpected JSON structure")
+            return []
+
+        score_map = {item["index"]: item["score"] for item in scores_list}
 
         # Annotate copies of candidates with LLM scores
         scored = []
@@ -75,6 +85,10 @@ def rerank_candidates(query: str, candidates: list[dict]) -> list[dict]:
         relevant = [c for c in scored if c["relevance_score"] >= MIN_RELEVANCE_SCORE]
         relevant.sort(key=lambda c: c["relevance_score"], reverse=True)
 
+        # Attach clean_quote to the top candidate if available
+        if relevant and best_quote:
+            relevant[0]["clean_quote"] = best_quote
+
         logger.info(
             f"Re-ranking: {len(candidates)} candidates → {len(relevant)} relevant "
             f"(scores: {[c['relevance_score'] for c in scored]})"
@@ -82,12 +96,11 @@ def rerank_candidates(query: str, candidates: list[dict]) -> list[dict]:
         return relevant
 
     except Exception as e:
-        logger.warning(f"Re-ranking failed: {e}, falling back to similarity ordering")
-        # Graceful degradation: return copies sorted by embedding similarity
-        return sorted([dict(c) for c in candidates], key=lambda c: c["similarity"], reverse=True)
+        logger.warning(f"Re-ranking failed: {e}; returning empty list (fail closed)")
+        return []
 
 
-def _format_section(metadata: dict) -> str:
+def format_section(metadata: dict) -> str:
     """Format section info from chunk metadata."""
     section_title = metadata.get("section_title")
     page = metadata.get("page")

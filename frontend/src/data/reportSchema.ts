@@ -159,5 +159,4 @@ export const REPORT_FIELDS: FieldDef[] = [
   },
   // full_details_q2, full_details_q3, full_details_q2_question, full_details_q3_question
   // are rendered as a special Q&A block in the PDF generator — excluded from standard iteration.
-  { key: 'persons_concealing', label: 'Persons concealing / steps taken', section: 'incident' },
 ]

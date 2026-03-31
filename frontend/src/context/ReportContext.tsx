@@ -12,12 +12,16 @@ import {
 } from '@/types/report'
 import type { ChatMessage } from '@/types/chat'
 
+export type PipelineStatus = 'idle' | 'analyzing' | 'constructing' | 'policyLoading' | 'ready' | 'error'
+
 interface ReportContextValue {
   report: ReportData
   updateReport: (updates: Partial<ReportData>) => void
   messages: ChatMessage[]
   addMessage: (role: 'ai' | 'user', content: string) => void
   removeLastMessage: () => void
+  pipelineStatus: PipelineStatus
+  setPipelineStatus: (status: PipelineStatus) => void
 }
 
 const ReportContext = createContext<ReportContextValue | null>(null)
@@ -32,6 +36,7 @@ const INITIAL_AI_MESSAGE: ChatMessage = {
 export function ReportProvider({ children }: { children: ReactNode }) {
   const [report, setReport] = useState<ReportData>(initialReportData)
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_AI_MESSAGE])
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>('idle')
 
   const updateReport = useCallback((updates: Partial<ReportData>) => {
     setReport((prev) => ({ ...prev, ...updates }))
@@ -58,8 +63,10 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       messages,
       addMessage,
       removeLastMessage,
+      pipelineStatus,
+      setPipelineStatus,
     }),
-    [report, updateReport, messages, addMessage, removeLastMessage]
+    [report, updateReport, messages, addMessage, removeLastMessage, pipelineStatus]
   )
 
   return (

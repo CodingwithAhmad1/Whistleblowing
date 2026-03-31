@@ -19,14 +19,22 @@ def _build_field_pairs(form_data: dict) -> str:
     return "\n".join(lines)
 
 
+_FALLBACK_KEYS = ("full_details_q1", "full_details_q2", "general_nature", "where_occurred")
+_MAX_FALLBACK_CHARS = 500
+
+
 def _naive_concatenation(form_data: dict) -> str:
-    """Fallback: join non-empty semantic fields with spaces (current behavior)."""
+    """Fallback: join the most semantically useful fields, capped for embedding quality."""
     parts: list[str] = []
-    for field in SENTENCE_FIELDS:
-        val = form_data.get(field["key"], "")
+    for key in _FALLBACK_KEYS:
+        val = form_data.get(key, "")
         if val and isinstance(val, str) and val.strip():
             parts.append(val.strip())
-    return " ".join(parts) if parts else ""
+    result = " ".join(parts) if parts else ""
+    if len(result) > _MAX_FALLBACK_CHARS:
+        # Truncate at word boundary
+        result = result[:_MAX_FALLBACK_CHARS].rsplit(" ", 1)[0]
+    return result
 
 
 def build_constructed_sentence(form_data: dict) -> str:

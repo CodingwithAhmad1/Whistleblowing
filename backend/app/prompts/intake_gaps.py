@@ -123,3 +123,36 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
 
 # Valid criteria types for validation
 VALID_CRITERIA_TYPES = {"boolean_false", "empty_array", "length_threshold"}
+
+# Valid Layer1Result field names that criteria.field can reference
+VALID_LAYER1_FIELDS = {
+    "summary",
+    "dates_mentioned",
+    "people_mentioned",
+    "locations_mentioned",
+    "specific_examples_present",
+    "evidence_described",
+    "timeline_clear",
+    "allegation_type",
+    "length_character_count",
+}
+
+# Maps each Layer1Result field to its logical type for criteria compatibility checks.
+LAYER1_FIELD_TYPES: dict[str, str] = {
+    "summary": "string",
+    "dates_mentioned": "array",
+    "people_mentioned": "array",
+    "locations_mentioned": "array",
+    "allegation_type": "array",
+    "specific_examples_present": "boolean",
+    "evidence_described": "boolean",
+    "timeline_clear": "boolean",
+    "length_character_count": "number",
+}
+
+# Which field types each criteria type can operate on.
+CRITERIA_FIELD_COMPAT: dict[str, set[str]] = {
+    "boolean_false": {"boolean"},
+    "empty_array": {"array"},
+    "length_threshold": {"number"},
+}

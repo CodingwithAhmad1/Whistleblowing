@@ -12,7 +12,7 @@ const Q3_QUESTION = 'Do you believe this policy has been violated? If Yes, to wh
 type Step = 'q1' | 'analyzing' | 'fq1' | 'constructing' | 'policyLoading' | 'policyQuestion' | 'review'
 
 export function FullDetailsQuestionnaire() {
-  const { report, updateReport } = useReport()
+  const { report, updateReport, setPipelineStatus } = useReport()
   const [step, setStep] = useState<Step>('q1')
   const stepRef = useRef<HTMLDivElement>(null)
   const prevStepRef = useRef<Step>(step)
@@ -38,7 +38,14 @@ export function FullDetailsQuestionnaire() {
 
   // After analysis completes successfully, persist question text and advance.
   useEffect(() => {
-    if (step !== 'analyzing' || isAnalyzing || analyzeError || !hasAnalyzed) return
+    if (step !== 'analyzing' || isAnalyzing) return
+
+    if (analyzeError) {
+      setPipelineStatus('error')
+      return
+    }
+
+    if (!hasAnalyzed) return
 
     // Persist first follow-up question text for PDF generation
     if (followUpQuestions[0]) {
@@ -50,6 +57,7 @@ export function FullDetailsQuestionnaire() {
       fq1WasShownRef.current = true
       setStep('fq1')
     } else {
+      setPipelineStatus('constructing')
       setConstructEnabled(true)
       setStep('constructing')
     }
@@ -59,17 +67,28 @@ export function FullDetailsQuestionnaire() {
   useEffect(() => {
     if (step !== 'constructing' || isConstructing) return
 
+    if (constructError) {
+      setPipelineStatus('error')
+      return
+    }
+
     if (constructedSentence) {
       updateReport({ constructed_sentence: constructedSentence })
     }
 
+    setPipelineStatus('policyLoading')
     setPolicyEnabled(true)
     setStep('policyLoading')
-  }, [step, isConstructing, constructedSentence])
+  }, [step, isConstructing, constructedSentence, constructError])
 
   // After policy quote loading completes, persist and advance
   useEffect(() => {
     if (step !== 'policyLoading' || isPolicyLoading) return
+
+    if (policyError) {
+      setPipelineStatus('error')
+      return
+    }
 
     // Always persist Q3 question text; persist quote + section only if available
     updateReport({
@@ -79,7 +98,7 @@ export function FullDetailsQuestionnaire() {
     })
 
     setStep('policyQuestion')
-  }, [step, isPolicyLoading, policyQuote, policySection])
+  }, [step, isPolicyLoading, policyQuote, policySection, policyError])
 
   // Scroll to top of component on step change (but not on initial mount)
   useEffect(() => {
@@ -89,6 +108,7 @@ export function FullDetailsQuestionnaire() {
   }, [step])
 
   const handleQ1Next = () => {
+    setPipelineStatus('analyzing')
     setAnalyzeEnabled(true)
     setStep('analyzing')
   }
@@ -99,12 +119,17 @@ export function FullDetailsQuestionnaire() {
   }
 
   const handleFq1Done = () => {
+    setPipelineStatus('constructing')
     setConstructEnabled(true)
     setStep('constructing')
   }
 
-  const handleDone = () => setStep('review')
+  const handleDone = () => {
+    setPipelineStatus('ready')
+    setStep('review')
+  }
   const handleRestart = () => {
+    setPipelineStatus('idle')
     setStep('q1')
     setAnalyzeEnabled(false)
     setConstructEnabled(false)
@@ -207,6 +232,7 @@ export function FullDetailsQuestionnaire() {
                   <button
                     type="button"
                     onClick={() => {
+                      setPipelineStatus('constructing')
                       setConstructEnabled(true)
                       setStep('constructing')
                     }}
@@ -246,6 +272,7 @@ export function FullDetailsQuestionnaire() {
                   <button
                     type="button"
                     onClick={() => {
+                      setPipelineStatus('policyLoading')
                       setPolicyEnabled(true)
                       setStep('policyLoading')
                     }}
@@ -284,7 +311,10 @@ export function FullDetailsQuestionnaire() {
                 <div className={styles.navBarRight}>
                   <button
                     type="button"
-                    onClick={() => setStep('policyQuestion')}
+                    onClick={() => {
+                      setPipelineStatus('ready')
+                      setStep('policyQuestion')
+                    }}
                     className={styles.navBtn}
                   >
                     Skip &amp; Continue <span aria-hidden>→</span>

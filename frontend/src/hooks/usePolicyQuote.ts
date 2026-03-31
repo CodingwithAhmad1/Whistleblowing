@@ -31,6 +31,7 @@ export function usePolicyQuote(
     const ac = new AbortController()
     abortRef.current = ac
     timedOutRef.current = false
+    let active = true
 
     const timeout = setTimeout(() => {
       timedOutRef.current = true
@@ -56,6 +57,7 @@ export function usePolicyQuote(
         return r.json()
       })
       .then((res: { quote: string | null; section: string | null; error?: string }) => {
+        if (!active) return
         setQuote(res.quote)
         setSection(res.section)
         if (res.error && !res.quote) {
@@ -63,6 +65,7 @@ export function usePolicyQuote(
         }
       })
       .catch((e) => {
+        if (!active) return
         if (timedOutRef.current) {
           setError('Request timed out')
         } else if (e?.name !== 'AbortError') {
@@ -71,10 +74,11 @@ export function usePolicyQuote(
       })
       .finally(() => {
         clearTimeout(timeout)
-        setIsLoading(false)
+        if (active) setIsLoading(false)
       })
 
     return () => {
+      active = false
       clearTimeout(timeout)
       ac.abort()
     }

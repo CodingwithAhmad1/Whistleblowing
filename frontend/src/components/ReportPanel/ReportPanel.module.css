@@ -57,3 +57,31 @@
   outline: 2px solid var(--color-text);
   outline-offset: 2px;
 }
+
+.submitButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.submitArea {
+  text-align: center;
+  margin-top: var(--space-48);
+}
+
+.statusText {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted, #888);
+  margin: 0 0 var(--space-12);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.statusError {
+  font-size: var(--text-sm);
+  color: var(--color-danger, #d44);
+  margin: 0 0 var(--space-12);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
