@@ -5,6 +5,8 @@ import { Incident } from './sections/Incident'
 import { FormSection } from './FormSection'
 import { useReport } from '@/context/ReportContext'
 import { generateReportPdf } from '@/utils/generateReportPdf'
+import { saveSubmission } from '@/utils/feedStore'
+import { API_CONFIG } from '@/config'
 import styles from './ReportPanel.module.css'
 
 const PIPELINE_LABELS: Record<string, string> = {
@@ -20,7 +22,22 @@ export function ReportPanel() {
   const hasError = pipelineStatus === 'error'
   const canSubmit = !isProcessing && !hasError
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch(API_CONFIG.ENDPOINTS.ADMIN_LAST_ANALYSIS)
+      if (res.ok) {
+        const analysis = await res.json()
+        saveSubmission({
+          timestamp: new Date().toISOString(),
+          formData: report,
+          extraction: analysis.extraction ?? null,
+          gaps: analysis.gaps ?? [],
+          followUpQuestions: analysis.follow_up_questions ?? [],
+        })
+      }
+    } catch (e) {
+      console.error('[Feed] Snapshot save failed:', e)
+    }
     generateReportPdf(report)
   }
 

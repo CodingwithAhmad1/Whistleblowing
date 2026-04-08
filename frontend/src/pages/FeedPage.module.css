@@ -1,0 +1,84 @@
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-48) var(--space-32);
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--color-text);
+  margin: 0 0 var(--space-8);
+}
+
+.subtitle {
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-48);
+  line-height: 1.5;
+}
+
+/* ── Empty state ───────────────────────────────────────────────────────────── */
+
+.emptyState {
+  padding: var(--space-48) var(--space-32);
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+}
+
+.emptyStateText {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-8);
+}
+
+.emptyStateHint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* ── Table ─────────────────────────────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.tableHead {
+  display: grid;
+  grid-template-columns: 64px 1fr 210px;
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-8) var(--space-16);
+  gap: var(--space-16);
+}
+
+.thCell {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+}
+
+.thCellRight {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.tableBody {
+  display: flex;
+  flex-direction: column;
+}

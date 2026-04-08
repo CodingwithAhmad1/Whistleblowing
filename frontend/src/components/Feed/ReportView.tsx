@@ -1,0 +1,202 @@
+import type { ReportData } from '@/types/report'
+import { personsFromReport } from '@/types/report'
+import { REPORT_FIELDS } from '@/data/reportSchema'
+import styles from './ReportView.module.css'
+
+const FULL_DETAILS_KEYS = new Set([
+  'full_details_q1',
+  'full_details_q2',
+  'full_details_q3',
+  'full_details_q2_question',
+  'full_details_q3_question',
+  'policy_quote_matched',
+  'policy_section_matched',
+  'constructed_sentence',
+])
+
+function getRaw(formData: ReportData, key: string): string {
+  return ((formData as unknown as Record<string, string>)[key] ?? '').trim()
+}
+
+function getFormatted(formData: ReportData, key: string): string {
+  const def = REPORT_FIELDS.find(f => f.key === key)
+  const raw = getRaw(formData, key)
+  if (!raw) return ''
+  return def?.formatValue ? def.formatValue(raw) : raw
+}
+
+function FieldRow({ label, value, fieldKey }: { label: string; value: string; fieldKey: string }) {
+  return (
+    <div className={styles.fieldRow} key={fieldKey}>
+      <span className={styles.label}>{label}</span>
+      {value ? (
+        <p className={styles.value}>{value}</p>
+      ) : (
+        <p className={styles.empty}>No response provided</p>
+      )}
+    </div>
+  )
+}
+
+interface Props {
+  formData: ReportData
+}
+
+export function ReportView({ formData }: Props) {
+  const orgFields = REPORT_FIELDS.filter(f => f.section === 'organization')
+
+  const reporterFields = REPORT_FIELDS.filter(
+    f => f.section === 'reporter' && !f.hideWhen?.(formData),
+  )
+
+  const mgmtFields = REPORT_FIELDS.filter(
+    f => f.section === 'persons' && !f.hideWhen?.(formData),
+  )
+
+  const incidentStandardFields = REPORT_FIELDS.filter(
+    f =>
+      f.section === 'incident' &&
+      !FULL_DETAILS_KEYS.has(f.key) &&
+      !f.hideWhen?.(formData),
+  )
+
+  const persons = personsFromReport(formData).filter(
+    p => p.first.trim() || p.last.trim() || p.title.trim(),
+  )
+
+  const q1 = getRaw(formData, 'full_details_q1')
+  const q2 = getRaw(formData, 'full_details_q2')
+  const q2q = getRaw(formData, 'full_details_q2_question')
+  const q3 = getRaw(formData, 'full_details_q3')
+  const q3q = getRaw(formData, 'full_details_q3_question')
+  const policyQuote = getRaw(formData, 'policy_quote_matched')
+  const policySection = getRaw(formData, 'policy_section_matched')
+  const personsCon = getRaw(formData, 'persons_concealing')
+
+  const showQ2 = q2 || q2q
+  const showQ3 = q3 || q3q
+
+  return (
+    <div>
+      {/* 1. Organization & Context */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Organization &amp; Context</div>
+        <div className={styles.card}>
+          {orgFields.map(f => (
+            <FieldRow key={f.key} fieldKey={f.key} label={f.label} value={getFormatted(formData, f.key)} />
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Reporter Preferences */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Reporter Preferences</div>
+        <div className={styles.card}>
+          {reporterFields.map(f => (
+            <FieldRow key={f.key} fieldKey={f.key} label={f.label} value={getFormatted(formData, f.key)} />
+          ))}
+        </div>
+      </div>
+
+      {/* 3. Persons Involved */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Persons Involved</div>
+        {persons.length === 0 ? (
+          <p className={styles.empty}>No persons identified</p>
+        ) : (
+          persons.map((p, i) => (
+            <div className={styles.personCard} key={i}>
+              <div className={styles.personHeader}>Person {i + 1}</div>
+              <div className={styles.personGrid}>
+                <div className={styles.personField}>
+                  <div className={styles.personFieldLabel}>First Name</div>
+                  <div className={styles.personFieldValue}>{p.first || '—'}</div>
+                </div>
+                <div className={styles.personField}>
+                  <div className={styles.personFieldLabel}>Last Name</div>
+                  <div className={styles.personFieldValue}>{p.last || '—'}</div>
+                </div>
+                <div className={styles.personField}>
+                  <div className={styles.personFieldLabel}>Title / Role</div>
+                  <div className={styles.personFieldValue}>{p.title || '—'}</div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* 4. Management Awareness */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Management Awareness</div>
+        <div className={styles.card}>
+          {mgmtFields.map(f => (
+            <FieldRow key={f.key} fieldKey={f.key} label={f.label} value={getFormatted(formData, f.key)} />
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Incident Details */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Incident Details</div>
+        <div className={styles.card}>
+          {incidentStandardFields.map(f => (
+            <FieldRow key={f.key} fieldKey={f.key} label={f.label} value={getFormatted(formData, f.key)} />
+          ))}
+          <FieldRow
+            fieldKey="persons_concealing"
+            label="Please identify any persons who have attempted to conceal this problem and the steps they took to conceal it:"
+            value={personsCon}
+          />
+        </div>
+      </div>
+
+      {/* 6. Full Details */}
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Full Details</div>
+
+        {/* Q1 */}
+        <div className={styles.qaBlock}>
+          <p className={styles.qaQuestion}>Please describe what happened in your own words.</p>
+          {q1 ? (
+            <p className={styles.qaAnswer}>{q1}</p>
+          ) : (
+            <p className={styles.empty}>No response provided</p>
+          )}
+        </div>
+
+        {/* Q2 */}
+        {showQ2 && (
+          <div className={styles.qaBlock}>
+            <p className={styles.qaQuestion}>{q2q || 'Follow-up question'}</p>
+            {q2 ? (
+              <p className={styles.qaAnswer}>{q2}</p>
+            ) : (
+              <p className={styles.empty}>No response provided</p>
+            )}
+          </div>
+        )}
+
+        {/* Q3 */}
+        {showQ3 && (
+          <div className={styles.qaBlock}>
+            {policyQuote && (
+              <blockquote className={styles.policyQuote}>
+                &ldquo;{policyQuote}&rdquo;
+                {policySection && (
+                  <span className={styles.policyCitation}>— {policySection}</span>
+                )}
+              </blockquote>
+            )}
+            <p className={styles.qaQuestion}>{q3q || 'Policy question'}</p>
+            {q3 ? (
+              <p className={styles.qaAnswer}>{q3}</p>
+            ) : (
+              <p className={styles.empty}>No response provided</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,212 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-32);
+}
+
+.noData {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Section ───────────────────────────────────────────────────────────────── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  margin: 0;
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.cardInner {
+  padding: var(--space-16);
+}
+
+.summaryText {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── Tags ──────────────────────────────────────────────────────────────────── */
+
+.tagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.tag {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 3px 10px;
+}
+
+.tagNone {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Boolean badges ────────────────────────────────────────────────────────── */
+
+.badgeRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.badgeRowItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.badgeRowItem:last-child {
+  border-bottom: none;
+}
+
+.badgeLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.badgeTrue {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: #16a34a;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.badgeFalse {
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  background: #b91c1c;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+/* ── Entities ──────────────────────────────────────────────────────────────── */
+
+.entityRow {
+  display: flex;
+  flex-direction: column;
+}
+
+.entityItem {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-16);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.entityItem:last-child {
+  border-bottom: none;
+}
+
+.entityLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.entityValues {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+/* ── Questions ─────────────────────────────────────────────────────────────── */
+
+.questionList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.questionItem {
+  display: flex;
+  gap: var(--space-12);
+  padding: var(--space-12) var(--space-16);
+  border-bottom: 1px solid var(--color-border);
+  align-items: baseline;
+}
+
+.questionItem:last-child {
+  border-bottom: none;
+}
+
+.questionNum {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  min-width: 20px;
+  flex-shrink: 0;
+}
+
+.questionText {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ── Policy match ──────────────────────────────────────────────────────────── */
+
+.policyQuote {
+  border-left: 3px solid var(--color-border);
+  padding: var(--space-8) var(--space-16);
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.policyCitation {
+  display: block;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-top: var(--space-8);
+  font-style: normal;
+}
+
+.noMatch {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  padding: var(--space-16);
+  margin: 0;
+}
