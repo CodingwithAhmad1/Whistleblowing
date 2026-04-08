@@ -67,6 +67,8 @@
 }
 
 .dropdownItem {
+  display: flex;
+  align-items: center;
   font-size: var(--text-base);
   font-weight: 500;
   color: var(--color-text-muted);
@@ -91,7 +93,17 @@
 
 .dropdownItemActive {
   color: var(--color-accent);
-  background: var(--color-border);
+}
+
+.dropdownItemActive::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .links {
