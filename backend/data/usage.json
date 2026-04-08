@@ -42,5 +42,13 @@
       "output_tokens": 160,
       "exhausted": false
     }
+  },
+  "2026-04-02": {
+    "gemini-2.5-flash-lite": {
+      "requests": 3,
+      "input_tokens": 1119,
+      "output_tokens": 304,
+      "exhausted": false
+    }
   }
 }

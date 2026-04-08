@@ -5,7 +5,93 @@
   background: var(--color-surface);
   display: flex;
   align-items: center;
-  justify-content: center;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 var(--space-24);
+  gap: var(--space-24);
+}
+
+.modeSelector {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.modeButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-8) var(--space-12);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.modeButton:hover {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.modeButton:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.chevron {
+  font-size: 0.75em;
+  line-height: 1;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 140px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownItem {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  padding: var(--space-8) var(--space-16);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease, background 0.15s ease;
+  font-family: inherit;
+}
+
+.dropdownItem:hover {
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+}
+
+.dropdownItem:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.dropdownItemActive {
+  color: var(--color-accent);
+  background: var(--color-border);
 }
 
 .links {
@@ -40,4 +126,16 @@
 .link:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+:global([data-mode="investigator"]) .nav {
+  --color-border: #d4d4d8;
+  --color-accent: #6b7280;
+  --color-accent-hover: #374151;
+}
+
+:global([data-mode="manager"]) .nav {
+  --color-border: #fecaca;
+  --color-accent: #ef4444;
+  --color-accent-hover: #dc2626;
 }
