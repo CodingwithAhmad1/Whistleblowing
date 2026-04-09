@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ClearPath — Product Overview</title>
+<style>
+  :root {
+    --sidebar-width: 240px;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --accent-muted: #93c5fd;
+    --gray-50: #f9fafb;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-400: #9ca3af;
+    --gray-600: #4b5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --teal: #0f766e;
+    --teal-light: #f0fdfa;
+    --amber: #b45309;
+    --amber-light: #fffbeb;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --green: #15803d;
+    --green-light: #f0fdf4;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    color: var(--gray-900);
+    background: #fff;
+    display: flex;
+    min-height: 100vh;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* Sidebar */
+  nav {
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    background: var(--gray-50);
+    border-right: 1px solid var(--gray-200);
+    padding: 2rem 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .nav-brand {
+    padding: 0 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: 1.25rem;
+  }
+
+  .nav-brand .logo {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+
+  .nav-brand .tagline {
+    font-size: 11px;
+    color: var(--gray-400);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  nav a {
+    display: block;
+    padding: 6px 1.25rem;
+    font-size: 13px;
+    color: var(--gray-600);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    line-height: 1.4;
+  }
+
+  nav a:hover {
+    color: var(--accent);
+    background: var(--accent-light);
+    border-left-color: var(--accent-muted);
+  }
+
+  nav a.active {
+    color: var(--accent);
+    background: var(--accent-light);
+    border-left-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .nav-section {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--gray-400);
+    padding: 1rem 1.25rem 0.4rem;
+  }
+
+  /* Main content */
+  main {
+    flex: 1;
+    max-width: 760px;
+    padding: 3rem 3.5rem;
+    min-width: 0;
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gray-900);
+    letter-spacing: -0.5px;
+    line-height: 1.25;
+    margin-bottom: 0.75rem;
+  }
+
+  h2 {
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--gray-900);
+    letter-spacing: -0.3px;
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: var(--gray-700);
+    margin-bottom: 1rem;
+  }
+
+  section {
+    margin-bottom: 1rem;
+  }
+
+  /* Hero */
+  .hero {
+    background: var(--accent-light);
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 1.75rem 2rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .hero h1 {
+    margin-bottom: 0.5rem;
+  }
+
+  .hero p {
+    color: #1e40af;
+    margin-bottom: 0;
+    font-size: 15px;
+  }
+
+  /* Callout boxes */
+  .callout {
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border-left: 3px solid;
+  }
+
+  .callout.blue {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+
+  .callout.teal {
+    background: var(--teal-light);
+    border-color: var(--teal);
+  }
+
+  .callout.amber {
+    background: var(--amber-light);
+    border-color: var(--amber);
+  }
+
+  .callout p {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  .callout.blue p { color: #1e40af; }
+  .callout.teal p { color: var(--teal); }
+  .callout.amber p { color: var(--amber); }
+
+  .callout strong { font-weight: 600; }
+
+  /* Cards */
+  .card-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 12px;
+    margin: 1.25rem 0;
+  }
+
+  .card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 1rem 1.25rem;
+  }
+
+  .card .card-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 0.4rem;
+  }
+
+  .card .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: var(--gray-900);
+  }
+
+  .card p {
+    font-size: 13.5px;
+    color: var(--gray-600);
+    margin: 0;
+  }
+
+  /* Role badges */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .badge.reporter { background: #dbeafe; color: #1d4ed8; }
+  .badge.investigator { background: var(--gray-100); color: var(--gray-600); }
+  .badge.manager { background: #fee2e2; color: var(--red); }
+  .badge.ai { background: #f3e8ff; color: #7c3aed; }
+  .badge.green { background: var(--green-light); color: var(--green); }
+
+  /* Benefit list */
+  .benefit-list {
+    list-style: none;
+    margin: 0.75rem 0 1rem;
+  }
+
+  .benefit-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 14px;
+    color: var(--gray-700);
+    border-bottom: 1px solid var(--gray-100);
+  }
+
+  .benefit-list li:last-child { border: none; }
+
+  .benefit-list .icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .icon.check { background: var(--green-light); color: var(--green); }
+
+  /* Gap table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 1rem 0;
+  }
+
+  th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--gray-400);
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--gray-200);
+  }
+
+  td {
+    padding: 9px 10px;
+    color: var(--gray-700);
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: top;
+  }
+
+  tr:last-child td { border: none; }
+
+  .priority-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Diagram container */
+  .diagram-wrap {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  /* Step flow inline */
+  .step-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 1.25rem 0;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .step-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 13px;
+    color: var(--gray-700);
+    font-weight: 500;
+  }
+
+  .step-pill .num {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-arrow {
+    color: var(--gray-400);
+    font-size: 14px;
+    padding: 0 2px;
+  }
+
+  /* Legal quote */
+  blockquote {
+    border-left: 3px solid var(--gray-200);
+    padding: 0.5rem 1rem;
+    margin: 1rem 0;
+    color: var(--gray-600);
+    font-size: 13.5px;
+    font-style: italic;
+  }
+
+  blockquote cite {
+    display: block;
+    margin-top: 0.25rem;
+    font-style: normal;
+    font-size: 12px;
+    color: var(--gray-400);
+    font-weight: 500;
+  }
+
+  /* Divider */
+  hr {
+    border: none;
+    border-top: 1px solid var(--gray-200);
+    margin: 2.5rem 0;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    nav { display: none; }
+    main { padding: 2rem 1.25rem; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="nav-brand">
+    <div class="logo">ClearPath</div>
+    <div class="tagline">Product Overview</div>
+  </div>
+
+  <div class="nav-section">Overview</div>
+  <a href="#introduction">Introduction</a>
+  <a href="#who-it-serves">Who it serves</a>
+  <a href="#the-problem">The problem it solves</a>
+
+  <div class="nav-section">The Platform</div>
+  <a href="#how-form-works">How the form works</a>
+  <a href="#final-section">The intelligence layer</a>
+  <a href="#q1">Q1 — Reporter narrative</a>
+  <a href="#q2">Q2 — AI follow-up</a>
+  <a href="#q3">Q3 — Policy match</a>
+
+  <div class="nav-section">For Investigators</div>
+  <a href="#investigator-view">What investigators see</a>
+  <a href="#analysis">AI analysis summary</a>
+
+  <div class="nav-section">Compatibility</div>
+  <a href="#data-privacy">Data & privacy</a>
+  <a href="#legal">Legal framework</a>
+</nav>
+
+<main>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="label">Product Overview — April 2026</div>
+    <h1>ClearPath</h1>
+    <p>An AI-assisted workplace misconduct reporting platform built for 3M — designed to help reporters say more, and help investigators act faster.</p>
+  </div>
+
+  <!-- Introduction -->
+  <section id="introduction">
+    <h2>Introduction</h2>
+    <p>ClearPath is a prototype internal reporting platform purpose-built for 3M. It gives employees a structured, confidential channel to report workplace misconduct — including harassment, bullying, and conduct that falls outside 3M's Code of Conduct — and gives investigators the information they need to act, from the moment a report lands.</p>
+    <p>The platform is not simply a form. Between the moment a reporter clicks submit and the moment an investigator opens a case, ClearPath's AI pipeline has already read the report, identified what is missing, asked one targeted clarifying question, and matched the incident to the relevant section of 3M's own policy documentation. All of this happens automatically, in the background, before any human reviews the submission.</p>
+  </section>
+
+  <!-- Who it serves -->
+  <section id="who-it-serves">
+    <h2>Who it serves</h2>
+    <div class="card-row">
+      <div class="card">
+        <div class="card-label" style="color: #1d4ed8;">Reporter</div>
+        <div class="card-title">The employee</div>
+        <p>Files a report through a clean, guided form. Never sees the analysis. Protected by anonymity controls.</p>
+      </div>
+      <div class="card">
+        <div class="card-label" style="color: var(--gray-600);">Investigator</div>
+        <div class="card-title">HR or legal counsel</div>
+        <p>Reviews a feed of submissions. Each submission arrives with a full AI summary, gap analysis, and policy match already complete.</p>
+      </div>
+      <div class="card">
+        <div class="card-label" style="color: var(--red);">Manager</div>
+        <div class="card-title">Platform administrator</div>
+        <p>Configures the AI gap rules, manages the system, and oversees platform-wide settings.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- The problem -->
+  <section id="the-problem">
+    <h2>The problem it solves</h2>
+    <p>Most misconduct reports arrive incomplete. The reporter submits what they can recall in the moment; the investigator reads it, identifies what is missing, and sends a follow-up. The reporter — already in a vulnerable position — has to re-engage, re-explain, and re-live the experience. This back-and-forth delays resolution, increases distress for the reporter, and creates administrative overhead for already stretched HR and legal teams.</p>
+
+    <div class="callout amber">
+      <p><strong>The core insight:</strong> If we can identify what is missing at the point of submission — and ask just one targeted question before the report is filed — we dramatically improve the quality of every case that lands with an investigator.</p>
+    </div>
+
+    <p>ClearPath addresses this at the source. By the time an investigator opens a report, they have:</p>
+
+    <ul class="benefit-list">
+      <li><span class="icon check">✓</span>A structured, AI-analysed summary of the incident</li>
+      <li><span class="icon check">✓</span>A complete gap analysis — what information is present and what is still missing</li>
+      <li><span class="icon check">✓</span>The most relevant section of 3M's policy documentation, automatically retrieved and matched to the case</li>
+      <li><span class="icon check">✓</span>A ranked list of remaining follow-up questions, should they be needed</li>
+    </ul>
+
+    <p>The result is fewer back-and-forth exchanges, faster case resolution, and a less burdensome experience for the reporter.</p>
+  </section>
+
+  <hr/>
+
+  <!-- How the form works -->
+  <section id="how-form-works">
+    <h2>How the form works</h2>
+    <p>The reporting form is divided into two parts. The first part collects structured contextual information: the nature of the incident, where and when it occurred, whether there were witnesses, and the reporter's identity (or anonymity preference). These fields use dropdowns and short text inputs — they are quick to complete and feed directly into the AI pipeline as supporting context.</p>
+
+    <p>The second part is the <strong>Full Details section</strong> — the heart of the form, and where ClearPath's AI does its work. It contains three sub-questions, each serving a distinct purpose.</p>
+
+    <div class="step-flow">
+      <div class="step-pill"><span class="num">Q1</span> Reporter narrative</div>
+      <div class="step-arrow">→</div>
+      <div class="step-pill"><span class="num" style="background: #7c3aed;">AI</span> Gap detection</div>
+      <div class="step-arrow">→</div>
+      <div class="step-pill"><span class="num">Q2</span> Targeted follow-up</div>
+      <div class="step-arrow">→</div>
+      <div class="step-pill"><span class="num" style="background: #7c3aed;">AI</span> Policy search</div>
+      <div class="step-arrow">→</div>
+      <div class="step-pill"><span class="num">Q3</span> Policy question</div>
+      <div class="step-arrow">→</div>
+      <div class="step-pill"><span class="num" style="background: var(--green);">✓</span> Submit</div>
+    </div>
+
+    <p>Each step is generated by — or informed by — what came before it. The form is not static: it reads the reporter's narrative and responds to it.</p>
+  </section>
+
+  <!-- Final section -->
+  <section id="final-section">
+    <h2>The intelligence layer</h2>
+    <p>The three sub-questions in the Full Details section each serve a distinct purpose, and together they form a pipeline that runs automatically between Q1 being submitted and the report being filed.</p>
+
+    <div class="diagram-wrap">
+      <svg width="100%" viewBox="0 0 680 420" role="img">
+        <title>ClearPath AI pipeline diagram</title>
+        <desc>Flow diagram showing how a reporter's Q1 narrative passes through three AI processing layers to produce Q2 and Q3, which together enrich the report before it reaches an investigator.</desc>
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+
+        <!-- Reporter box -->
+        <rect x="40" y="30" width="140" height="52" rx="8" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.5"/>
+        <text x="110" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#1d4ed8">Reporter</text>
+        <text x="110" y="70" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#3b82f6">writes free narrative</text>
+
+        <!-- Arrow down -->
+        <line x1="110" y1="82" x2="110" y2="118" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+        <text x="120" y="105" font-family="system-ui, sans-serif" font-size="10" fill="#9ca3af">Q1</text>
+
+        <!-- Layer 1 box -->
+        <rect x="40" y="120" width="140" height="64" rx="8" fill="#f3e8ff" stroke="#c4b5fd" stroke-width="0.5"/>
+        <text x="110" y="142" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#6d28d9">Layer 1</text>
+        <text x="110" y="158" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#7c3aed">AI reads narrative</text>
+        <text x="110" y="173" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#7c3aed">extracts structured data</text>
+
+        <!-- Arrow right to Layer 2 -->
+        <line x1="180" y1="152" x2="240" y2="152" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- Layer 2 box -->
+        <rect x="242" y="120" width="148" height="64" rx="8" fill="#f3e8ff" stroke="#c4b5fd" stroke-width="0.5"/>
+        <text x="316" y="142" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#6d28d9">Layer 2</text>
+        <text x="316" y="158" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#7c3aed">checks 7 gap rules</text>
+        <text x="316" y="173" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#7c3aed">picks highest priority</text>
+
+        <!-- Arrow right to Layer 3 -->
+        <line x1="390" y1="152" x2="450" y2="152" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- Layer 3 box -->
+        <rect x="452" y="120" width="148" height="64" rx="8" fill="#f3e8ff" stroke="#c4b5fd" stroke-width="0.5"/>
+        <text x="526" y="142" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#6d28d9">Layer 3</text>
+        <text x="526" y="158" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#7c3aed">selects question template</text>
+        <text x="526" y="173" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#7c3aed">returns Q2 text</text>
+
+        <!-- Arrow from Layer 3 down to Q2 shown to reporter -->
+        <line x1="526" y1="184" x2="526" y2="224" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- Q2 box (shown to reporter) -->
+        <rect x="452" y="226" width="148" height="52" rx="8" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.5"/>
+        <text x="526" y="248" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#1d4ed8">Q2 shown to reporter</text>
+        <text x="526" y="264" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3b82f6">one targeted question</text>
+
+        <!-- Arrow from Q2 left and down toward RAG -->
+        <line x1="452" y1="252" x2="380" y2="252" stroke="#9ca3af" stroke-width="1"/>
+        <line x1="380" y1="252" x2="380" y2="310" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- RAG box -->
+        <rect x="242" y="312" width="276" height="64" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="0.5"/>
+        <text x="380" y="334" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#15803d">Policy search (RAG)</text>
+        <text x="380" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#16a34a">AI searches 3M policy document</text>
+        <text x="380" y="365" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#16a34a">returns most relevant excerpt</text>
+
+        <!-- Arrow from RAG left to Q3 box -->
+        <line x1="242" y1="344" x2="180" y2="344" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- Q3 box -->
+        <rect x="40" y="312" width="140" height="64" rx="8" fill="#dbeafe" stroke="#93c5fd" stroke-width="0.5"/>
+        <text x="110" y="334" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#1d4ed8">Q3 shown to reporter</text>
+        <text x="110" y="350" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3b82f6">policy context + question</text>
+        <text x="110" y="365" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#3b82f6">reporter responds</text>
+
+        <!-- Arrow from Q3 up to reporter output / submit -->
+        <line x1="110" y1="312" x2="110" y2="250" stroke="#9ca3af" stroke-width="1"/>
+        <line x1="110" y1="250" x2="110" y2="208" stroke="#9ca3af" stroke-width="1" marker-end="url(#arr)"/>
+
+        <!-- Submit box -->
+        <rect x="40" y="200" width="140" height="40" rx="8" fill="#f0fdf4" stroke="#86efac" stroke-width="0.5"/>
+        <text x="110" y="225" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#15803d">Report submitted</text>
+
+        <!-- Reporter label -->
+        <text x="15" y="58" font-family="system-ui, sans-serif" font-size="9" fill="#9ca3af" text-anchor="middle" transform="rotate(-90, 15, 140)">Reporter facing</text>
+        <text x="15" y="160" font-family="system-ui, sans-serif" font-size="9" fill="#7c3aed" text-anchor="middle" transform="rotate(-90, 15, 158)">AI pipeline</text>
+
+      </svg>
+    </div>
+
+    <p>It is worth noting that this pipeline is resilient by design. If any AI step fails — due to a network issue or an unexpected response — the form continues and the reporter can still submit. No failure silently drops a report.</p>
+  </section>
+
+  <!-- Q1 -->
+  <section id="q1">
+    <h3>Q1 — The reporter's narrative</h3>
+    <p>Q1 is a free-text field. The reporter is asked to describe the incident in their own words, with no imposed structure. This is intentional: structured prompts ("describe the date," "name the individuals") can feel clinical and alienating, particularly for reporters describing sensitive experiences. A free narrative is lower-friction and tends to surface richer, more authentic detail.</p>
+
+    <div class="callout blue">
+      <p>The absence of structure in Q1 is not a design limitation — it is a deliberate choice. The AI handles the structure. The reporter just writes.</p>
+    </div>
+  </section>
+
+  <!-- Q2 -->
+  <section id="q2">
+    <h3>Q2 — The AI-generated follow-up</h3>
+    <p>Once the reporter completes Q1, the system analyses the narrative automatically. This analysis has three steps, which happen in the background while the reporter moves to the next screen.</p>
+
+    <p><strong>Step one — extraction.</strong> The AI reads the Q1 narrative and the earlier form fields together. It produces a structured summary: which specific people are mentioned, whether a clear timeline can be reconstructed, whether concrete examples are described, whether any evidence is referenced, and so on. Think of this as the AI building a checklist of what the report does and does not contain.</p>
+
+    <p><strong>Step two — gap detection.</strong> A set of rules — configured by the platform manager — checks that checklist. Seven gap types are evaluated, in priority order. The system identifies the single most important piece of missing information and only asks about that. It does not interrogate the reporter with multiple questions.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Priority</th>
+          <th>Gap</th>
+          <th>What is being checked</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="priority-dot" style="background:#ef4444;"></span>1</td>
+          <td>Timeline unclear</td>
+          <td>Can the sequence of events be reconstructed?</td>
+        </tr>
+        <tr>
+          <td><span class="priority-dot" style="background:#f97316;"></span>2</td>
+          <td>No specific example</td>
+          <td>Is at least one concrete incident described?</td>
+        </tr>
+        <tr>
+          <td><span class="priority-dot" style="background:#eab308;"></span>3</td>
+          <td>No evidence referenced</td>
+          <td>Are emails, messages, or documents mentioned?</td>
+        </tr>
+        <tr>
+          <td><span class="priority-dot" style="background:#84cc16;"></span>4</td>
+          <td>Date missing</td>
+          <td>Are explicit dates present in the narrative?</td>
+        </tr>
+        <tr>
+          <td><span class="priority-dot" style="background:#22c55e;"></span>5</td>
+          <td>No individuals named</td>
+          <td>Are specific people mentioned by name?</td>
+        </tr>
+        <tr>
+          <td><span class="priority-dot" style="background:#06b6d4;"></span>6</td>
+          <td>Location missing</td>
+          <td>Is a specific place referenced?</td>
+        </tr>
+        <tr>
+          <td><span class="priority-dot" style="background:#6366f1;"></span>7</td>
+          <td>Narrative too short</td>
+          <td>Is the narrative above a minimum length?</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Crucially, the system is context-aware. If the reporter already answered "when did this occur?" in the earlier form fields, the system will not ask about dates again in Q2, even if the Q1 narrative lacks explicit dates. It reads what has already been provided before deciding what to ask.</p>
+
+    <p><strong>Step three — question generation.</strong> Once the highest-priority gap is identified, the system retrieves the corresponding question template and presents it to the reporter as Q2. If no gaps are found — if the narrative is sufficiently complete — Q2 is skipped entirely and the reporter moves directly to Q3.</p>
+
+    <div class="callout teal">
+      <p><strong>Why only one question?</strong> A reporter disclosing harassment or bullying is already in a vulnerable position. Being asked five follow-up questions in sequence would feel like an interrogation. One targeted, well-chosen question is maximally useful with minimal additional burden.</p>
+    </div>
+
+    <p>The remaining gaps — those not surfaced to the reporter — are passed to the investigator as a ranked list. This gives investigators a clear picture of what the report still lacks, and what they may need to pursue if they take the case forward.</p>
+  </section>
+
+  <!-- Q3 -->
+  <section id="q3">
+    <h3>Q3 — The policy match</h3>
+    <p>After Q2, the system performs a second, independent AI operation: it searches 3M's internal policy documentation to find the section most relevant to the reported incident.</p>
+
+    <p>This search works by converting the entire report — all form fields and Q1 narrative — into a compact, semantically precise summary sentence. That summary is then compared against the policy document, which has been pre-processed and indexed by the system. The comparison is not a keyword search; it works by measuring the conceptual similarity between the report summary and sections of the policy. The closest match is retrieved, re-evaluated for quality, and the relevant excerpt is surfaced.</p>
+
+    <div class="callout blue">
+      <p><strong>In plain terms:</strong> the system reads the report, understands what kind of incident is being described, and finds the exact passage in 3M's Code of Conduct that applies to it — automatically, without anyone having to look it up.</p>
+    </div>
+
+    <p>Q3 presents the reporter with that policy excerpt alongside a single question: does the described conduct align with this policy? The reporter's response to Q3, together with the policy excerpt itself, is stored in the report and surfaced to the investigator.</p>
+
+    <p>This means investigators arrive at a case already knowing which policy clause is in play — removing one of the most time-consuming steps in early-stage case assessment.</p>
+  </section>
+
+  <hr/>
+
+  <!-- Investigator view -->
+  <section id="investigator-view">
+    <h2>What investigators see</h2>
+    <p>Investigators access ClearPath through a dedicated view — the Feed — which shows a table of all submitted reports. Each report is identified by a case number, the reporter's identity or anonymity status, and the date and time of submission.</p>
+
+    <p>Clicking on any report expands it to reveal two tabs.</p>
+
+    <h3>Report tab</h3>
+    <p>A clean, read-only display of everything the reporter submitted: all form fields, the Q1 narrative, the Q2 follow-up question and response, and the Q3 policy question and response. Unanswered questions are clearly marked. The layout mirrors the form's structure but is purpose-built for reading rather than filling in — no input boxes, no distractions.</p>
+
+    <h3>Summary tab</h3>
+    <p>The AI-generated analysis of the report, presented as a structured briefing. This includes the AI's neutral summary of the incident, the full gap analysis with each gap ranked by priority, the matched policy excerpt, and the list of remaining follow-up questions the investigator may wish to pursue.</p>
+
+    <div class="callout teal">
+      <p><strong>For investigators:</strong> by the time a report is opened, the background work is done. The AI has read the report, identified what is strong and what is missing, matched the relevant policy, and organised everything into a structured briefing. The investigator's job is to assess and act — not to prepare.</p>
+    </div>
+  </section>
+
+  <!-- Analysis -->
+  <section id="analysis">
+    <h2>AI analysis — how it is presented</h2>
+    <p>The analysis displayed to investigators is a snapshot taken at the moment of submission. It does not re-run when the report is opened. This is intentional: the analysis reflects the state of the report as filed, ensuring consistency across reviews and preventing discrepancies if AI model behaviour changes over time.</p>
+
+    <p>The gap status for each of the seven dimensions is displayed clearly: green where information is present and sufficient, red where a gap was identified. The investigator can see at a glance both what was asked of the reporter (Q2) and what gaps remain open for follow-up.</p>
+  </section>
+
+  <hr/>
+
+  <!-- Data & privacy -->
+  <section id="data-privacy">
+    <h2>Data and privacy</h2>
+    <p>ClearPath is designed for deployment within 3M's own environment. The AI processing — the gap analysis, the policy search, the summary generation — runs locally. Submission data does not leave 3M's infrastructure, and no third-party service receives report content.</p>
+
+    <p>Reporter anonymity is handled at the form level. Reporters may choose to submit anonymously; if they do, their identity is not stored anywhere in the system. If they choose to provide their name, it is stored only within the submission record and is visible solely to authorised investigators.</p>
+
+    <p>The current prototype stores submissions in local browser storage for demonstration purposes. A production deployment would integrate with 3M's existing secure data infrastructure.</p>
+  </section>
+
+  <!-- Legal -->
+  <section id="legal">
+    <h2>Legal framework</h2>
+    <p>ClearPath's design is consistent with established whistleblower protection frameworks. Key reference points for 3M's operating jurisdictions include:</p>
+
+    <blockquote>
+      Organisations must provide secure, confidential channels through which employees can report misconduct without fear of retaliation, and must ensure reports are handled by appropriately trained personnel.
+      <cite>— EU Whistleblower Protection Directive (2019/1937), core requirements</cite>
+    </blockquote>
+
+    <blockquote>
+      Federal Law No. 4 of 2016 (UAE) establishes protections for individuals reporting violations within regulated entities, with confidentiality of reporter identity as a baseline obligation.
+      <cite>— UAE Federal Law No. 4 of 2016</cite>
+    </blockquote>
+
+    <p>ClearPath supports compliance with both frameworks through its anonymity controls, restricted access model (only authorised investigators see submissions), and local data processing. Any production deployment should be reviewed by 3M's legal counsel against applicable jurisdiction-specific requirements.</p>
+  </section>
+
+  <hr/>
+
+  <p style="font-size: 13px; color: var(--gray-400); text-align: center; padding-bottom: 2rem;">
+    ClearPath — Internal Prototype — April 2026 — For review purposes only
+  </p>
+
+</main>
+
+<script>
+  const links = document.querySelectorAll('nav a');
+  const sections = document.querySelectorAll('section, .hero');
+
+  function updateActive() {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 100) {
+        current = s.id || '';
+      }
+    });
+    links.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  }
+
+  window.addEventListener('scroll', updateActive, { passive: true });
+  updateActive();
+
+  links.forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+</body>
+</html>

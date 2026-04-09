@@ -1,0 +1,252 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+  .ar-wrap {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    padding: 4px 0 20px;
+  }
+
+  .ar-banner {
+    border: 1px solid #dbe8f8;
+    border-radius: 10px;
+    background: #f7faff;
+    overflow: hidden;
+  }
+
+  .ar-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 20px 22px 18px;
+  }
+
+  .ar-icon {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ar-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .ar-body { flex: 1; min-width: 0; }
+
+  .ar-headline {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e3a5f;
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+
+  .ar-text {
+    font-size: 13.5px;
+    color: #4b6080;
+    line-height: 1.65;
+    margin: 0 0 10px;
+  }
+
+  .ar-text em {
+    font-style: normal;
+    font-weight: 500;
+    color: #1e3a5f;
+  }
+
+  .ar-points {
+    list-style: none;
+    margin: 0 0 4px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .ar-points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #4b6080;
+    line-height: 1.5;
+  }
+
+  .ar-dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #2563eb;
+    margin-top: 6px;
+  }
+
+  /* Sources toggle */
+  .ar-sources-row {
+    border-top: 1px solid #dbe8f8;
+    padding: 10px 22px 10px 80px;
+    background: #f0f6ff;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .ar-sources-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b8ab0;
+    cursor: pointer;
+    width: fit-content;
+  }
+
+  .ar-sources-btn:hover { color: #2563eb; }
+
+  .ar-sources-btn .ch {
+    font-size: 9px;
+    transition: transform 0.2s;
+    display: inline-block;
+  }
+
+  .ar-sources-drawer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+
+  .ar-sources-drawer.open { max-height: 200px; }
+
+  .ar-links {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 10px;
+  }
+
+  .ar-link {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .ar-link:hover { text-decoration: underline; }
+
+  .ar-link-icon {
+    width: 18px;
+    height: 18px;
+    background: #dbeafe;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ar-link-icon svg { width: 10px; height: 10px; }
+
+  .ar-link-sub {
+    font-size: 11px;
+    color: #6b8ab0;
+    font-weight: 400;
+    margin-left: 25px;
+    margin-top: -3px;
+  }
+</style>
+
+<div class="ar-wrap">
+  <div class="ar-banner">
+    <div class="ar-main">
+      <div class="ar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </div>
+      <div class="ar-body">
+        <div class="ar-headline">You are protected. Speaking up is safe.</div>
+        <p class="ar-text">
+          The Firm has a strict anti-retaliation policy. Coming forward — whether or not your concern is ultimately investigated — <em>cannot and will not</em> affect your employment, standing, or relationships at work.
+        </p>
+        <ul class="ar-points">
+          <li><span class="ar-dot"></span>Your identity is kept strictly confidential throughout the process.</li>
+          <li><span class="ar-dot"></span>You are protected by law — both in the UAE and under EU regulation.</li>
+          <li><span class="ar-dot"></span>Your report is reviewed only by a dedicated, independent team.</li>
+          <li><span class="ar-dot"></span>Good faith reporting is always protected, even if the facts are unclear.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="ar-sources-row">
+      <button class="ar-sources-btn" id="srcBtn" onclick="toggleSources()">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="6" cy="6" r="5"/><line x1="6" y1="4" x2="6" y2="6.5"/><circle cx="6" cy="8.5" r="0.5" fill="currentColor"/>
+        </svg>
+        Legal protections &amp; sources
+        <span class="ch" id="ch">&#9654;</span>
+      </button>
+      <div class="ar-sources-drawer" id="srcDrawer">
+        <div class="ar-links">
+          <div>
+            <a class="ar-link" href="https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32019L1937" target="_blank">
+              <span class="ar-link-icon">
+                <svg viewBox="0 0 12 12" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round">
+                  <path d="M2 10V4l4-2 4 2v6l-4 2z"/>
+                </svg>
+              </span>
+              EU Whistleblower Protection Directive (2019/1937)
+            </a>
+            <div class="ar-link-sub">Guarantees confidentiality and prohibits retaliation across EU member states</div>
+          </div>
+          <div>
+            <a class="ar-link" href="https://www.uaelegislation.gov.ae" target="_blank">
+              <span class="ar-link-icon">
+                <svg viewBox="0 0 12 12" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round">
+                  <path d="M2 10V4l4-2 4 2v6l-4 2z"/>
+                </svg>
+              </span>
+              UAE Federal Law No. 4 of 2016
+            </a>
+            <div class="ar-link-sub">Establishes reporter confidentiality obligations within regulated entities</div>
+          </div>
+          <div>
+            <a class="ar-link" href="https://www.whistleblowers.gov" target="_blank">
+              <span class="ar-link-icon">
+                <svg viewBox="0 0 12 12" fill="none" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round">
+                  <path d="M2 10V4l4-2 4 2v6l-4 2z"/>
+                </svg>
+              </span>
+              U.S. Whistleblower Protection Program (DOL)
+            </a>
+            <div class="ar-link-sub">Federal protections for employees reporting violations in good faith</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function toggleSources() {
+    const d = document.getElementById('srcDrawer');
+    const ch = document.getElementById('ch');
+    const open = d.classList.toggle('open');
+    ch.style.transform = open ? 'rotate(90deg)' : 'rotate(0deg)';
+  }
+</script>
