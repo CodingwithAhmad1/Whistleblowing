@@ -1,0 +1,42 @@
+.callout {
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
+  border-left: 3px solid;
+}
+
+.callout p {
+  margin: 0;
+  font-size: 15px;
+}
+
+.callout strong {
+  font-weight: 600;
+}
+
+.blue {
+  background: #eff6ff;
+  border-color: var(--color-accent-hover);
+}
+
+.blue p {
+  color: #1e40af;
+}
+
+.teal {
+  background: #f0fdfa;
+  border-color: #0f766e;
+}
+
+.teal p {
+  color: #0f766e;
+}
+
+.amber {
+  background: #fffbeb;
+  border-color: #b45309;
+}
+
+.amber p {
+  color: #b45309;
+}
