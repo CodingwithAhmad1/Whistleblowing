@@ -34,6 +34,16 @@
   margin: 0 0 var(--space-8);
 }
 
+.encouragement {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.65;
+  margin: var(--space-12) 0 0;
+  padding-left: var(--space-12);
+  border-left: 2px solid var(--color-accent);
+  opacity: 0.85;
+}
+
 .errorText {
   font-size: var(--text-sm);
   color: #b91c1c;

@@ -2,6 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -11,8 +12,15 @@ import {
   type ReportData,
 } from '@/types/report'
 import type { ChatMessage } from '@/types/chat'
+import type { Layer1Extraction, FollowUpQuestion } from '@/utils/feedStore'
 
 export type PipelineStatus = 'idle' | 'analyzing' | 'constructing' | 'policyLoading' | 'ready' | 'error'
+
+export interface AnalysisSnapshot {
+  extraction: Layer1Extraction | null
+  gaps: string[]
+  follow_up_questions: FollowUpQuestion[]
+}
 
 interface ReportContextValue {
   report: ReportData
@@ -22,6 +30,8 @@ interface ReportContextValue {
   removeLastMessage: () => void
   pipelineStatus: PipelineStatus
   setPipelineStatus: (status: PipelineStatus) => void
+  intakeAnalysisResult: AnalysisSnapshot | null
+  setIntakeAnalysisResult: (result: AnalysisSnapshot | null) => void
 }
 
 const ReportContext = createContext<ReportContextValue | null>(null)
@@ -37,6 +47,7 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const [report, setReport] = useState<ReportData>(initialReportData)
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_AI_MESSAGE])
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>('idle')
+  const [intakeAnalysisResult, setIntakeAnalysisResult] = useState<AnalysisSnapshot | null>(null)
 
   const updateReport = useCallback((updates: Partial<ReportData>) => {
     setReport((prev) => ({ ...prev, ...updates }))
@@ -56,6 +67,19 @@ export function ReportProvider({ children }: { children: ReactNode }) {
     setMessages((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev))
   }, [])
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const hasData =
+        messages.length > 1 ||
+        Object.values(report).some((v) => typeof v === 'string' && v.trim() !== '')
+      if (!hasData) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [messages, report])
+
   const value = useMemo<ReportContextValue>(
     () => ({
       report,
@@ -65,8 +89,10 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       removeLastMessage,
       pipelineStatus,
       setPipelineStatus,
+      intakeAnalysisResult,
+      setIntakeAnalysisResult,
     }),
-    [report, updateReport, messages, addMessage, removeLastMessage, pipelineStatus]
+    [report, updateReport, messages, addMessage, removeLastMessage, pipelineStatus, intakeAnalysisResult]
   )
 
   return (

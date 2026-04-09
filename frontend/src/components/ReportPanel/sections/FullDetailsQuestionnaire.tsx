@@ -4,6 +4,7 @@ import { useIntakeAnalysis } from '@/hooks/useIntakeAnalysis'
 import { useConstructedSentence } from '@/hooks/useConstructedSentence'
 import { usePolicyQuote } from '@/hooks/usePolicyQuote'
 import { FormField } from './FormField'
+import type { Layer1Extraction } from '@/utils/feedStore'
 import styles from './FullDetailsQuestionnaire.module.css'
 
 const Q1_LABEL = 'Please describe what happened in your own words.'
@@ -12,7 +13,7 @@ const Q3_QUESTION = 'Do you believe this policy has been violated? If Yes, to wh
 type Step = 'q1' | 'analyzing' | 'fq1' | 'constructing' | 'policyLoading' | 'policyQuestion' | 'review'
 
 export function FullDetailsQuestionnaire() {
-  const { report, updateReport, setPipelineStatus } = useReport()
+  const { report, updateReport, setPipelineStatus, setIntakeAnalysisResult } = useReport()
   const [step, setStep] = useState<Step>('q1')
   const stepRef = useRef<HTMLDivElement>(null)
   const prevStepRef = useRef<Step>(step)
@@ -20,7 +21,7 @@ export function FullDetailsQuestionnaire() {
 
   // Intake analysis is enabled only when we move to 'analyzing' step
   const [analyzeEnabled, setAnalyzeEnabled] = useState(false)
-  const { followUpQuestions, isLoading: isAnalyzing, hasAnalyzed, error: analyzeError, reset: resetIntake } =
+  const { followUpQuestions, analysisResult, isLoading: isAnalyzing, hasAnalyzed, error: analyzeError, reset: resetIntake } =
     useIntakeAnalysis(report.full_details_q1, analyzeEnabled, report as unknown as Record<string, string>)
 
   // Constructed sentence is enabled only when we move to 'constructing' step
@@ -46,6 +47,15 @@ export function FullDetailsQuestionnaire() {
     }
 
     if (!hasAnalyzed) return
+
+    // Store the full analysis result in context for use at submit time
+    if (analysisResult) {
+      setIntakeAnalysisResult({
+        extraction: analysisResult.extraction as Layer1Extraction | null,
+        gaps: analysisResult.gaps,
+        follow_up_questions: analysisResult.follow_up_questions,
+      })
+    }
 
     // Persist first follow-up question text for PDF generation
     if (followUpQuestions[0]) {
@@ -85,7 +95,10 @@ export function FullDetailsQuestionnaire() {
   useEffect(() => {
     if (step !== 'policyLoading' || isPolicyLoading) return
 
-    if (policyError) {
+    // "policy_unavailable" means no relevant policy was found — this is expected
+    // and handled gracefully in policyQuestion with a fallback message.
+    // Only treat other errors as pipeline failures.
+    if (policyError && policyError !== 'policy_unavailable') {
       setPipelineStatus('error')
       return
     }
@@ -297,7 +310,7 @@ export function FullDetailsQuestionnaire() {
           {isPolicyLoading && (
             <p className={styles.loadingText}>Finding relevant policy…</p>
           )}
-          {policyError && !isPolicyLoading && (
+          {policyError && policyError !== 'policy_unavailable' && !isPolicyLoading && (
             <>
               <p className={styles.errorText} role="alert">
                 Could not find relevant policy: {policyError}
@@ -342,6 +355,9 @@ export function FullDetailsQuestionnaire() {
             rows={8}
             placeholder="Type your answer here…"
           />
+          <p className={styles.encouragement}>
+            Remember, you are doing the right thing. Submitting this report helps create a safer, fairer workplace for everyone.
+          </p>
         </div>
         <div className={styles.navBar}>
           <div className={styles.navBarLeft} />
@@ -408,7 +424,7 @@ export function FullDetailsQuestionnaire() {
             </blockquote>
           ) : (
             <p className={styles.fillerText}>
-              We weren't able to retrieve a relevant policy section. You can still describe how organizational policies relate to your incident.
+              No specific policy section was identified for your report. You can still share your perspective on how you believe organisational policies apply to this situation.
             </p>
           )}
           <p className={styles.questionText}>{Q3_QUESTION}</p>
