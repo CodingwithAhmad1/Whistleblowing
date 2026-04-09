@@ -73,10 +73,20 @@ def get_policy_quote(req: PolicyQuoteRequest):
 
         query_text = " ".join(parts)
 
+    logger.info(
+        f"policy-quote: has_constructed_sentence={bool(req.constructed_sentence)}, "
+        f"query_text={query_text[:120]!r}"
+    )
+
     service = get_policy_rag_service()
     result = service.query(query_text)
 
     if result is None:
+        logger.info("policy-quote result: no relevant policy found")
         return PolicyQuoteResponse(error="policy_unavailable")
 
+    logger.info(
+        f"policy-quote result: section={result['section']!r}, "
+        f"score={result.get('relevance_score')}, sim={result.get('similarity', 0):.3f}"
+    )
     return PolicyQuoteResponse(quote=result["quote"], section=result["section"])

@@ -6,6 +6,12 @@ export interface FollowUpQuestion {
   question_text: string
 }
 
+export interface FullAnalysisResult {
+  extraction: Record<string, unknown> | null
+  gaps: string[]
+  follow_up_questions: FollowUpQuestion[]
+}
+
 export interface IntakeAnalysisResult {
   follow_up_questions: FollowUpQuestion[]
 }
@@ -27,16 +33,18 @@ export function useIntakeAnalysis(
   formData?: Record<string, string>,
 ): {
   followUpQuestions: FollowUpQuestion[]
+  analysisResult: FullAnalysisResult | null
   isLoading: boolean
   hasAnalyzed: boolean
   error: string | null
   reset: () => void
 } {
   const [followUpQuestions, setFollowUpQuestions] = useState<FollowUpQuestion[]>([])
+  const [analysisResult, setAnalysisResult] = useState<FullAnalysisResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [hasAnalyzed, setHasAnalyzed] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const cacheRef = useRef<Map<string, FollowUpQuestion[]>>(new Map())
+  const cacheRef = useRef<Map<string, FullAnalysisResult>>(new Map())
   const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -45,7 +53,8 @@ export function useIntakeAnalysis(
     const key = cacheKey(q1Text)
     const cached = cacheRef.current.get(key)
     if (cached) {
-      setFollowUpQuestions(cached)
+      setFollowUpQuestions(cached.follow_up_questions)
+      setAnalysisResult(cached)
       setIsLoading(false)
       setHasAnalyzed(true)
       setError(null)
@@ -74,10 +83,15 @@ export function useIntakeAnalysis(
         if (!r.ok) throw new Error(r.status >= 500 ? 'Server error' : `Request failed: ${r.status}`)
         return r.json()
       })
-      .then((res: IntakeAnalysisResult) => {
-        const questions = res?.follow_up_questions ?? []
-        cacheRef.current.set(key, questions)
-        setFollowUpQuestions(questions)
+      .then((res: FullAnalysisResult) => {
+        const result: FullAnalysisResult = {
+          extraction: res?.extraction ?? null,
+          gaps: res?.gaps ?? [],
+          follow_up_questions: res?.follow_up_questions ?? [],
+        }
+        cacheRef.current.set(key, result)
+        setFollowUpQuestions(result.follow_up_questions)
+        setAnalysisResult(result)
         setHasAnalyzed(true)
       })
       .catch((e) => {
@@ -96,11 +110,12 @@ export function useIntakeAnalysis(
   const reset = () => {
     abortRef.current?.abort()
     setFollowUpQuestions([])
+    setAnalysisResult(null)
     setIsLoading(false)
     setHasAnalyzed(false)
     setError(null)
     cacheRef.current.clear()
   }
 
-  return { followUpQuestions, isLoading, hasAnalyzed, error, reset }
+  return { followUpQuestions, analysisResult, isLoading, hasAnalyzed, error, reset }
 }
