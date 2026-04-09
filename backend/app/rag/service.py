@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 CHROMA_PATH = str(Path(__file__).resolve().parent.parent.parent / "data" / "chroma")
 COLLECTION_NAME = "whistleblowing_policy"
 MIN_SIMILARITY = 0.3
-N_RESULTS = 5
+N_RESULTS = 8
 
 _service: Optional["PolicyRAGService"] = None
 
@@ -68,6 +68,11 @@ class PolicyRAGService:
             f"PolicyRAG: {len(results['documents'][0])} retrieved, "
             f"{len(candidates)} above similarity threshold {MIN_SIMILARITY}"
         )
+        for c in candidates:
+            logger.info(
+                f"  candidate: section={c['metadata'].get('section_title')!r}, "
+                f"page={c['metadata'].get('page')}, sim={c['similarity']:.3f}"
+            )
         return candidates
 
     def query(self, query_text: str) -> dict | None:
