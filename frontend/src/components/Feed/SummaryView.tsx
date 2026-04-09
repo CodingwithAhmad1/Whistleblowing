@@ -95,10 +95,10 @@ export function SummaryView({ extraction, followUpQuestions, formData }: Props) 
       )}
 
       {/* Follow-Up Questions */}
-      {followUpQuestions.length > 0 && (
-        <div className={styles.section}>
-          <div className={styles.sectionTitle}>Follow-Up Questions</div>
-          <div className={styles.card}>
+      <div className={styles.section}>
+        <div className={styles.sectionTitle}>Follow-Up Questions</div>
+        <div className={styles.card}>
+          {followUpQuestions.length > 0 ? (
             <ol className={styles.questionList}>
               {followUpQuestions.map((q, i) => (
                 <li key={q.gap_id} className={styles.questionItem}>
@@ -107,9 +107,11 @@ export function SummaryView({ extraction, followUpQuestions, formData }: Props) 
                 </li>
               ))}
             </ol>
-          </div>
+          ) : (
+            <p className={styles.noMatch}>No follow-up questions were generated for this submission.</p>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Policy Match */}
       <div className={styles.section}>

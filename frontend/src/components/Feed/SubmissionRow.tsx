@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { StoredSubmission } from '@/utils/feedStore'
 import { ReportView } from './ReportView'
 import { SummaryView } from './SummaryView'
+import { DeleteConfirmModal } from './DeleteConfirmModal'
 import styles from './SubmissionRow.module.css'
 
 function formatReporter(formData: StoredSubmission['formData']): string {
@@ -25,11 +26,13 @@ type Tab = 'report' | 'summary'
 
 interface Props {
   submission: StoredSubmission
+  onDelete: (id: number) => void
 }
 
-export function SubmissionRow({ submission }: Props) {
+export function SubmissionRow({ submission, onDelete }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('report')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   function toggle() {
     setIsOpen(prev => !prev)
@@ -53,7 +56,24 @@ export function SubmissionRow({ submission }: Props) {
         <span className={styles.cellId}>#{submission.id}</span>
         <span className={styles.cellReporter}>{formatReporter(submission.formData)}</span>
         <span className={styles.cellDate}>{formatUtc(submission.timestamp)}</span>
+        <button
+          type="button"
+          className={styles.deleteBtn}
+          onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true) }}
+          aria-label={`Delete report #${submission.id}`}
+          title="Delete report"
+        >
+          &times;
+        </button>
       </div>
+
+      {showDeleteModal && (
+        <DeleteConfirmModal
+          submissionId={submission.id}
+          onConfirm={() => { setShowDeleteModal(false); onDelete(submission.id) }}
+          onCancel={() => setShowDeleteModal(false)}
+        />
+      )}
 
       {isOpen && (
         <div className={styles.panel}>

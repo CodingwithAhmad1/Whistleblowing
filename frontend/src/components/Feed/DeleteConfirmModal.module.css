@@ -1,0 +1,73 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--space-32);
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 var(--space-12);
+  letter-spacing: -0.01em;
+}
+
+.body {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-24);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-8);
+  justify-content: flex-end;
+}
+
+.cancelBtn {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  background: none;
+  color: var(--color-text);
+  font-family: inherit;
+  transition: background 100ms;
+}
+
+.cancelBtn:hover {
+  background: var(--color-surface-muted);
+}
+
+.deleteBtn {
+  border: 1px solid #fca5a5;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  color: #b91c1c;
+  font-family: inherit;
+  transition: background 100ms;
+}
+
+.deleteBtn:hover {
+  background: #fef2f2;
+}

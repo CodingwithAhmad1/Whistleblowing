@@ -1,16 +1,19 @@
-import { useMemo } from 'react'
-import { loadSubmissions } from '@/utils/feedStore'
+import { useState } from 'react'
+import { loadSubmissions, deleteSubmission } from '@/utils/feedStore'
 import { SubmissionRow } from '@/components/Feed/SubmissionRow'
 import styles from './FeedPage.module.css'
 
 export function FeedPage() {
-  const submissions = useMemo(
-    () =>
-      loadSubmissions().sort(
-        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-      ),
-    [],
+  const [submissions, setSubmissions] = useState(() =>
+    loadSubmissions().sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    ),
   )
+
+  function handleDelete(id: number) {
+    deleteSubmission(id)
+    setSubmissions(prev => prev.filter(s => s.id !== id))
+  }
 
   return (
     <div className={styles.container}>
@@ -30,10 +33,11 @@ export function FeedPage() {
             <span className={styles.thCell}>#</span>
             <span className={styles.thCell}>Reporter</span>
             <span className={styles.thCellRight}>Submitted (UTC)</span>
+            <span aria-hidden="true" />
           </div>
           <div className={styles.tableBody}>
             {submissions.map(s => (
-              <SubmissionRow key={s.id} submission={s} />
+              <SubmissionRow key={s.id} submission={s} onDelete={handleDelete} />
             ))}
           </div>
         </div>

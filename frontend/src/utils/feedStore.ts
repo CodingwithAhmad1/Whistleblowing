@@ -38,6 +38,12 @@ export function loadSubmissions(): StoredSubmission[] {
   }
 }
 
+export function deleteSubmission(id: number): void {
+  const existing = loadSubmissions()
+  const updated = existing.filter(s => s.id !== id)
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+}
+
 export function saveSubmission(data: Omit<StoredSubmission, 'id'>): void {
   try {
     const existing = loadSubmissions()
