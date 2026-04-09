@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 0 var(--space-24);
+  padding: 0 var(--space-48) 0 max(var(--space-48), calc((100vw - 720px) / 2));
   gap: var(--space-24);
 }
 
@@ -141,9 +141,9 @@
 }
 
 :global([data-mode="investigator"]) .nav {
-  --color-border: #d4d4d8;
-  --color-accent: #6b7280;
-  --color-accent-hover: #374151;
+  --color-border: #c7d2fe;
+  --color-accent: #4338ca;
+  --color-accent-hover: #3730a3;
 }
 
 :global([data-mode="manager"]) .nav {

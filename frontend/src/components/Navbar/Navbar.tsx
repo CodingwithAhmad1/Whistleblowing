@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useMode, type Mode } from '@/context/ModeContext'
 import styles from './Navbar.module.css'
 
@@ -11,6 +11,7 @@ const MODE_LABELS: Record<Mode, string> = {
 
 export function Navbar() {
   const { mode, setMode } = useMode()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const selectorRef = useRef<HTMLDivElement>(null)
 
@@ -27,6 +28,7 @@ export function Navbar() {
   function selectMode(next: Mode) {
     setMode(next)
     setOpen(false)
+    navigate('/')
   }
 
   return (
