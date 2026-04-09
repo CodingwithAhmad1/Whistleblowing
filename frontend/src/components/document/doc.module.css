@@ -24,6 +24,14 @@
   margin-bottom: 0.5rem;
 }
 
+.h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-top: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+
 .p {
   color: var(--color-text-muted);
   margin-bottom: 1.25rem;
@@ -224,6 +232,69 @@
   padding: 1.5rem;
   margin: 1.5rem 0;
   overflow-x: auto;
+}
+
+/* Pipeline diagram */
+.pipeline {
+  margin: 1.75rem 0;
+}
+
+.pipelineStep {
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 0.9rem 1.25rem;
+}
+
+.pipelineStepReporter { border-left-color: #3b82f6; }
+.pipelineStepAI       { border-left-color: #7c3aed; }
+.pipelineStepSystem   { border-left-color: #0f766e; }
+.pipelineStepSubmit   { border-left-color: #15803d; }
+
+.pipelineStepHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.45rem;
+}
+
+.pipelineBadge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.pipelineBadgeReporter { background: #dbeafe; color: #1d4ed8; }
+.pipelineBadgeAI       { background: #f3e8ff; color: #6d28d9; }
+.pipelineBadgeSystem   { background: #f0fdfa; color: #0f766e; }
+.pipelineBadgeSubmit   { background: #f0fdf4; color: #15803d; }
+
+.pipelineStepTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.pipelineStepBody {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.pipelineArrow {
+  text-align: center;
+  padding: 3px 0;
+  color: var(--color-text-muted);
+  opacity: 0.35;
+  font-size: 18px;
+  line-height: 1;
+  user-select: none;
 }
 
 /* Legal blockquote */

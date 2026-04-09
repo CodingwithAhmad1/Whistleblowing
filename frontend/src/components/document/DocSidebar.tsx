@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react'
 import styles from './DocSidebar.module.css'
 
-const NAV_GROUPS = [
+interface NavItem {
+  id: string
+  label: string
+}
+
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Overview',
     items: [
@@ -38,7 +48,7 @@ const NAV_GROUPS = [
 
 const ALL_IDS = NAV_GROUPS.flatMap(g => g.items.map(i => i.id))
 
-export function DocSidebar() {
+export function DocSidebar(): JSX.Element {
   const [activeId, setActiveId] = useState<string>('')
 
   useEffect(() => {
