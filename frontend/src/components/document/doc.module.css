@@ -323,3 +323,140 @@
   border-top: 1px solid var(--color-border);
   margin: 2.5rem 0;
 }
+
+/* Manager mode: ~12.5% larger type + scaled UI chrome (step flow, pipeline, table) */
+:global(html[data-mode="manager"]) .h2 {
+  font-size: 29px;
+  margin-top: 4.25rem;
+  margin-bottom: 1.35rem;
+}
+
+:global(html[data-mode="manager"]) .h3 {
+  font-size: 19px;
+  margin-top: 1.9rem;
+}
+
+:global(html[data-mode="manager"]) .h4 {
+  font-size: 17px;
+}
+
+:global(html[data-mode="manager"]) .p {
+  font-size: 18px;
+}
+
+:global(html[data-mode="manager"]) .cardLabel {
+  font-size: 12.5px;
+}
+
+:global(html[data-mode="manager"]) .cardTitle {
+  font-size: 18px;
+}
+
+:global(html[data-mode="manager"]) .cardDesc {
+  font-size: 16.5px;
+}
+
+:global(html[data-mode="manager"]) .badge {
+  font-size: 12.5px;
+  padding: 3px 9px;
+}
+
+:global(html[data-mode="manager"]) .benefitList li {
+  font-size: 17px;
+  padding: 9px 0;
+}
+
+:global(html[data-mode="manager"]) .benefitIcon {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+:global(html[data-mode="manager"]) .stepFlow {
+  gap: 6px;
+  margin: 1.65rem 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+:global(html[data-mode="manager"]) .stepPill {
+  gap: 7px;
+  padding: 7px 15px;
+  font-size: 16px;
+  border-radius: 22px;
+}
+
+:global(html[data-mode="manager"]) .stepNum {
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+}
+
+:global(html[data-mode="manager"]) .stepArrow {
+  font-size: 16px;
+}
+
+:global(html[data-mode="manager"]) .table {
+  font-size: 16.5px;
+  margin: 1.35rem 0;
+}
+
+:global(html[data-mode="manager"]) .table th {
+  font-size: 12.5px;
+  padding: 9px 13px;
+}
+
+:global(html[data-mode="manager"]) .table td {
+  padding: 12px 13px;
+}
+
+:global(html[data-mode="manager"]) .priorityDot {
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+}
+
+:global(html[data-mode="manager"]) .diagramWrap {
+  padding: 1.65rem;
+  margin: 1.65rem 0;
+}
+
+:global(html[data-mode="manager"]) .pipeline {
+  margin: 1.9rem 0;
+}
+
+:global(html[data-mode="manager"]) .pipelineStep {
+  padding: 1rem 1.35rem;
+}
+
+:global(html[data-mode="manager"]) .pipelineBadge {
+  font-size: 11px;
+  padding: 3px 9px;
+}
+
+:global(html[data-mode="manager"]) .pipelineStepTitle {
+  font-size: 16px;
+}
+
+:global(html[data-mode="manager"]) .pipelineStepBody {
+  font-size: 16px;
+}
+
+:global(html[data-mode="manager"]) .pipelineArrow {
+  font-size: 20px;
+  padding: 4px 0;
+}
+
+:global(html[data-mode="manager"]) .blockquote {
+  font-size: 17px;
+  padding: 0.85rem 1.35rem;
+}
+
+:global(html[data-mode="manager"]) .blockquote cite {
+  font-size: 13.5px;
+}
+
+:global(html[data-mode="manager"]) .hr {
+  margin: 2.75rem 0;
+}

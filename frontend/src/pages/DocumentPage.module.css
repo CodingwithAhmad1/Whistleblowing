@@ -69,3 +69,46 @@
     padding: 2rem 1.25rem;
   }
 }
+
+/* Manager mode: wider column + larger hero (matches doc.module.css scale) */
+:global(html[data-mode="manager"]) .inner {
+  max-width: 1500px;
+}
+
+:global(html[data-mode="manager"]) .content {
+  max-width: 1020px;
+}
+
+:global(html[data-mode="manager"]) .heroLabel {
+  font-size: 12.5px;
+  letter-spacing: 0.75px;
+}
+
+:global(html[data-mode="manager"]) .heroTitle {
+  font-size: 41px;
+  letter-spacing: -0.85px;
+}
+
+:global(html[data-mode="manager"]) .heroDesc {
+  font-size: 18px;
+}
+
+@media (max-width: 900px) {
+  :global(html[data-mode="manager"]) .inner {
+    max-width: 100%;
+  }
+
+  :global(html[data-mode="manager"]) .content {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  :global(html[data-mode="manager"]) .heroTitle {
+    font-size: 34px;
+  }
+
+  :global(html[data-mode="manager"]) .heroDesc {
+    font-size: 17px;
+  }
+}

@@ -59,3 +59,13 @@
     display: none;
   }
 }
+
+:global(html[data-mode="manager"]) .navSection {
+  font-size: 11.5px;
+  letter-spacing: 0.75px;
+}
+
+:global(html[data-mode="manager"]) .navLink {
+  font-size: 14.5px;
+  padding: 8px 1.5rem;
+}

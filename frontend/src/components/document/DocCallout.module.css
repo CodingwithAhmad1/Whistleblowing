@@ -40,3 +40,12 @@
 .amber p {
   color: #b45309;
 }
+
+:global(html[data-mode="manager"]) .callout {
+  padding: 1.35rem 1.6rem;
+  margin: 1.35rem 0;
+}
+
+:global(html[data-mode="manager"]) .callout p {
+  font-size: 17px;
+}

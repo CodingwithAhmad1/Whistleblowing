@@ -1,0 +1,102 @@
+[  121070ms] ReferenceError: hasMounted is not defined
+    at http://localhost:5173/src/components/ReportPanel/sections/FullDetailsQuestionnaire.tsx?t=1773408070754:60:5
+    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:16915:34)
+    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18156:19)
+    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18129:17)
+    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18119:15)
+    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18109:11)
+    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19490:11)
+    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19447:22)
+    at commitRootImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19416:13)
+    at commitRoot (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19277:13)
+[  121073ms] ReferenceError: hasMounted is not defined
+    at http://localhost:5173/src/components/ReportPanel/sections/FullDetailsQuestionnaire.tsx?t=1773408070754:60:5
+    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:16915:34)
+    at invokePassiveEffectMountInDEV (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18324:19)
+    at invokeEffectsInDev (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19701:19)
+    at commitDoubleInvokeEffectsInDEV (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19686:15)
+    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19503:13)
+    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19447:22)
+    at commitRootImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19416:13)
+    at commitRoot (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19277:13)
+    at performSyncWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18895:11)
+[  121082ms] [ERROR] The above error occurred in the <FullDetailsQuestionnaire> component:
+
+    at FullDetailsQuestionnaire (http://localhost:5173/src/components/ReportPanel/sections/FullDetailsQuestionnaire.tsx?t=1773408070754:28:36)
+    at Incident (http://localhost:5173/src/components/ReportPanel/sections/Incident.tsx:26:36)
+    at div
+    at section
+    at FormSection (http://localhost:5173/src/components/ReportPanel/FormSection.tsx:18:31)
+    at div
+    at div
+    at div
+    at ReportPanel (http://localhost:5173/src/components/ReportPanel/ReportPanel.tsx:28:22)
+    at ErrorBoundary (http://localhost:5173/src/components/ErrorBoundary.tsx:8:5)
+    at main
+    at div
+    at HomePage
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:6355:26)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:7222:3)
+    at Suspense
+    at div
+    at div
+    at AppContent (http://localhost:5173/src/App.tsx:47:24)
+    at ReportProvider (http://localhost:5173/src/context/ReportContext.tsx:34:34)
+    at ErrorBoundary (http://localhost:5173/src/components/ErrorBoundary.tsx:8:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:7152:13)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:10363:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:14031
+[  121082ms] [ERROR] ErrorBoundary caught an error: ReferenceError: hasMounted is not defined
+    at http://localhost:5173/src/components/ReportPanel/sections/FullDetailsQuestionnaire.tsx?t=1773408070754:60:5
+    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:16915:34)
+    at commitPassiveMountOnFiber (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18156:19)
+    at commitPassiveMountEffects_complete (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18129:17)
+    at commitPassiveMountEffects_begin (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18119:15)
+    at commitPassiveMountEffects (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18109:11)
+    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19490:11)
+    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19447:22)
+    at commitRootImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19416:13)
+    at commitRoot (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19277:13) {componentStack: 
+    at FullDetailsQuestionnaire (http://localhost…vite/deps/react-router-dom.js?v=2c0e3f49:10363:3)} @ http://localhost:5173/src/components/ErrorBoundary.tsx:14
+[  121082ms] [ERROR] The above error occurred in the <FullDetailsQuestionnaire> component:
+
+    at FullDetailsQuestionnaire (http://localhost:5173/src/components/ReportPanel/sections/FullDetailsQuestionnaire.tsx?t=1773408070754:28:36)
+    at Incident (http://localhost:5173/src/components/ReportPanel/sections/Incident.tsx:26:36)
+    at div
+    at section
+    at FormSection (http://localhost:5173/src/components/ReportPanel/FormSection.tsx:18:31)
+    at div
+    at div
+    at div
+    at ReportPanel (http://localhost:5173/src/components/ReportPanel/ReportPanel.tsx:28:22)
+    at ErrorBoundary (http://localhost:5173/src/components/ErrorBoundary.tsx:8:5)
+    at main
+    at div
+    at HomePage
+    at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:6355:26)
+    at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:7222:3)
+    at Suspense
+    at div
+    at div
+    at AppContent (http://localhost:5173/src/App.tsx:47:24)
+    at ReportProvider (http://localhost:5173/src/context/ReportContext.tsx:34:34)
+    at ErrorBoundary (http://localhost:5173/src/components/ErrorBoundary.tsx:8:5)
+    at App
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:7152:13)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=2c0e3f49:10363:3)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, ErrorBoundary. @ http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:14031
+[  121082ms] [ERROR] ErrorBoundary caught an error: ReferenceError: hasMounted is not defined
+    at http://localhost:5173/src/components/ReportPanel/sections/FullDetailsQuestionnaire.tsx?t=1773408070754:60:5
+    at commitHookEffectListMount (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:16915:34)
+    at invokePassiveEffectMountInDEV (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18324:19)
+    at invokeEffectsInDev (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19701:19)
+    at commitDoubleInvokeEffectsInDEV (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19686:15)
+    at flushPassiveEffectsImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19503:13)
+    at flushPassiveEffects (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19447:22)
+    at commitRootImpl (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19416:13)
+    at commitRoot (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:19277:13)
+    at performSyncWorkOnRoot (http://localhost:5173/node_modules/.vite/deps/chunk-PBXWVHXV.js?v=2c0e3f49:18895:11) {componentStack: 
+    at FullDetailsQuestionnaire (http://localhost…vite/deps/react-router-dom.js?v=2c0e3f49:10363:3)} @ http://localhost:5173/src/components/ErrorBoundary.tsx:14
