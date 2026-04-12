@@ -30,18 +30,12 @@
 
 - **Quota resilience**: `GeminiProvider.generate_stream` catches `ClientError` with code `429` and retries with the next model in the fallback chain (`model_fallback.get_active_model()`).
 - **No busy-wait**: The retry is immediate — no `asyncio.sleep()` between tokens or between model switches.
-- **Exhaustion state**: Stored in `data/usage.json` via `UsageTracker`. `is_exhausted(model)` is a fast file read; only one file read per request at the model selection step.
-
-### Usage Tracker
-
-- **File locking**: `filelock.FileLock` used for all writes to `data/usage.json`. Prevents concurrent write races under high request load.
-- **Atomic write**: `record_usage` and `mark_exhausted` use `tempfile.mkstemp` + `Path.replace` for crash-safe atomic updates.
-- **Cleanup**: Entries older than 7 days are pruned inside each write, avoiding unbounded file growth.
+- **Exhaustion state**: In-process only (`mark_model_exhausted` / `is_model_exhausted` in `model_fallback.py`), keyed by UTC date. No per-request file read for quota state.
 
 ### Settings Store
 
 - **File locking**: `filelock` used during `update_settings()` to prevent concurrent write races.
-- **Atomic write**: Same tempfile + rename pattern as `UsageTracker`.
+- **Atomic write**: Tempfile + rename for crash-safe updates.
 
 ### Embeddings
 
@@ -51,8 +45,6 @@
 ### Full Details Frontend
 
 - **Q3 cache**: `useQuestionContent` cache key includes `settingsModified` from sessionStorage. Admin saves invalidate Q3 cache so updated templates are used on new Full Details requests.
-- **Admin usage polling**: `ModelUsageSection` polls `GET /api/admin/usage` every 30 seconds with `setInterval`. The interval is cleared on unmount via the `useEffect` cleanup.
-
 ---
 
 ## Future Enhancements

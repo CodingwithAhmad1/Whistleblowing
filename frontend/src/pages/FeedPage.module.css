@@ -14,8 +14,19 @@
 .subtitle {
   font-size: var(--text-base);
   color: var(--color-text-muted);
-  margin: 0 0 var(--space-48);
+  margin: 0 0 var(--space-16);
   line-height: 1.5;
+}
+
+.disclosure {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-48);
+  padding: var(--space-16) var(--space-20);
+  line-height: 1.55;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-elevated, rgba(0, 0, 0, 0.03));
 }
 
 /* ── Empty state ───────────────────────────────────────────────────────────── */

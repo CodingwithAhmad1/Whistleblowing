@@ -148,16 +148,16 @@ Layer 2 takes the Layer 1 JSON and evaluates a prioritised list of **gap rules**
 
 ```python
 {
-  "id":       "timeline_unclear",           # unique slug
-  "label":    "Timeline Unclear",           # human-readable
-  "priority": 1,                            # 1 = highest
+  "id":       "no_witnesses_mentioned",     # unique slug
+  "label":    "No Witnesses Mentioned",     # human-readable
+  "priority": 2,                            # 1 = highest
   "active":   True,
   "criteria": {
     "type":      "boolean_false",           # see below
-    "field":     "timeline_clear",          # key in Layer1Result
+    "field":     "witnesses_mentioned",     # key in Layer1Result
     "threshold": None                       # only for length_threshold type
   },
-  "template": "To clarify the sequence..."  # question text
+  "template": "Was anyone else present..."  # question text
 }
 ```
 
@@ -171,19 +171,19 @@ Layer 2 takes the Layer 1 JSON and evaluates a prioritised list of **gap rules**
 
 ### Form-Field Suppression
 
-If `form_data` already contains a value for a field that a gap would ask about, that gap is **suppressed**. Example: if the user already selected `when_occurred = "Last 3 months"` in the main form, the `missing_date` gap is skipped — we do not ask "when did this happen?" again.
+The `_FORM_FIELD_GAP_SUPPRESSION` map in `intake_processor.py` is an extension point that lets a filled form field suppress a gap. It is currently empty: the surviving gap pool is evaluated against the combined narrative (`full_details_q1` + `sequence_of_events` + `evidence_description`), which already captures all standardised input, so no suppression rules are needed at present.
 
 ### Default Gap Set (in priority order)
 
 | Priority | Gap ID | Field Checked | Condition |
 |----------|--------|---------------|-----------|
-| 1 | `timeline_unclear` | `timeline_clear` | is `False` |
-| 2 | `no_specific_example` | `specific_examples_present` | is `False` |
-| 3 | `no_evidence` | `evidence_described` | is `False` |
-| 4 | `missing_date` | `dates_mentioned` | is empty list |
-| 5 | `missing_individuals` | `people_mentioned` | is empty list |
-| 6 | `missing_location` | `locations_mentioned` | is empty list |
-| 7 | `narrative_too_short` | `length_character_count` | < 300 chars |
+| 1 | `no_specific_example` | `specific_examples_present` | is `False` |
+| 2 | `no_witnesses_mentioned` | `witnesses_mentioned` | is `False` |
+| 3 | `no_prior_reporting` | `prior_reporting_mentioned` | is `False` |
+| 4 | `no_impact_described` | `impact_described` | is `False` |
+| 5 | `no_retaliation_context` | `retaliation_mentioned` | is `False` |
+
+Sequence-of-events and evidence coverage are handled up front as **standardised questions** in the wizard (Q2 and Q3), so they no longer need a gap template. Date / location / named-individual gaps were dropped because the main form already captures those fields (`when_occurred`, `incident_location`, `where_occurred`, `person_1..10`).
 
 All gaps are configurable via the Admin panel and persisted in `backend/data/settings.json`.
 
@@ -200,17 +200,17 @@ Layer 3 is trivial: for each gap identified by Layer 2, it looks up the `templat
 ```json
 {
   "extraction": { ...Layer1Result },
-  "gaps": ["timeline_unclear"],
+  "gaps": ["no_witnesses_mentioned"],
   "follow_up_questions": [
     {
-      "gap_id": "timeline_unclear",
-      "question_text": "To clarify the sequence of events, could you describe what happened first and what happened next?"
+      "gap_id": "no_witnesses_mentioned",
+      "question_text": "Was anyone else present who could corroborate what you've described — witnesses or people who saw or heard the incident?"
     }
   ]
 }
 ```
 
-This response is also **automatically persisted** to `settings.json` under `lastIntakeAnalysis` (with a timestamp) so the Analysis page can display it later without re-running the analysis.
+The frontend persists the latest successful response (plus a client timestamp and `used_defaults`) to **`sessionStorage`** under `whistleblow_lastIntakeAnalysis` so the Analysis page can show it in the same browser session without re-running the pipeline.
 
 ---
 
@@ -349,7 +349,7 @@ This is a **read-only diagnostic page**. It shows the result of the most recent 
 
 ### Section 1: Last Analysis Result
 
-Fetches `GET /admin/last-intake-analysis` and renders three cards:
+Reads the stored intake payload from **session storage** (written by `useIntakeAnalysis` after a successful `POST /api/questions/intake/analyze`) and loads gap definitions from **`GET /api/intake/gaps`**. It renders three cards:
 
 **Layer 1 Card — Extraction Data**
 - Summary text
@@ -437,8 +437,8 @@ POST /questions/intake/analyze
          │
     ┌────┴────────────────────────────────────────┐
     │         Layer 2: Gap Evaluation              │
-    │  Pure Python: check 7 rules, pick highest    │
-    │  priority gap that fires (max 1)             │
+    │  Pure Python: walk rules in priority order   │
+    │  (up to 2 gaps that fire)                    │
     └────┬────────────────────────────────────────┘
          │
     ┌────┴────────────────────────────────────────┐
@@ -446,10 +446,10 @@ POST /questions/intake/analyze
     │  Return question text for identified gap     │
     └────┬────────────────────────────────────────┘
          │
-         ▼ saved to settings.json (lastIntakeAnalysis)
+         ▼ sessionStorage (browser — last intake snapshot)
          │
-[If follow-up question: show Q2 to user]
-[If no gap: skip Q2]
+[If follow-up question(s): show up to 2 gap questions to user]
+[If no gap: skip to constructing]
          │
          ▼
 POST /rag/construct-sentence
@@ -493,10 +493,11 @@ POST /rag/policy-quote
 | `backend/app/rag/sentence_builder.py` | Constructed sentence via Gemini |
 | `backend/app/routers/questions.py` | `POST /questions/intake/analyze` |
 | `backend/app/routers/rag.py` | `POST /rag/construct-sentence`, `POST /rag/policy-quote` |
-| `backend/app/routers/admin.py` | Gap CRUD, settings, `GET /admin/last-intake-analysis` |
+| `backend/app/routers/intake.py` | `GET /api/intake/gaps` (read-only) |
+| `backend/app/routers/admin.py` | Gap CRUD, settings |
 | `backend/app/settings/store.py` | JSON persistence with filelock |
 | `backend/ingest_policy.py` | PDF → ChromaDB ingestion (run manually) |
-| `backend/data/settings.json` | Live config + last analysis result |
+| `backend/data/settings.json` | Live admin config |
 | `backend/data/chroma/` | ChromaDB vector store |
 
 ### Frontend

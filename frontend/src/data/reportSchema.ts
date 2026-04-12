@@ -157,6 +157,17 @@ export const REPORT_FIELDS: FieldDef[] = [
     label: 'Please describe what happened in your own words.',
     section: 'incident',
   },
-  // full_details_q2, full_details_q3, full_details_q2_question, full_details_q3_question
+  {
+    key: 'sequence_of_events',
+    label: 'Sequence of events — what happened first and what happened next?',
+    section: 'incident',
+  },
+  {
+    key: 'evidence_description',
+    label: 'Do you have any supporting evidence (documents, emails, screenshots, etc.)?',
+    section: 'incident',
+  },
+  // full_details_q1, sequence_of_events, evidence_description, full_details_q2,
+  // full_details_q3, full_details_q2_question, full_details_q3_question
   // are rendered as a special Q&A block in the PDF generator — excluded from standard iteration.
 ]

@@ -8,28 +8,18 @@ Each gap defines:
 - active: whether gap is evaluated by default
 - criteria: deterministic check against Layer 1 extraction JSON
 - template: standard question text
+
+Layer 1 evaluates its booleans across the combined narrative
+(full_details_q1 + sequence_of_events + evidence_description), so these
+gaps fire only when the reporter has not addressed the topic in ANY of
+the three standardised narrative answers.
 """
 
 DEFAULT_INTAKE_GAPS: list[dict] = [
     {
-        "id": "timeline_unclear",
-        "label": "Timeline Unclear",
-        "priority": 1,
-        "active": True,
-        "criteria": {
-            "type": "boolean_false",
-            "field": "timeline_clear",
-            "threshold": None,
-        },
-        "template": (
-            "To clarify the sequence of events, could you describe what happened "
-            "first and what happened next?"
-        ),
-    },
-    {
         "id": "no_specific_example",
         "label": "No Specific Example",
-        "priority": 2,
+        "priority": 1,
         "active": True,
         "criteria": {
             "type": "boolean_false",
@@ -40,84 +30,66 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "For documentation purposes, could you provide a specific example "
             "of when this occurred?"
         ),
-
     },
     {
-        "id": "no_evidence",
-        "label": "No Evidence Mentioned",
+        "id": "no_witnesses_mentioned",
+        "label": "No Witnesses Mentioned",
+        "priority": 2,
+        "active": True,
+        "criteria": {
+            "type": "boolean_false",
+            "field": "witnesses_mentioned",
+            "threshold": None,
+        },
+        "template": (
+            "Was anyone else present who could corroborate what you've described "
+            "— witnesses or people who saw or heard the incident?"
+        ),
+    },
+    {
+        "id": "no_prior_reporting",
+        "label": "No Prior Reporting Mentioned",
         "priority": 3,
         "active": True,
         "criteria": {
             "type": "boolean_false",
-            "field": "evidence_described",
+            "field": "prior_reporting_mentioned",
             "threshold": None,
         },
         "template": (
-            "To ensure accurate review, do you have any documents, emails, screenshots, "
-            "or other materials related to this?"
+            "Has this matter been raised or reported to anyone before "
+            "(e.g., a manager, HR, or a hotline), and if so, what was the outcome?"
         ),
-
     },
     {
-        "id": "missing_date",
-        "label": "Missing Date",
+        "id": "no_impact_described",
+        "label": "No Impact Described",
         "priority": 4,
         "active": True,
         "criteria": {
-            "type": "empty_array",
-            "field": "dates_mentioned",
+            "type": "boolean_false",
+            "field": "impact_described",
             "threshold": None,
         },
         "template": (
-            "To clarify timing, do you recall approximately when this occurred "
-            "(month and year if possible)?"
+            "Who or what has been harmed by this, and in what way "
+            "(people, finances, safety, reputation)?"
         ),
-
     },
     {
-        "id": "missing_individuals",
-        "label": "Missing Named Individuals",
+        "id": "no_retaliation_context",
+        "label": "No Retaliation Context",
         "priority": 5,
         "active": True,
         "criteria": {
-            "type": "empty_array",
-            "field": "people_mentioned",
+            "type": "boolean_false",
+            "field": "retaliation_mentioned",
             "threshold": None,
         },
         "template": (
-            "For documentation purposes, were any specific individuals involved "
-            "that you can name?"
+            "Have you experienced any retaliation for raising this, or do you "
+            "have concerns about retaliation if you report?"
         ),
-
-    },
-    {
-        "id": "missing_location",
-        "label": "Missing Location",
-        "priority": 6,
-        "active": True,
-        "criteria": {
-            "type": "empty_array",
-            "field": "locations_mentioned",
-            "threshold": None,
-        },
-        "template": "To ensure accurate review, where did this take place?",
-
-    },
-    {
-        "id": "narrative_too_short",
-        "label": "Narrative Too Short",
-        "priority": 7,
-        "active": True,
-        "criteria": {
-            "type": "length_threshold",
-            "field": "length_character_count",
-            "threshold": 300,
-        },
-        "template": (
-            "To better understand your report, could you provide more detail "
-            "about what occurred?"
-        ),
-
     },
 ]
 
@@ -133,6 +105,10 @@ VALID_LAYER1_FIELDS = {
     "specific_examples_present",
     "evidence_described",
     "timeline_clear",
+    "witnesses_mentioned",
+    "prior_reporting_mentioned",
+    "impact_described",
+    "retaliation_mentioned",
     "allegation_type",
     "length_character_count",
 }
@@ -147,6 +123,10 @@ LAYER1_FIELD_TYPES: dict[str, str] = {
     "specific_examples_present": "boolean",
     "evidence_described": "boolean",
     "timeline_clear": "boolean",
+    "witnesses_mentioned": "boolean",
+    "prior_reporting_mentioned": "boolean",
+    "impact_described": "boolean",
+    "retaliation_mentioned": "boolean",
     "length_character_count": "number",
 }
 

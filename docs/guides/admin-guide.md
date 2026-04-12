@@ -25,13 +25,12 @@ A gap is a category of missing or unclear information in the reporter's narrativ
 | Field | Description |
 |-------|-------------|
 | **Label** | Human-readable name shown in the Admin UI |
-| **Priority** | Evaluation order (1 = highest priority). The backend evaluates gaps in priority order and stops after finding 2. |
+| **Priority** | Evaluation order (1 = highest priority). The backend evaluates gaps in priority order and stops after finding 1. |
 | **Active** | Toggle to include/exclude this gap from analysis without deleting it |
 | **Criteria type** | How the gap is detected (see below) |
 | **Criteria field** | The Layer 1 extraction field to evaluate |
 | **Threshold** | For `length_threshold` type: minimum character count (gap fires if below this) |
 | **Template** | The question text shown to the reporter when this gap is identified |
-| **Conditional template** | *(Optional)* Alternative template with `{event}` placeholder. Only used for `timeline_unclear` when a partial timeline is present; the backend fills `{event}` via a lightweight LLM call. |
 
 ### Criteria Types
 
@@ -123,7 +122,7 @@ The **Model Usage** section shows today's request and token consumption for each
 
 The section refreshes automatically every 30 seconds.
 
-**Fallback chain:** When the active model is exhausted, the backend automatically switches to the next available model in order: `gemini-2.0-flash` → `gemini-2.5-flash-lite` → `gemini-1.5-flash`. The starting model is set via `GEMINI_MODEL` in `backend/.env`.
+**Fallback chain:** When the active model returns HTTP 429, the backend automatically switches to the next available model in order: `gemini-2.0-flash` → `gemini-2.5-flash-lite` → `gemini-2.5-flash`. The starting model is set via `GEMINI_MODEL` in `backend/.env`. Skipped models are remembered until UTC midnight for that server process (in-memory).
 
 ---
 
@@ -132,7 +131,7 @@ The section refreshes automatically every 30 seconds.
 ### Loading Settings
 
 1. Open **Admin** from the navigation bar.
-2. The page fetches current settings from `GET /api/admin/settings` and usage from `GET /api/admin/usage`.
+2. The page fetches current settings from `GET /api/admin/settings`.
 3. If loading fails (backend unreachable), an error is shown and **Save** is disabled. Click **Retry load** to try again.
 
 ### Saving
@@ -161,10 +160,10 @@ Some settings are not exposed in the Admin UI and must be configured in `backend
 
 ## Security Note
 
-The Admin endpoints (`GET` and `PUT /api/admin/settings`, `GET /api/admin/usage`) do **not** require authentication in the current implementation. Restrict access to the Admin page (e.g., via network policy, reverse proxy, or future auth middleware) before deploying to production.
+The Admin endpoints (`GET` and `PUT /api/admin/settings`, intake gap CRUD under `/api/admin/intake-gaps`, etc.) do **not** require authentication in the current implementation. Restrict access to the Admin page (e.g., via network policy, reverse proxy, or future auth middleware) before deploying to production.
 
 ---
 
 ## API Reference
 
-See [API Reference](../api/README.md#admin-settings) for full request/response details including the `/api/admin/usage` endpoint.
+See [API Reference](../api/README.md#admin-settings) for full request/response details.

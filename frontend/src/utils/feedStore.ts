@@ -8,6 +8,10 @@ export interface Layer1Extraction {
   specific_examples_present: boolean
   evidence_described: boolean
   timeline_clear: boolean
+  witnesses_mentioned: boolean
+  prior_reporting_mentioned: boolean
+  impact_described: boolean
+  retaliation_mentioned: boolean
   allegation_type: string[]
   length_character_count: number
 }

@@ -61,9 +61,17 @@ REPORT_FIELDS = [
     {"key": "how_aware_other", "label": "How you became aware (other)"},
     {"key": "persons_concealing", "label": "Persons concealing / steps taken"},
     {"key": "full_details_q1", "label": "Please describe what happened in your own words."},
-    {"key": "full_details_q2", "label": "Answer to AI-generated follow-up question"},
-    {"key": "full_details_q3", "label": "Answer to 2nd AI-generated follow-up question"},
+    {"key": "sequence_of_events", "label": "Sequence of events — what happened first and what happened next"},
+    {"key": "evidence_description", "label": "Evidence or supporting materials the reporter has"},
+    {"key": "full_details_q2", "label": "Answer to first AI-generated follow-up question"},
+    {"key": "full_details_q2_question", "label": "Text of the first AI-generated follow-up question"},
+    {"key": "full_details_gap2", "label": "Answer to second AI-generated follow-up question (gap)"},
+    {"key": "full_details_gap2_question", "label": "Text of the second AI-generated follow-up question"},
+    {"key": "full_details_q3", "label": "Answer to policy violation question"},
+    {"key": "full_details_q3_question", "label": "Text of the second AI-generated follow-up question"},
     {"key": "policy_quote_matched", "label": "Matched policy quote from rules book"},
+    {"key": "policy_section_matched", "label": "Section citation for matched policy quote"},
+    {"key": "constructed_sentence", "label": "LLM-generated summary used for policy / RAG query"},
 ]
 
 

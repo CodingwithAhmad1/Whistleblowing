@@ -77,7 +77,18 @@ def get_intake_gaps() -> list[dict]:
     # makes the API response order predictable for the frontend display too).
     gaps_copy = copy.deepcopy(gaps)
     gaps_copy.sort(key=lambda g: g.get("priority", 999))
-    return gaps_copy
+    valid: list[dict] = []
+    for g in gaps_copy:
+        try:
+            _validate_gap(g)
+            valid.append(g)
+        except ValueError as e:
+            logger.warning(
+                "Skipping invalid intake gap from settings (id=%r): %s",
+                g.get("id"),
+                e,
+            )
+    return valid if valid else copy.deepcopy(DEFAULT_INTAKE_GAPS)
 
 
 def _validate_gap(gap: dict) -> None:
@@ -164,39 +175,6 @@ def _slugify(label: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "_", slug)
     slug = slug.strip("_")
     return slug or "gap"
-
-
-def get_last_analysis() -> dict | None:
-    """Return the most recently stored intake analysis result, or None if absent."""
-    raw = _read_raw()
-    result = raw.get("lastIntakeAnalysis")
-    if not isinstance(result, dict):
-        return None
-    return result
-
-
-def update_last_analysis(result: dict) -> None:
-    """Persist the latest intake analysis result to settings.json."""
-    lock_path = SETTINGS_FILE.with_suffix(SETTINGS_FILE.suffix + ".lock")
-    lock = FileLock(lock_path)
-    with lock:
-        current = _read_raw()
-        current["lastIntakeAnalysis"] = result
-        _ensure_dir()
-        try:
-            fd, tmp_path = tempfile.mkstemp(
-                dir=str(DATA_DIR), suffix=".tmp", prefix="settings_"
-            )
-            try:
-                with open(fd, "w", encoding="utf-8") as f:
-                    json.dump(current, f, indent=2)
-                Path(tmp_path).replace(SETTINGS_FILE)
-            except BaseException:
-                Path(tmp_path).unlink(missing_ok=True)
-                raise
-        except OSError as e:
-            logger.error(f"Failed to write last intake analysis: {e}")
-            raise
 
 
 def update_settings(updates: dict) -> dict:

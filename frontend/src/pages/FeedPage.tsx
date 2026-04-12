@@ -19,6 +19,11 @@ export function FeedPage() {
     <div className={styles.container}>
       <h1 className={styles.title}>Submission Feed</h1>
       <p className={styles.subtitle}>Review submitted whistleblowing reports.</p>
+      <p className={styles.disclosure} role="note">
+        Prototype notice: submissions are stored only in this browser&apos;s local storage. They are not encrypted,
+        are not sent to a server, and are not suitable as an official compliance or investigation record. Clearing
+        site data or using another device will hide them here.
+      </p>
 
       {submissions.length === 0 ? (
         <div className={styles.emptyState}>

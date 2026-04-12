@@ -1,6 +1,7 @@
-"""Model fallback chain for automatic quota-exhaustion recovery."""
+"""Model fallback chain for automatic quota-exhaustion recovery (in-process only)."""
 
 import logging
+from datetime import datetime, timezone
 
 from ..config import settings
 
@@ -13,6 +14,35 @@ MODEL_CHAIN: list[str] = [
     "gemini-2.5-flash",
 ]
 
+_exhausted_models: set[str] = set()
+_exhaustion_day_utc: str | None = None
+
+
+def _today_utc() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def _ensure_fresh_day() -> None:
+    """Clear exhaustion when the UTC date rolls over."""
+    global _exhausted_models, _exhaustion_day_utc
+    today = _today_utc()
+    if _exhaustion_day_utc != today:
+        _exhausted_models = set()
+        _exhaustion_day_utc = today
+
+
+def mark_model_exhausted(model: str) -> None:
+    """Mark a model as quota-exhausted for today (this process only). Called on HTTP 429."""
+    _ensure_fresh_day()
+    _exhausted_models.add(model)
+    logger.warning("Model %r marked quota-exhausted for %s (in-process)", model, _exhaustion_day_utc)
+
+
+def is_model_exhausted(model: str) -> bool:
+    """Return True if this process already hit 429 for the model today (UTC)."""
+    _ensure_fresh_day()
+    return model in _exhausted_models
+
 
 def get_active_model() -> str:
     """
@@ -22,24 +52,21 @@ def get_active_model() -> str:
     rest of the chain. If all models are exhausted, returns the last one as a
     best-effort fallback (the caller will receive a 429 and surface the error).
     """
-    from .usage_tracker import get_tracker
-
-    tracker = get_tracker()
     configured = settings.GEMINI_MODEL
 
-    # Build ordered list starting from the configured model
     if configured in MODEL_CHAIN:
         idx = MODEL_CHAIN.index(configured)
         ordered = MODEL_CHAIN[idx:] + MODEL_CHAIN[:idx]
     else:
-        # Model set in env is outside the known chain — try it first
         ordered = [configured] + MODEL_CHAIN
 
     for model in ordered:
-        if not tracker.is_exhausted(model):
+        if not is_model_exhausted(model):
             if model != configured:
                 logger.info(
-                    f"Model {configured!r} exhausted, falling back to {model!r}"
+                    "Model %r exhausted, falling back to %r",
+                    configured,
+                    model,
                 )
             return model
 

@@ -85,7 +85,7 @@ If a Gemini model returns a `429 Too Many Requests` (quota exhausted), the backe
 gemini-2.0-flash → gemini-2.5-flash-lite → gemini-1.5-flash
 ```
 
-The backend starts from the model set in `GEMINI_MODEL` (default: `gemini-2.5-flash-lite`) and cycles through the remaining models in chain order. Exhaustion state resets at UTC midnight. Current usage is visible at `GET /api/admin/usage` and on the Admin page.
+The backend starts from the model set in `GEMINI_MODEL` (default: `gemini-2.5-flash-lite`) and cycles through the remaining models in chain order. After an HTTP 429, a model is skipped until UTC midnight **for that running server process** (in-memory; there is no usage stats file).
 
 ---
 
@@ -114,7 +114,7 @@ curl http://localhost:8000/api/health
 curl http://localhost:8000/api/admin/settings
 
 # Model usage
-curl http://localhost:8000/api/admin/usage
+curl http://localhost:8000/api/intake/gaps
 ```
 
 ---
@@ -126,4 +126,4 @@ cd frontend && npm run build
 cd ../backend && venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-The built SPA (`frontend/dist`) is served at `/` by the backend. Runtime data files (`backend/data/settings.json`, `backend/data/usage.json`) are created automatically on first use.
+The built SPA (`frontend/dist`) is served at `/` by the backend. `backend/data/settings.json` is created on first admin save.

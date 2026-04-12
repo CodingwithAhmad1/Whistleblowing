@@ -5,6 +5,8 @@ import styles from './ReportView.module.css'
 
 const FULL_DETAILS_KEYS = new Set([
   'full_details_q1',
+  'sequence_of_events',
+  'evidence_description',
   'full_details_q2',
   'full_details_q3',
   'full_details_q2_question',
@@ -65,6 +67,8 @@ export function ReportView({ formData }: Props) {
   )
 
   const q1 = getRaw(formData, 'full_details_q1')
+  const sequence = getRaw(formData, 'sequence_of_events')
+  const evidence = getRaw(formData, 'evidence_description')
   const q2 = getRaw(formData, 'full_details_q2')
   const q2q = getRaw(formData, 'full_details_q2_question')
   const q3 = getRaw(formData, 'full_details_q3')
@@ -155,7 +159,7 @@ export function ReportView({ formData }: Props) {
       <div className={styles.section}>
         <div className={styles.sectionTitle}>Full Details</div>
 
-        {/* Q1 */}
+        {/* Q1 — narrative */}
         <div className={styles.qaBlock}>
           <p className={styles.qaQuestion}>Please describe what happened in your own words.</p>
           {q1 ? (
@@ -165,7 +169,23 @@ export function ReportView({ formData }: Props) {
           )}
         </div>
 
-        {/* Q2 */}
+        {/* Q2 — sequence of events */}
+        {sequence && (
+          <div className={styles.qaBlock}>
+            <p className={styles.qaQuestion}>Sequence of events — what happened first and what happened next?</p>
+            <p className={styles.qaAnswer}>{sequence}</p>
+          </div>
+        )}
+
+        {/* Q3 — evidence */}
+        {evidence && (
+          <div className={styles.qaBlock}>
+            <p className={styles.qaQuestion}>Supporting evidence or materials</p>
+            <p className={styles.qaAnswer}>{evidence}</p>
+          </div>
+        )}
+
+        {/* Q4 — AI follow-up */}
         {showQ2 && (
           <div className={styles.qaBlock}>
             <p className={styles.qaQuestion}>{q2q || 'Follow-up question'}</p>

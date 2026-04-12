@@ -14,6 +14,8 @@ SENTENCE_FIELDS: list[dict[str, str]] = [
     {"key": "supervisor_involved", "label": "Supervisor involvement"},
     {"key": "management_aware", "label": "Management awareness"},
     {"key": "full_details_q1", "label": "Detailed description of the incident"},
+    {"key": "sequence_of_events", "label": "Sequence of events"},
+    {"key": "evidence_description", "label": "Evidence described"},
     {"key": "full_details_q2", "label": "Additional details (follow-up)"},
     {"key": "persons_concealing", "label": "Persons concealing the issue"},
 ]

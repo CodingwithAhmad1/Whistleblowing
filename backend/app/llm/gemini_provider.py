@@ -32,13 +32,11 @@ class GeminiProvider:
             raise RuntimeError("Gemini not initialized. Call initialize() first.")
 
         from .genai_config import get_client
-        from .model_fallback import get_active_model
-        from .usage_tracker import get_tracker
+        from .model_fallback import get_active_model, mark_model_exhausted
         from google.genai import types
         from google.genai.errors import ClientError
 
         client = get_client()
-        tracker = get_tracker()
         max_tokens = max_tokens or settings.MAX_TOKENS
 
         tried: set[str] = set()
@@ -51,8 +49,6 @@ class GeminiProvider:
                 )
             tried.add(model)
 
-            input_tokens = len(prompt) // 4
-            output_tokens = 0
             quota_hit = False
 
             logger.debug(f"Generating via Gemini model={model!r} prompt_len={len(prompt)}")
@@ -69,20 +65,18 @@ class GeminiProvider:
                 )
                 async for chunk in stream:
                     if chunk.text:
-                        output_tokens += len(chunk.text) // 4
                         yield chunk.text
             except ClientError as e:
                 if e.code == 429:
                     logger.warning(
                         f"Quota 429 for model {model!r}, marking exhausted and retrying"
                     )
-                    tracker.mark_exhausted(model)
+                    mark_model_exhausted(model)
                     quota_hit = True
                 else:
                     raise
 
             if not quota_hit:
-                tracker.record_usage(model, input_tokens, output_tokens)
                 return
             # quota_hit=True: loop back and select next available model
 

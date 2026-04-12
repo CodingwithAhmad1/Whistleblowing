@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .llm import get_provider
-from .routers import chat, questions, admin, rag
+from .routers import chat, questions, admin, intake, rag
 from .config import settings
 
 # Configure logging
@@ -50,6 +50,7 @@ app.add_middleware(
 # Include routers
 app.include_router(chat.router, prefix="/api", tags=["chat"])
 app.include_router(questions.router, prefix="/api", tags=["questions"])
+app.include_router(intake.router, prefix="/api", tags=["intake"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(rag.router, prefix="/api", tags=["rag"])
 

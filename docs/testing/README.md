@@ -92,58 +92,26 @@ curl -X POST http://localhost:8000/api/questions/q2/generate \
 # Restore: PUT settings with empty q2PromptTemplate to reset to default
 ```
 
-### Model Usage
+### Public intake gaps (read-only)
 
 ```bash
-# Today's per-model usage and active model
-curl http://localhost:8000/api/admin/usage
-```
-
-Expected shape:
-```json
-{
-  "date": "2026-03-03",
-  "active_model": "gemini-2.5-flash-lite",
-  "models": [
-    {
-      "model": "gemini-2.0-flash",
-      "requests_used": 0,
-      "requests_limit": 1500,
-      "tokens_used": 0,
-      "tokens_limit": 1000000,
-      "requests_pct": 0.0,
-      "tokens_pct": 0.0,
-      "exhausted": false
-    }
-  ],
-  "cumulative": {
-    "days_stored": 1,
-    "total_requests": 0,
-    "total_tokens": 0,
-    "per_model": {
-      "gemini-2.0-flash": { "requests": 0, "tokens": 0 },
-      "gemini-2.5-flash-lite": { "requests": 0, "tokens": 0 },
-      "gemini-1.5-flash": { "requests": 0, "tokens": 0 }
-    }
-  }
-}
+curl http://localhost:8000/api/intake/gaps
 ```
 
 ### Intake Analysis (Full Details)
 
 ```bash
-# Run 3-layer intake analysis on Q1 text — returns 0-2 follow-up questions
+# Run 3-layer intake analysis on Q1 text — returns 0–2 follow-up questions
 curl -X POST http://localhost:8000/api/questions/intake/analyze \
   -H "Content-Type: application/json" \
   -d '{"q1_text":"Something bad happened at work last month."}'
 
 # Expected response shape:
 # {
-#   "extraction": { "summary": "...", "dates_mentioned": [...], "timeline_clear": false, ... },
-#   "gaps": ["timeline_unclear", "no_specific_example"],
+#   "extraction": { "summary": "...", "witnesses_mentioned": false, "impact_described": false, ... },
+#   "gaps": ["no_specific_example"],
 #   "follow_up_questions": [
-#     { "gap_id": "timeline_unclear", "question_text": "Could you describe what happened first..." },
-#     { "gap_id": "no_specific_example", "question_text": "Could you describe a specific incident..." }
+#     { "gap_id": "no_specific_example", "question_text": "For documentation purposes, could you provide a specific example..." }
 #   ]
 # }
 
@@ -171,7 +139,7 @@ curl -X POST http://localhost:8000/api/admin/intake-gaps \
   }'
 
 # Deactivate a gap (patch a single field)
-curl -X PUT http://localhost:8000/api/admin/intake-gaps/narrative_too_short \
+curl -X PUT http://localhost:8000/api/admin/intake-gaps/no_retaliation_context \
   -H "Content-Type: application/json" \
   -d '{"active": false}'
 
@@ -234,29 +202,7 @@ curl http://localhost:8000/api/sessions/test-session-1/history
 
 ## Model Fallback Testing
 
-To simulate quota exhaustion and test the fallback chain, manually edit `backend/data/usage.json`:
-
-```json
-{
-  "2026-03-03": {
-    "gemini-2.0-flash": {
-      "requests": 1500,
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "exhausted": true
-    }
-  }
-}
-```
-
-Then make a Q2/Q3 request. Backend logs should show:
-```
-WARNING - Quota 429 for model 'gemini-2.0-flash', marking exhausted and retrying
-WARNING - Model 'gemini-2.0-flash' marked quota-exhausted for 2026-03-03
-INFO    - Model 'gemini-2.0-flash' exhausted, falling back to 'gemini-2.5-flash-lite'
-```
-
-The Admin page Model Usage section should show the "Exhausted" badge for that model.
+429 exhaustion is tracked **in memory** for the running server process (cleared at UTC midnight). To verify fallback behaviour, trigger real quota limits from the API or temporarily misconfigure the primary model so it returns 429; logs should show exhaustion and a switch to the next model in `MODEL_CHAIN`. Restarting the backend clears in-process exhaustion flags.
 
 ---
 
@@ -294,7 +240,7 @@ The server is using the system Python instead of the venv. Always run via `venv/
 
 ### 429 Quota Errors
 
-The free-tier daily quota for the current model is exhausted. The backend auto-falls back to the next model. If all three models are exhausted, wait until UTC midnight or add billing to your Google AI account. Check current usage: `curl http://localhost:8000/api/admin/usage`.
+The free-tier daily quota for the current model may be exhausted. The backend auto-falls back to the next model in the chain. If every model in the chain returns 429 for this process, wait until UTC midnight (in-process flags reset) or add billing to your Google AI account.
 
 ### Intake Analysis Returns 500 / Full Details Stuck on "Analyzing"
 

@@ -66,8 +66,17 @@ class ReportCreate(BaseModel):
     how_aware: Optional[str] = None
     how_aware_other: Optional[str] = None
     full_details_q1: Optional[str] = None
+    sequence_of_events: Optional[str] = None
+    evidence_description: Optional[str] = None
     full_details_q2: Optional[str] = None
+    full_details_q2_question: Optional[str] = None
+    full_details_gap2: Optional[str] = None
+    full_details_gap2_question: Optional[str] = None
     full_details_q3: Optional[str] = None
+    full_details_q3_question: Optional[str] = None
+    policy_quote_matched: Optional[str] = None
+    policy_section_matched: Optional[str] = None
+    constructed_sentence: Optional[str] = None
     persons_concealing: Optional[str] = None
 
 

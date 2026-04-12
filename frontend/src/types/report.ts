@@ -96,10 +96,14 @@ export interface ReportData {
   how_aware: string
   how_aware_other: string
   full_details_q1: string
+  sequence_of_events: string         // standardised Q2: sequence of events
+  evidence_description: string       // standardised Q3: supporting evidence
   full_details_q2: string
-  full_details_q2_question: string   // 1st follow-up question text
+  full_details_q2_question: string   // First AI follow-up question text
+  full_details_gap2: string
+  full_details_gap2_question: string
   full_details_q3: string
-  full_details_q3_question: string   // 2nd follow-up question text (if any)
+  full_details_q3_question: string   // Policy violation question text
   policy_quote_matched: string       // matched policy quote from RAG
   policy_section_matched: string     // section citation for matched policy quote
   constructed_sentence: string       // LLM-generated summary for RAG query
@@ -158,8 +162,12 @@ export const initialReportData: ReportData = {
   how_aware: '',
   how_aware_other: '',
   full_details_q1: '',
+  sequence_of_events: '',
+  evidence_description: '',
   full_details_q2: '',
   full_details_q2_question: '',
+  full_details_gap2: '',
+  full_details_gap2_question: '',
   full_details_q3: '',
   full_details_q3_question: '',
   policy_quote_matched: '',

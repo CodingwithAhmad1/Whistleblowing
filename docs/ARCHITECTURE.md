@@ -2,7 +2,7 @@
 
 ## Overview
 
-ReportIQ is a whistleblowing report form application. Users fill out a structured report across four sections. The **Full Details** subsection drives a dynamic wizard powered by a 3-layer deterministic intake analysis pipeline: Q1 (free-text narrative) is analyzed by the backend, which returns 0–2 targeted follow-up questions; the user answers them, then reviews all answers. An Admin page lets administrators configure Q2/Q3 prompt templates, manage intake gap configurations, and monitor AI model quota usage. A PDF can be exported when the report is complete. A WebSocket chat backend exists for future chat UI integration.
+ReportIQ is a whistleblowing report form application. Users fill out a structured report across four sections. The **Full Details** subsection drives a dynamic wizard powered by a 3-layer deterministic intake analysis pipeline: Q1 (free-text narrative) is analyzed by the backend, which returns 0–2 targeted gap-driven follow-up questions; the user answers them, then continues through case summary and policy steps before review. An Admin page lets administrators configure Q2/Q3 prompt templates and manage intake gap configurations. The **Analysis** page reads the latest intake result from **session storage** in the browser (not from the server). A PDF can be exported when the report is complete. A WebSocket chat backend exists for future chat UI integration.
 
 ```mermaid
 flowchart TB
@@ -33,7 +33,6 @@ flowchart TB
         WS[WebSocket /api/chat]
         Fallback[Model Fallback]
         Provider[LLM Provider]
-        UsageTracker[Usage Tracker]
         Gemini[Gemini API]
         Storage[Session Storage]
         SettingsStore[Settings Store]
@@ -42,7 +41,6 @@ flowchart TB
         AdminPage -->|GET/PUT/GET| Admin
         AdminPage -->|GET/PUT/POST/DELETE| GapStore
         Admin --> SettingsStore
-        Admin --> UsageTracker
         Admin --> GapStore
         Intake --> Provider
         Intake --> GapStore
@@ -50,7 +48,6 @@ flowchart TB
         Questions --> SettingsStore
         WS --> Provider
         Provider --> Fallback
-        Fallback --> UsageTracker
         Fallback --> Gemini
         WS --> Storage
     end
@@ -67,11 +64,11 @@ flowchart TB
 | PDF | jsPDF (client-side) |
 | Backend | FastAPI, Pydantic 2, Uvicorn |
 | AI SDK | `google-genai` >= 1.0.0 (new Gen AI SDK, replaces deprecated `google-generativeai`) |
-| AI Model | Gemini (default: `gemini-2.5-flash-lite`; fallback chain: `gemini-2.0-flash` → `gemini-2.5-flash-lite` → `gemini-1.5-flash`) |
+| AI Model | Gemini (default from `GEMINI_MODEL`; fallback chain in `model_fallback.MODEL_CHAIN`: `gemini-2.0-flash` → `gemini-2.5-flash-lite` → `gemini-2.5-flash`) |
 | Embeddings | `models/text-embedding-004` via `google-genai` |
 | Settings | JSON file (`backend/data/settings.json`) with file locking |
-| Usage Tracking | JSON file (`backend/data/usage.json`) with file locking, 7-day retention |
-| Data | In-memory (React context + backend sessions) |
+| Quota fallback | In-process only: models that return HTTP 429 are skipped for the rest of the UTC day in that server process (no `usage.json`) |
+| Data | In-memory (React context + backend chat sessions); Analysis page uses `sessionStorage` for the last intake run |
 
 ---
 
@@ -82,7 +79,8 @@ flowchart TB
 | Path | Component | Description |
 |------|-----------|-------------|
 | `/` | HomePage | Report form |
-| `/admin` | AdminPage | Settings (Q2/Q3 prompt templates) + Model Usage stats |
+| `/admin` | AdminPage | Settings (Q2/Q3 prompt templates) and intake gap configuration |
+| `/analysis` | AnalysisPage | Read-only view of last intake run (session storage) + public gap config |
 
 ### Layout
 
@@ -121,7 +119,8 @@ Within Incident Details, **Full Details** is a dynamic step wizard powered by th
 | `q1` | User types free-text narrative | `full_details_q1` |
 | `analyzing` | "Analyzing your report…" loading state — POSTs to `/api/questions/intake/analyze` | — |
 | `fq1` *(optional)* | First follow-up question (if any returned) | `full_details_q2_question` (question text), `full_details_q2` (answer) |
-| `fq2` *(optional)* | Second follow-up question (if any returned) | `full_details_q3_question` (question text), `full_details_q3` (answer) |
+| `fq2` *(optional)* | Second gap follow-up (if returned) | `full_details_gap2_question`, `full_details_gap2` |
+| *(later steps)* | Case summary + policy quote + policy question | `constructed_sentence`, `policy_quote_matched`, `policy_section_matched`, `full_details_q3_question`, `full_details_q3` |
 | `review` | Editable review of all answered questions | — |
 
 - 0–2 follow-up questions are shown depending on what gaps the backend identifies in Q1.
@@ -143,7 +142,8 @@ ChatPanel and ChatSidebar components exist but are not rendered in the current A
 |--------|-----------|
 | **chat** | `WS /api/chat/{session_id}`, `GET /api/reports/{session_id}`, `POST /api/reports/{session_id}/reset`, `GET /api/sessions/{session_id}/history` |
 | **questions** | `POST /api/questions/intake/analyze`, `POST /api/questions/q2/generate`, `POST /api/questions/q3/generate` |
-| **admin** | `GET/PUT /api/admin/settings`, `GET /api/admin/usage`, `GET/PUT/POST /api/admin/intake-gaps`, `PUT/DELETE /api/admin/intake-gaps/{gap_id}` |
+| **intake** | `GET /api/intake/gaps` (read-only gap list for Analysis page and public callers) |
+| **admin** | `GET/PUT /api/admin/settings`, `GET/PUT/POST /api/admin/intake-gaps`, `PUT/DELETE /api/admin/intake-gaps/{gap_id}` |
 
 ### LLM Layer
 
@@ -153,20 +153,17 @@ app/llm/
 ├── genai_config.py      # google.genai.Client singleton; API key resolution (admin > env)
 ├── registry.py          # get_provider() → GeminiProvider singleton
 ├── gemini_provider.py   # Streaming provider with 429 detection and model fallback
-├── model_fallback.py    # get_active_model() — walks MODEL_CHAIN, skips exhausted models
-├── usage_tracker.py     # Per-model, per-day usage counters; persisted to data/usage.json
+├── model_fallback.py    # get_active_model(), mark_model_exhausted() — MODEL_CHAIN, in-process 429 flags (UTC day)
 └── stream_helpers.py    # collect_stream() — fully consumes a stream into a string
 ```
 
 **Model fallback flow:**
 
 When `generate_stream` receives a `ClientError` with code `429`:
-1. Calls `usage_tracker.mark_exhausted(model)` to record the exhaustion.
-2. Calls `model_fallback.get_active_model()` to select the next non-exhausted model.
+1. Calls `mark_model_exhausted(model)` (in-process; cleared at UTC midnight for that process).
+2. Calls `get_active_model()` to select the next model not marked exhausted today.
 3. Retries the stream with the new model.
-4. Raises `RuntimeError` only if all models in the chain are exhausted.
-
-**Usage tracking:** After each successful stream, `record_usage(model, input_tokens, output_tokens)` is called. Tokens are estimated as `len(text) // 4`.
+4. Raises `RuntimeError` only if all models in the chain are exhausted for this process/day.
 
 **SDK note:** Uses `google-genai` (new SDK). The client is created as `genai.Client(api_key=...)` and streaming is via `client.aio.models.generate_content_stream(...)`. The deprecated `google-generativeai` package and its `genai.configure()` / `GenerativeModel` pattern are no longer used.
 
@@ -272,22 +269,22 @@ app/settings/
 
 ### Intake Gap Configuration
 
-Gap configs are stored in `settings.json` under the `intakeGaps` key. The 7 defaults live in `app/prompts/intake_gaps.py` and are used when no file exists or the key is absent.
+Gap configs are stored in `settings.json` under the `intakeGaps` key. The 5 defaults live in `app/prompts/intake_gaps.py` and are used when no file exists or the key is absent.
 
 **Gap object schema:**
 
 ```json
 {
-  "id": "timeline_unclear",
-  "label": "Timeline Unclear",
-  "priority": 1,
+  "id": "no_witnesses_mentioned",
+  "label": "No Witnesses Mentioned",
+  "priority": 2,
   "active": true,
   "criteria": {
     "type": "boolean_false",
-    "field": "timeline_clear",
+    "field": "witnesses_mentioned",
     "threshold": null
   },
-  "template": "To clarify the sequence of events, could you describe what happened first and what happened next?"
+  "template": "Was anyone else present who could corroborate what you've described — witnesses or people who saw or heard the incident?"
 }
 ```
 
@@ -295,26 +292,13 @@ Gap configs are stored in `settings.json` under the `intakeGaps` key. The 7 defa
 
 | Priority | ID | Criteria | Field |
 |----------|----|----------|-------|
-| 1 | `timeline_unclear` | `boolean_false` | `timeline_clear` |
-| 2 | `no_specific_example` | `boolean_false` | `specific_examples_present` |
-| 3 | `no_evidence` | `boolean_false` | `evidence_described` |
-| 4 | `missing_date` | `empty_array` | `dates_mentioned` |
-| 5 | `missing_individuals` | `empty_array` | `people_mentioned` |
-| 6 | `missing_location` | `empty_array` | `locations_mentioned` |
-| 7 | `narrative_too_short` | `length_threshold` (< 300 chars) | `length_character_count` |
+| 1 | `no_specific_example` | `boolean_false` | `specific_examples_present` |
+| 2 | `no_witnesses_mentioned` | `boolean_false` | `witnesses_mentioned` |
+| 3 | `no_prior_reporting` | `boolean_false` | `prior_reporting_mentioned` |
+| 4 | `no_impact_described` | `boolean_false` | `impact_described` |
+| 5 | `no_retaliation_context` | `boolean_false` | `retaliation_mentioned` |
 
-### Usage Tracker
-
-```
-app/llm/
-└── usage_tracker.py  # UsageTracker class; persisted to data/usage.json with FileLock
-```
-
-- **Path**: `backend/data/usage.json`
-- **Schema**: `{ "YYYY-MM-DD": { "model-name": { requests, input_tokens, output_tokens, exhausted } } }`
-- **Daily limits** (free tier): 1,500 requests/day and 1,000,000 tokens/day per model.
-- **Retention**: Entries older than 7 days are pruned on each write.
-- **Singleton**: `get_tracker()` returns the module-level instance.
+Sequence-of-events and supporting-evidence coverage are handled by two **standardised** questions in the wizard (`sequence_of_events`, `evidence_description`) and no longer need a gap template. Layer 1 evaluates its booleans across the combined narrative of Q1 + sequence + evidence.
 
 ### Embeddings
 
@@ -328,9 +312,8 @@ Policy quoting (`get_relevant_policy_snippets`) returns `[]` until documents are
 
 ### Storage
 
-- **Session store** (`app/storage.py`): In-memory per `session_id`. Holds conversation history, report state, and system prompt cache.
+- **Session store** (`app/storage.py`): In-memory per `session_id`. Holds conversation history, report state, and system prompt cache. **Horizontal scale:** multiple app processes do not share this store; use a single replica or an external session store (e.g. Redis) before load-balancing chat across instances.
 - **Settings store**: JSON file with file locking. Persists Q2/Q3 prompt templates, API key, policy excerpt, and intake gap configurations.
-- **Usage store**: JSON file with file locking. Persists per-model daily usage and exhaustion state.
 
 ---
 
@@ -358,7 +341,7 @@ flowchart LR
     User[User]
     FD[FullDetailsQuestionnaire]
     hook[useIntakeAnalysis]
-    analyze[POST /intake/analyze]
+    analyze[POST /questions/intake/analyze]
     L1[IntakeLayer1 - LLM extraction]
     L2[IntakeLayer2 - gap analysis]
     L3[IntakeLayer3 - template resolution]
@@ -424,9 +407,11 @@ frontend/src/
 │   └── BackendLLMContext.tsx
 ├── pages/
 │   ├── HomePage.tsx
-│   └── AdminPage.tsx             # Q2/Q3 prompt templates + Model Usage section
+│   ├── AdminPage.tsx             # Q2/Q3 prompt templates + intake gaps
+│   ├── AnalysisPage.tsx          # Last intake from sessionStorage; GET /api/intake/gaps
+│   └── FeedPage.tsx              # Local-only submission list (localStorage)
 ├── hooks/
-│   ├── useIntakeAnalysis.ts      # Fetches intake analysis (POST /intake/analyze); caches per Q1 text + settings version
+│   ├── useIntakeAnalysis.ts      # POST /questions/intake/analyze; caches per Q1; writes sessionStorage for Analysis page
 │   ├── useQuestionContent.ts     # Fetches Q2/Q3 content on demand; caches per report state
 │   └── useWebVitals.ts
 ├── components/
@@ -453,28 +438,27 @@ frontend/src/
 backend/app/
 ├── main.py                       # FastAPI app, lifespan, CORS, router includes, static SPA
 ├── config.py                     # Pydantic Settings (GEMINI_MODEL default: gemini-2.5-flash-lite)
-├── models.py                     # ReportCreate (54 optional fields), Report
+├── models.py                     # ReportCreate (optional fields aligned with REPORT_FIELDS), Report
 ├── storage.py                    # ChatSession, SessionStore (in-memory)
 ├── routers/
 │   ├── chat.py                   # WS /api/chat, GET/POST /api/reports, GET /api/sessions
 │   ├── questions.py              # POST /api/questions/intake/analyze, q2/generate, q3/generate
-│   └── admin.py                  # GET/PUT /api/admin/settings, GET /api/admin/usage,
-│                                 # GET/PUT/POST/DELETE /api/admin/intake-gaps
+│   ├── intake.py                 # GET /api/intake/gaps
+│   └── admin.py                  # GET/PUT /api/admin/settings, GET/PUT/POST/DELETE /api/admin/intake-gaps
 ├── llm/
 │   ├── genai_config.py           # google.genai.Client singleton, API key resolution
 │   ├── registry.py               # get_provider() singleton
 │   ├── gemini_provider.py        # Streaming provider with 429 detection and model fallback
-│   ├── model_fallback.py         # MODEL_CHAIN, get_active_model()
-│   ├── usage_tracker.py          # UsageTracker, DAILY_LIMITS, get_tracker()
+│   ├── model_fallback.py         # MODEL_CHAIN, get_active_model(), mark_model_exhausted()
 │   └── stream_helpers.py         # collect_stream(provider, prompt, max_tokens) → str
 ├── prompts/
-│   ├── core.py                   # REPORT_FIELDS (54 fields), build_system_prompt()
+│   ├── core.py                   # REPORT_FIELDS, build_system_prompt()
 │   ├── layer1_classify.py        # build_classify_prompt() — 20-token classification
 │   ├── layer2_execute.py         # build_execution_prompt() — full execution prompt
 │   ├── response_types.py         # normalize_response_type() (set-based exact match)
 │   ├── formats.py                # format_for_provider() — plain text message formatting
 │   ├── display_content.py        # DEFAULT_Q2/Q3_PROMPT_TEMPLATE, word limits, Q3 question text
-│   └── intake_gaps.py            # DEFAULT_INTAKE_GAPS (7 configs), VALID_CRITERIA_TYPES
+│   └── intake_gaps.py            # DEFAULT_INTAKE_GAPS, VALID_CRITERIA_TYPES
 ├── question_processors/
 │   ├── base.py                   # Q2Output, Q3Output, QuestionProcessor protocol
 │   ├── registry.py               # get_processor(), register_processor()
@@ -491,6 +475,5 @@ backend/app/
     └── store.py                  # InMemoryDocumentStore, cosine similarity, heapq top-k
 
 backend/data/                     # Created at runtime
-├── settings.json                 # Admin settings (API key, Q2/Q3 templates, intake gap configs)
-└── usage.json                    # Per-model, per-day usage counters (7-day retention)
+└── settings.json                 # Admin settings (API key, Q2/Q3 templates, intake gap configs)
 ```

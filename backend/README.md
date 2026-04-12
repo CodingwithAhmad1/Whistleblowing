@@ -59,10 +59,10 @@ GEMINI_API_KEY=your_google_ai_api_key_here
 When a model returns a 429 quota error, the backend automatically retries with the next available model. The full chain is:
 
 ```
-gemini-2.0-flash → gemini-2.5-flash-lite → gemini-1.5-flash
+gemini-2.0-flash → gemini-2.5-flash-lite → gemini-2.5-flash
 ```
 
-The backend starts from whichever model is set in `GEMINI_MODEL` (default: `gemini-2.5-flash-lite`) and cycles through the rest in chain order. Exhausted models are tracked per-day in `backend/data/usage.json` and reset at UTC midnight.
+The backend starts from whichever model is set in `GEMINI_MODEL` (default: `gemini-2.5-flash-lite`) and cycles through the rest in chain order. Models that return HTTP 429 are skipped for the rest of the UTC day **in that server process** (in-memory; no `usage.json`).
 
 ## API Endpoints
 
@@ -90,7 +90,7 @@ The backend starts from whichever model is set in `GEMINI_MODEL` (default: `gemi
 |--------|------|-------------|
 | `GET` | `/api/admin/settings` | Get admin settings |
 | `PUT` | `/api/admin/settings` | Update admin settings |
-| `GET` | `/api/admin/usage` | Per-model daily usage stats |
+| `GET` | `/api/intake/gaps` | Read-only intake gap list (same data as admin GET, for Analysis page) |
 | `GET` | `/api/admin/intake-gaps` | Get all intake gap configurations |
 | `PUT` | `/api/admin/intake-gaps` | Replace full ordered gap list |
 | `POST` | `/api/admin/intake-gaps` | Add a new gap (auto-generates id from label) |
@@ -102,4 +102,3 @@ The backend starts from whichever model is set in `GEMINI_MODEL` (default: `gemi
 | File | Description |
 |------|-------------|
 | `backend/data/settings.json` | Persisted admin settings (API key, Q2/Q3 templates, intake gap configs). Created on first save. |
-| `backend/data/usage.json` | Per-model, per-day usage counters. Created automatically. Entries older than 7 days are pruned. |

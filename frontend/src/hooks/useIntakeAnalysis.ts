@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { API_CONFIG } from '@/config'
 
+/** Session-only copy of the last intake pipeline result (for Analysis page). */
+export const LAST_INTAKE_ANALYSIS_STORAGE_KEY = 'whistleblow_lastIntakeAnalysis'
+
 export interface FollowUpQuestion {
   gap_id: string
   question_text: string
@@ -10,6 +13,7 @@ export interface FullAnalysisResult {
   extraction: Record<string, unknown> | null
   gaps: string[]
   follow_up_questions: FollowUpQuestion[]
+  used_defaults?: boolean
 }
 
 export interface IntakeAnalysisResult {
@@ -88,11 +92,24 @@ export function useIntakeAnalysis(
           extraction: res?.extraction ?? null,
           gaps: res?.gaps ?? [],
           follow_up_questions: res?.follow_up_questions ?? [],
+          used_defaults: Boolean((res as FullAnalysisResult)?.used_defaults),
         }
         cacheRef.current.set(key, result)
         setFollowUpQuestions(result.follow_up_questions)
         setAnalysisResult(result)
         setHasAnalyzed(true)
+        try {
+          const stamped = {
+            timestamp: new Date().toISOString(),
+            extraction: result.extraction,
+            gaps: result.gaps,
+            follow_up_questions: result.follow_up_questions,
+            used_defaults: result.used_defaults ?? false,
+          }
+          sessionStorage.setItem(LAST_INTAKE_ANALYSIS_STORAGE_KEY, JSON.stringify(stamped))
+        } catch {
+          /* quota or private mode */
+        }
       })
       .catch((e) => {
         if (e?.name !== 'AbortError') {

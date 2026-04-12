@@ -47,9 +47,11 @@ const CONTACT_KEYS = new Set([
 ])
 
 const FULL_DETAILS_KEYS = new Set([
-  'full_details_q1', 'full_details_q2', 'full_details_q3',
-  'full_details_q2_question', 'full_details_q3_question',
-  'policy_quote_matched', 'policy_section_matched',
+  'full_details_q1', 'sequence_of_events', 'evidence_description',
+  'full_details_q2', 'full_details_q3',
+  'full_details_q2_question', 'full_details_gap2', 'full_details_gap2_question',
+  'full_details_q3_question',
+  'policy_quote_matched', 'policy_section_matched', 'constructed_sentence',
 ])
 
 function getDisplay(report: ReportData, key: string, def: FieldDef): string {
@@ -372,7 +374,7 @@ export function generateReportPdf(report: ReportData): void {
       doc.line(MARGIN, y, MARGIN + contentW(doc), y)
       y += 5
 
-      // Q1
+      // Q1 — narrative
       y = drawQA(
         doc,
         'Please describe what happened in your own words.',
@@ -380,7 +382,29 @@ export function generateReportPdf(report: ReportData): void {
         y,
       )
 
-      // Q2 — first follow-up question (deterministic intake workflow)
+      // Q2 — standardised sequence of events
+      const sequenceAnswer = (report as unknown as Record<string, string>).sequence_of_events?.trim() ?? ''
+      if (sequenceAnswer) {
+        y = drawQA(
+          doc,
+          'Sequence of events — what happened first and what happened next?',
+          sequenceAnswer,
+          y,
+        )
+      }
+
+      // Q3 — standardised evidence description
+      const evidenceAnswer = (report as unknown as Record<string, string>).evidence_description?.trim() ?? ''
+      if (evidenceAnswer) {
+        y = drawQA(
+          doc,
+          'Supporting evidence or materials',
+          evidenceAnswer,
+          y,
+        )
+      }
+
+      // Q4 — AI-generated follow-up (deterministic intake workflow)
       const q2Answer = report.full_details_q2?.trim() ?? ''
       const q2Question = report.full_details_q2_question?.trim()
       if (q2Question || q2Answer) {
@@ -392,7 +416,19 @@ export function generateReportPdf(report: ReportData): void {
         )
       }
 
-      // Q3 — policy-based follow-up question (if present)
+      // Second AI gap follow-up (optional)
+      const gap2Answer = report.full_details_gap2?.trim() ?? ''
+      const gap2Question = report.full_details_gap2_question?.trim()
+      if (gap2Question || gap2Answer) {
+        y = drawQA(
+          doc,
+          gap2Question || 'Follow-up question',
+          gap2Answer,
+          y,
+        )
+      }
+
+      // Policy-based follow-up question (if present)
       const q3Answer = report.full_details_q3?.trim() ?? ''
       const q3Question = report.full_details_q3_question?.trim()
       if (q3Question || q3Answer) {

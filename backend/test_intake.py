@@ -147,19 +147,36 @@ from app.prompts.intake_gaps import DEFAULT_INTAKE_GAPS
 
 layer2 = IntakeLayer2()
 
-# Test: empty narrative → top priority gap (timeline_unclear)
-# Note: use explicit Layer1Result, not _safe_layer1_defaults() which sets _used_defaults=True
-empty_layer1 = Layer1Result(
-    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
-    specific_examples_present=False, evidence_described=False, timeline_clear=False,
-    allegation_type=[], length_character_count=len("short"), _used_defaults=False,
-)
+def _make_layer1(**overrides) -> Layer1Result:
+    """Helper to build a Layer1Result with sensible defaults for tests."""
+    base = dict(
+        summary="",
+        dates_mentioned=[],
+        people_mentioned=[],
+        locations_mentioned=[],
+        specific_examples_present=False,
+        evidence_described=False,
+        timeline_clear=False,
+        witnesses_mentioned=False,
+        prior_reporting_mentioned=False,
+        impact_described=False,
+        retaliation_mentioned=False,
+        allegation_type=[],
+        length_character_count=500,
+        _used_defaults=False,
+    )
+    base.update(overrides)
+    return Layer1Result(**base)
+
+
+# Test: empty narrative → top priority gap (no_specific_example)
+empty_layer1 = _make_layer1(length_character_count=len("short"))
 gaps = layer2.analyze(empty_layer1, DEFAULT_INTAKE_GAPS)
-assert gaps == ["timeline_unclear"], f"Unexpected gaps: {gaps}"
+assert gaps == ["no_specific_example"], f"Unexpected gaps: {gaps}"
 ok("Empty narrative returns top-priority gap", str(gaps))
 
 # Test: complete narrative → no gaps
-full_layer1 = Layer1Result(
+full_layer1 = _make_layer1(
     summary="Full summary",
     dates_mentioned=["2024-01-15"],
     people_mentioned=["John Smith"],
@@ -167,59 +184,48 @@ full_layer1 = Layer1Result(
     specific_examples_present=True,
     evidence_described=True,
     timeline_clear=True,
+    witnesses_mentioned=True,
+    prior_reporting_mentioned=True,
+    impact_described=True,
+    retaliation_mentioned=True,
     allegation_type=["fraud"],
-    length_character_count=500,
-    _used_defaults=False,
 )
 gaps = layer2.analyze(full_layer1, DEFAULT_INTAKE_GAPS)
 assert gaps == [], f"Expected no gaps, got {gaps}"
 ok("Complete narrative returns no gaps")
 
-# Test: short narrative (length_threshold) triggers narrative_too_short only if all others pass
-short_but_detailed = Layer1Result(
-    summary="Short summary",
-    dates_mentioned=["Jan 2024"],
-    people_mentioned=["Alice"],
-    locations_mentioned=["Office"],
+# Test: narrative with specific example but missing witnesses → no_witnesses_mentioned
+missing_witnesses = _make_layer1(
     specific_examples_present=True,
-    evidence_described=True,
-    timeline_clear=True,
-    allegation_type=[],
-    length_character_count=100,  # under 300 threshold
-    _used_defaults=False,
+    witnesses_mentioned=False,
+    prior_reporting_mentioned=True,
+    impact_described=True,
+    retaliation_mentioned=True,
 )
-gaps = layer2.analyze(short_but_detailed, DEFAULT_INTAKE_GAPS)
-assert "narrative_too_short" in gaps, f"Expected narrative_too_short, got {gaps}"
-ok("Short but detailed narrative triggers narrative_too_short gap")
+gaps = layer2.analyze(missing_witnesses, DEFAULT_INTAKE_GAPS)
+assert gaps == ["no_witnesses_mentioned"], f"Expected no_witnesses_mentioned, got {gaps}"
+ok("Missing witnesses triggers no_witnesses_mentioned gap")
 
-# Test: max 1 gap returned regardless of how many exist
-all_missing = Layer1Result(
-    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
-    specific_examples_present=False, evidence_described=False, timeline_clear=False,
-    allegation_type=[], length_character_count=50, _used_defaults=False,
-)
+# Test: up to 2 gaps returned when multiple criteria match (priority order)
+all_missing = _make_layer1(length_character_count=50)
 gaps = layer2.analyze(all_missing, DEFAULT_INTAKE_GAPS)
-assert len(gaps) == 1, f"Expected exactly 1 gap, got: {gaps}"
-ok("Layer 2 returns at most 1 gap", f"returned: {gaps}")
+assert gaps == ["no_specific_example", "no_witnesses_mentioned"], f"Unexpected gaps: {gaps}"
+ok("Layer 2 returns at most 2 gaps in priority order", f"returned: {gaps}")
 
-# Test: inactive gaps are skipped
+# Test: inactive gaps are skipped (top-priority gap deactivated → next priority fires)
 custom_gaps = [
-    {**g, "active": False} if g["id"] == "timeline_unclear" else g
+    {**g, "active": False} if g["id"] == "no_specific_example" else g
     for g in DEFAULT_INTAKE_GAPS
 ]
-inactive_test_layer1 = Layer1Result(
-    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
-    specific_examples_present=False, evidence_described=False, timeline_clear=False,
-    allegation_type=[], length_character_count=500, _used_defaults=False,
-)
-gaps = layer2.analyze(inactive_test_layer1, custom_gaps)
-assert "timeline_unclear" not in gaps, f"Inactive gap should be skipped: {gaps}"
+gaps = layer2.analyze(all_missing, custom_gaps)
+assert "no_specific_example" not in gaps, f"Inactive gap should be skipped: {gaps}"
+assert gaps == ["no_witnesses_mentioned"], f"Expected next-priority gap, got {gaps}"
 ok("Inactive gaps are excluded from analysis")
 
 # Test: priority ordering respected
 reordered_gaps = sorted(DEFAULT_INTAKE_GAPS, key=lambda g: -g["priority"])  # reversed priority
-gaps = layer2.analyze(inactive_test_layer1, reordered_gaps)
-assert gaps == ["timeline_unclear"], f"Priority sort should override list order: {gaps}"
+gaps = layer2.analyze(all_missing, reordered_gaps)
+assert gaps == ["no_specific_example"], f"Priority sort should override list order: {gaps}"
 ok("Priority ordering overrides list order in analysis")
 
 # Test: _used_defaults=True causes empty gap list (LLM parse failure protection)
@@ -228,22 +234,6 @@ assert defaults_layer1["_used_defaults"] is True
 gaps = layer2.analyze(defaults_layer1, DEFAULT_INTAKE_GAPS)
 assert gaps == [], f"Expected empty gaps for parse-failure defaults, got: {gaps}"
 ok("LLM parse failure (safe defaults) returns no gaps")
-
-# Test: form_data suppresses redundant gaps
-form_suppression_layer1 = Layer1Result(
-    summary="", dates_mentioned=[], people_mentioned=[], locations_mentioned=[],
-    specific_examples_present=True, evidence_described=True, timeline_clear=True,
-    allegation_type=[], length_character_count=500, _used_defaults=False,
-)
-# Without form_data: missing_date should fire (first gap that matches)
-gaps = layer2.analyze(form_suppression_layer1, DEFAULT_INTAKE_GAPS)
-assert gaps == ["missing_date"], f"Expected missing_date, got: {gaps}"
-ok("missing_date fires when no form context")
-
-# With form_data containing when_occurred: missing_date should be suppressed
-gaps = layer2.analyze(form_suppression_layer1, DEFAULT_INTAKE_GAPS, form_data={"when_occurred": "January 2026"})
-assert "missing_date" not in gaps, f"missing_date should be suppressed by form_data: {gaps}"
-ok("Form context (when_occurred) suppresses missing_date gap")
 
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n=== 4. Settings Store ===")
@@ -259,7 +249,7 @@ from app.settings.store import (
 # Test: get_intake_gaps returns list with correct structure
 gaps_list = get_intake_gaps()
 assert isinstance(gaps_list, list), "Should return a list"
-assert len(gaps_list) == 7, f"Expected 7 default gaps, got {len(gaps_list)}"
+assert len(gaps_list) == 5, f"Expected 5 default gaps, got {len(gaps_list)}"
 ok(f"get_intake_gaps returns {len(gaps_list)} gaps")
 
 # Test: get_intake_gaps is sorted by priority
@@ -367,11 +357,11 @@ layer3 = IntakeLayer3()
 from app.prompts.intake_gaps import DEFAULT_INTAKE_GAPS as dg_for_l3
 
 gaps_by_id = {g["id"]: g for g in dg_for_l3}
-no_evidence_gap = gaps_by_id["no_evidence"]
-questions = layer3.generate(["no_evidence"], dg_for_l3)
+witnesses_gap = gaps_by_id["no_witnesses_mentioned"]
+questions = layer3.generate(["no_witnesses_mentioned"], dg_for_l3)
 assert len(questions) == 1
-assert questions[0]["question_text"] == no_evidence_gap["template"], f"Expected plain template, got: {questions[0]['question_text']!r}"
-ok("Layer 3 generates correct template for no_evidence gap")
+assert questions[0]["question_text"] == witnesses_gap["template"], f"Expected plain template, got: {questions[0]['question_text']!r}"
+ok("Layer 3 generates correct template for no_witnesses_mentioned gap")
 
 # Test: question text is truncated to MAX_QUESTION_CHARS
 async def test_layer3_truncation():

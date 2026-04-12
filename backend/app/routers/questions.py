@@ -1,14 +1,12 @@
 """Question content generation endpoints for Full Details Q2, Q3, and intake analysis."""
 
 import logging
-from datetime import datetime, timezone
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Body
 
 from ..question_processors import get_processor
 from ..question_processors.intake_processor import IntakeProcessor
-from ..settings import update_last_analysis
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -82,14 +80,14 @@ async def intake_analyze(body: dict[str, Any] = Body(default_factory=dict)):
         form_data = None
     try:
         result = await _intake_processor.process(q1_text.strip(), form_data)
-        # Persist result for the Analysis page (best-effort — never blocks response)
-        try:
-            stamped = dict(result)
-            stamped["timestamp"] = datetime.now(timezone.utc).isoformat()
-            update_last_analysis(stamped)
-        except Exception:
-            logger.warning("Failed to persist intake analysis result", exc_info=True)
-        return result
+        extraction = dict(result["extraction"])
+        used_defaults = bool(extraction.pop("_used_defaults", False))
+        return {
+            "extraction": extraction,
+            "gaps": result["gaps"],
+            "follow_up_questions": result["follow_up_questions"],
+            "used_defaults": used_defaults,
+        }
     except ValueError as e:
         logger.warning(f"Intake analyze bad input: {e}")
         raise HTTPException(status_code=422, detail=str(e))

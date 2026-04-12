@@ -8,9 +8,21 @@ import type { Layer1Extraction } from '@/utils/feedStore'
 import styles from './FullDetailsQuestionnaire.module.css'
 
 const Q1_LABEL = 'Please describe what happened in your own words.'
+const SEQUENCE_LABEL = 'To help us understand the sequence of events, could you describe what happened first and what happened next?'
+const EVIDENCE_LABEL = 'Do you have any supporting materials related to this — documents, emails, screenshots, photos, or other evidence? If so, please describe them. If not, write "None".'
 const Q3_QUESTION = 'Do you believe this policy has been violated? If Yes, to what extent?'
 
-type Step = 'q1' | 'analyzing' | 'fq1' | 'constructing' | 'policyLoading' | 'policyQuestion' | 'review'
+type Step =
+  | 'q1'
+  | 'q_sequence'
+  | 'q_evidence'
+  | 'analyzing'
+  | 'fq1'
+  | 'fq2'
+  | 'constructing'
+  | 'policyLoading'
+  | 'policyQuestion'
+  | 'review'
 
 export function FullDetailsQuestionnaire() {
   const { report, updateReport, setPipelineStatus, setIntakeAnalysisResult } = useReport()
@@ -18,6 +30,7 @@ export function FullDetailsQuestionnaire() {
   const stepRef = useRef<HTMLDivElement>(null)
   const prevStepRef = useRef<Step>(step)
   const fq1WasShownRef = useRef(false)
+  const fq2WasShownRef = useRef(false)
 
   // Intake analysis is enabled only when we move to 'analyzing' step
   const [analyzeEnabled, setAnalyzeEnabled] = useState(false)
@@ -34,8 +47,8 @@ export function FullDetailsQuestionnaire() {
   const { quote: policyQuote, section: policySection, isLoading: isPolicyLoading, error: policyError, reset: resetPolicy } =
     usePolicyQuote(report, policyEnabled, constructedSentence)
 
-  // Derived: only the first follow-up is used
   const fq1 = followUpQuestions[0] ?? null
+  const fq2 = followUpQuestions[1] ?? null
 
   // After analysis completes successfully, persist question text and advance.
   useEffect(() => {
@@ -57,12 +70,13 @@ export function FullDetailsQuestionnaire() {
       })
     }
 
-    // Persist first follow-up question text for PDF generation
     if (followUpQuestions[0]) {
       updateReport({ full_details_q2_question: followUpQuestions[0].question_text })
     }
+    if (followUpQuestions[1]) {
+      updateReport({ full_details_gap2_question: followUpQuestions[1].question_text })
+    }
 
-    // Advance to follow-up if any, else construct sentence and load policy
     if (followUpQuestions.length > 0) {
       fq1WasShownRef.current = true
       setStep('fq1')
@@ -121,17 +135,43 @@ export function FullDetailsQuestionnaire() {
   }, [step])
 
   const handleQ1Next = () => {
+    setStep('q_sequence')
+  }
+
+  const handleSequenceNext = () => {
+    setStep('q_evidence')
+  }
+
+  const handleEvidenceNext = () => {
     setPipelineStatus('analyzing')
     setAnalyzeEnabled(true)
     setStep('analyzing')
   }
 
   const handleBack = () => {
-    if (step === 'fq1') setStep('q1')
-    if (step === 'policyQuestion') setStep(fq1WasShownRef.current ? 'fq1' : 'q1')
+    if (step === 'q_sequence') setStep('q1')
+    if (step === 'q_evidence') setStep('q_sequence')
+    if (step === 'fq1') setStep('q_evidence')
+    if (step === 'fq2') setStep('fq1')
+    if (step === 'policyQuestion') {
+      if (fq2WasShownRef.current) setStep('fq2')
+      else if (fq1WasShownRef.current) setStep('fq1')
+      else setStep('q_evidence')
+    }
   }
 
   const handleFq1Done = () => {
+    if (fq2) {
+      fq2WasShownRef.current = true
+      setStep('fq2')
+      return
+    }
+    setPipelineStatus('constructing')
+    setConstructEnabled(true)
+    setStep('constructing')
+  }
+
+  const handleFq2Done = () => {
     setPipelineStatus('constructing')
     setConstructEnabled(true)
     setStep('constructing')
@@ -151,11 +191,13 @@ export function FullDetailsQuestionnaire() {
     resetConstruct()
     resetPolicy()
     fq1WasShownRef.current = false
+    fq2WasShownRef.current = false
   }
 
   // ── Review mode ─────────────────────────────────────────────────────────────
   if (step === 'review') {
     const fq1Stored = report.full_details_q2_question
+    const fq2Stored = report.full_details_gap2_question
     const q3Stored = report.full_details_q3_question
 
     const reviewItems: Array<{
@@ -166,8 +208,13 @@ export function FullDetailsQuestionnaire() {
       policySection?: string
     }> = [
       { answerKey: 'full_details_q1', question: Q1_LABEL, isQ1: true },
+      { answerKey: 'sequence_of_events', question: SEQUENCE_LABEL },
+      { answerKey: 'evidence_description', question: EVIDENCE_LABEL },
       ...(fq1 || fq1Stored
         ? [{ answerKey: 'full_details_q2' as const, question: fq1?.question_text || fq1Stored || '' }]
+        : []),
+      ...(fq2 || fq2Stored
+        ? [{ answerKey: 'full_details_gap2' as const, question: fq2?.question_text || fq2Stored || '' }]
         : []),
       ...((q3Stored || report.full_details_q3)
         ? [{
@@ -237,7 +284,7 @@ export function FullDetailsQuestionnaire() {
               </p>
               <div className={styles.navBar}>
                 <div className={styles.navBarLeft}>
-                  <button type="button" onClick={() => setStep('q1')} className={styles.navBtn}>
+                  <button type="button" onClick={() => setStep('q_evidence')} className={styles.navBtn}>
                     <span aria-hidden>←</span> Back
                   </button>
                 </div>
@@ -277,7 +324,15 @@ export function FullDetailsQuestionnaire() {
               </p>
               <div className={styles.navBar}>
                 <div className={styles.navBarLeft}>
-                  <button type="button" onClick={() => setStep(fq1WasShownRef.current ? 'fq1' : 'q1')} className={styles.navBtn}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (fq2WasShownRef.current) setStep('fq2')
+                      else if (fq1WasShownRef.current) setStep('fq1')
+                      else setStep('q_evidence')
+                    }}
+                    className={styles.navBtn}
+                  >
                     <span aria-hidden>←</span> Back
                   </button>
                 </div>
@@ -317,7 +372,15 @@ export function FullDetailsQuestionnaire() {
               </p>
               <div className={styles.navBar}>
                 <div className={styles.navBarLeft}>
-                  <button type="button" onClick={() => setStep(fq1WasShownRef.current ? 'fq1' : 'q1')} className={styles.navBtn}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (fq2WasShownRef.current) setStep('fq2')
+                      else if (fq1WasShownRef.current) setStep('fq1')
+                      else setStep('q_evidence')
+                    }}
+                    className={styles.navBtn}
+                  >
                     <span aria-hidden>←</span> Back
                   </button>
                 </div>
@@ -377,11 +440,85 @@ export function FullDetailsQuestionnaire() {
     )
   }
 
-  // ── Follow-up step (Q2: AI-generated question) ──────────────────────────────
-  if (step === 'fq1' && fq1) {
+  // ── Sequence of events step (Q2) ────────────────────────────────────────────
+  if (step === 'q_sequence') {
     return (
       <div ref={stepRef} className={styles.block}>
         <p className={styles.stepIndicator}>Question 2</p>
+        <div className={styles.stepContent}>
+          <FormField
+            label={SEQUENCE_LABEL}
+            value={report.sequence_of_events}
+            onChange={(v) => updateReport({ sequence_of_events: v })}
+            type="textarea"
+            rows={8}
+            placeholder="Type your answer here…"
+          />
+        </div>
+        <div className={styles.navBar}>
+          <div className={styles.navBarLeft}>
+            <button type="button" onClick={handleBack} className={styles.navBtn} aria-label="Previous question">
+              <span aria-hidden>←</span> Back
+            </button>
+          </div>
+          <div className={styles.navBarRight}>
+            <button
+              type="button"
+              onClick={handleSequenceNext}
+              className={styles.navBtn}
+              disabled={!report.sequence_of_events?.trim()}
+              aria-label="Next question"
+            >
+              Next <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Evidence step (Q3) ──────────────────────────────────────────────────────
+  if (step === 'q_evidence') {
+    return (
+      <div ref={stepRef} className={styles.block}>
+        <p className={styles.stepIndicator}>Question 3</p>
+        <div className={styles.stepContent}>
+          <FormField
+            label={EVIDENCE_LABEL}
+            value={report.evidence_description}
+            onChange={(v) => updateReport({ evidence_description: v })}
+            type="textarea"
+            rows={8}
+            placeholder="Type your answer here…"
+          />
+        </div>
+        <div className={styles.navBar}>
+          <div className={styles.navBarLeft}>
+            <button type="button" onClick={handleBack} className={styles.navBtn} aria-label="Previous question">
+              <span aria-hidden>←</span> Back
+            </button>
+          </div>
+          <div className={styles.navBarRight}>
+            <button
+              type="button"
+              onClick={handleEvidenceNext}
+              className={styles.navBtn}
+              disabled={!report.evidence_description?.trim()}
+              aria-label="Next question"
+            >
+              Next <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── AI follow-up step (Q4: AI-generated question) ───────────────────────────
+  if (step === 'fq1' && fq1) {
+    return (
+      <div ref={stepRef} className={styles.block}>
+        <p className={styles.stepIndicator}>Question 4</p>
         <div className={styles.stepContent}>
           <p className={styles.questionText}>{fq1.question_text}</p>
           <FormField
@@ -409,11 +546,49 @@ export function FullDetailsQuestionnaire() {
     )
   }
 
-  // ── Policy question step (Q3) ───────────────────────────────────────────────
+  // ── Second AI follow-up (optional) ──────────────────────────────────────────
+  if (step === 'fq2' && fq2) {
+    return (
+      <div ref={stepRef} className={styles.block}>
+        <p className={styles.stepIndicator}>Question 5</p>
+        <div className={styles.stepContent}>
+          <p className={styles.questionText}>{fq2.question_text}</p>
+          <FormField
+            label=""
+            value={report.full_details_gap2}
+            onChange={(v) => updateReport({ full_details_gap2: v })}
+            type="textarea"
+            rows={8}
+            placeholder="Type your answer here…"
+          />
+        </div>
+        <div className={styles.navBar}>
+          <div className={styles.navBarLeft}>
+            <button type="button" onClick={handleBack} className={styles.navBtn} aria-label="Previous question">
+              <span aria-hidden>←</span> Back
+            </button>
+          </div>
+          <div className={styles.navBarRight}>
+            <button
+              type="button"
+              onClick={handleFq2Done}
+              className={styles.navBtn}
+              disabled={!report.full_details_gap2?.trim()}
+              aria-label="Next question"
+            >
+              Next <span aria-hidden>→</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Policy question step ─────────────────────────────────────────────────────
   if (step === 'policyQuestion') {
     return (
       <div ref={stepRef} className={styles.block}>
-        <p className={styles.stepIndicator}>Question 3</p>
+        <p className={styles.stepIndicator}>{fq2WasShownRef.current ? 'Question 6' : 'Question 5'}</p>
         <div className={styles.stepContent}>
           {policyQuote ? (
             <blockquote className={styles.policyCallout}>

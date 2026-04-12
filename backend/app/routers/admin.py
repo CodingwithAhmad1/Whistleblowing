@@ -2,15 +2,13 @@
 
 import copy
 import logging
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Body
 
 from ..prompts.display_content import DEFAULT_Q2_PROMPT_TEMPLATE, DEFAULT_Q3_PROMPT_TEMPLATE
 from ..prompts.intake_gaps import DEFAULT_INTAKE_GAPS
-from ..settings import get_settings, update_settings, get_intake_gaps, update_intake_gaps, get_last_analysis, _slugify
-from ..llm.usage_tracker import get_tracker
+from ..settings import get_settings, update_settings, get_intake_gaps, update_intake_gaps, _slugify
 from ..llm.model_fallback import get_active_model
 
 router = APIRouter()
@@ -55,18 +53,6 @@ def admin_update_settings(body: dict[str, Any] = Body(default_factory=dict)):
     except Exception:
         logger.exception("Admin settings update failed")
         raise HTTPException(status_code=500, detail="Failed to update settings")
-
-
-@router.get("/admin/usage")
-def admin_get_usage():
-    """Return today's per-model usage statistics and the currently active model."""
-    tracker = get_tracker()
-    return {
-        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-        "active_model": get_active_model(),
-        "models": tracker.get_today_summary(),
-        "cumulative": tracker.get_cumulative_summary(),
-    }
 
 
 # ── Intake Gap CRUD ───────────────────────────────────────────────────────────
@@ -212,12 +198,6 @@ def admin_gemini_test():
             pass
         logger.warning(f"Gemini test failed: {error_msg}")
         return {"success": False, "model": None, "response": None, "error": error_msg}
-
-
-@router.get("/admin/last-intake-analysis")
-def admin_get_last_intake_analysis():
-    """Return the most recent intake analysis result, or null if none has been run."""
-    return {"result": get_last_analysis()}
 
 
 # ── AI Pipeline Diagnostics ──────────────────────────────────────────────────

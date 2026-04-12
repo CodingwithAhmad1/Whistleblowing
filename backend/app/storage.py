@@ -11,23 +11,8 @@ from .question_processors.report_utils import has_value
 
 logger = logging.getLogger(__name__)
 
-# Valid report field keys for JSON extraction (built once, reused)
-_PERSON_FIELDS = {
-    f"person_{n}_{s}"
-    for n in range(1, 11)
-    for s in ("first", "last", "title")
-}
-_VALID_REPORT_FIELDS = {
-    "organization_tier", "country", "incident_location",
-    "is_employee", "wish_anonymous", "reporter_first_name", "reporter_last_name",
-    "reporter_phone_code", "reporter_phone", "reporter_email", "best_time_contact",
-    *_PERSON_FIELDS,
-    "supervisor_involved", "supervisor_who", "management_aware",
-    "general_nature", "where_occurred", "when_occurred", "duration",
-    "how_aware", "how_aware_other",
-    "full_details_q1", "full_details_q2", "full_details_q3",
-    "persons_concealing",
-}
+# Valid report field keys for JSON extraction — same keys as ReportCreate
+_VALID_REPORT_FIELDS = frozenset(ReportCreate.model_fields.keys())
 
 
 class ChatSession:

@@ -39,6 +39,10 @@ const LAYER1_FIELDS: { value: string; label: string }[] = [
   { value: 'specific_examples_present', label: 'Specific examples present (bool)' },
   { value: 'evidence_described', label: 'Evidence described (bool)' },
   { value: 'timeline_clear', label: 'Timeline clear (bool)' },
+  { value: 'witnesses_mentioned', label: 'Witnesses mentioned (bool)' },
+  { value: 'prior_reporting_mentioned', label: 'Prior reporting mentioned (bool)' },
+  { value: 'impact_described', label: 'Impact described (bool)' },
+  { value: 'retaliation_mentioned', label: 'Retaliation mentioned (bool)' },
   { value: 'allegation_type', label: 'Allegation type (array)' },
   { value: 'length_character_count', label: 'Character count (number)' },
 ]

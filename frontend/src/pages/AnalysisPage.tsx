@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { API_CONFIG } from '@/config'
+import { LAST_INTAKE_ANALYSIS_STORAGE_KEY } from '@/hooks/useIntakeAnalysis'
 import styles from './AnalysisPage.module.css'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -13,6 +14,10 @@ interface Layer1Extraction {
   specific_examples_present: boolean
   evidence_described: boolean
   timeline_clear: boolean
+  witnesses_mentioned?: boolean
+  prior_reporting_mentioned?: boolean
+  impact_described?: boolean
+  retaliation_mentioned?: boolean
   allegation_type: string[]
   length_character_count: number
 }
@@ -27,6 +32,7 @@ interface LastAnalysisResult {
   extraction: Layer1Extraction
   gaps: string[]
   follow_up_questions: FollowUpQuestion[]
+  used_defaults?: boolean
 }
 
 interface GapCriteria {
@@ -42,7 +48,7 @@ interface IntakeGap {
   active: boolean
   criteria: GapCriteria
   template: string
-  template_conditional: string | null
+  template_conditional?: string | null
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -57,6 +63,10 @@ const FIELD_DESCRIPTIONS: Record<string, string> = {
   timeline_clear: 'Timeline clarity',
   specific_examples_present: 'Specific examples',
   evidence_described: 'Evidence described',
+  witnesses_mentioned: 'Witnesses mentioned',
+  prior_reporting_mentioned: 'Prior reporting mentioned',
+  impact_described: 'Impact described',
+  retaliation_mentioned: 'Retaliation mentioned',
   dates_mentioned: 'Dates mentioned',
   people_mentioned: 'People mentioned',
   locations_mentioned: 'Locations mentioned',
@@ -91,6 +101,29 @@ function criteriaDescription(criteria: GapCriteria): string {
 
 function listOrNone(items: string[]): string {
   return items.length > 0 ? items.join(', ') : 'None'
+}
+
+function normalizeExtraction(raw: unknown): Layer1Extraction | null {
+  if (!raw || typeof raw !== 'object') return null
+  const e = raw as Record<string, unknown>
+  const asStrArr = (v: unknown) => (Array.isArray(v) ? v.map(String) : [])
+  const asBool = (v: unknown) => Boolean(v)
+  return {
+    summary: String(e.summary ?? ''),
+    dates_mentioned: asStrArr(e.dates_mentioned),
+    people_mentioned: asStrArr(e.people_mentioned),
+    locations_mentioned: asStrArr(e.locations_mentioned),
+    specific_examples_present: asBool(e.specific_examples_present),
+    evidence_described: asBool(e.evidence_described),
+    timeline_clear: asBool(e.timeline_clear),
+    witnesses_mentioned: e.witnesses_mentioned !== undefined ? asBool(e.witnesses_mentioned) : undefined,
+    prior_reporting_mentioned:
+      e.prior_reporting_mentioned !== undefined ? asBool(e.prior_reporting_mentioned) : undefined,
+    impact_described: e.impact_described !== undefined ? asBool(e.impact_described) : undefined,
+    retaliation_mentioned: e.retaliation_mentioned !== undefined ? asBool(e.retaliation_mentioned) : undefined,
+    allegation_type: asStrArr(e.allegation_type),
+    length_character_count: typeof e.length_character_count === 'number' ? e.length_character_count : 0,
+  }
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -131,6 +164,18 @@ function Layer1Card({ extraction }: { extraction: Layer1Extraction }) {
           <BoolBadge value={extraction.timeline_clear} label="Timeline clear" />
           <BoolBadge value={extraction.specific_examples_present} label="Specific examples" />
           <BoolBadge value={extraction.evidence_described} label="Evidence described" />
+          {extraction.witnesses_mentioned !== undefined && (
+            <BoolBadge value={extraction.witnesses_mentioned} label="Witnesses mentioned" />
+          )}
+          {extraction.prior_reporting_mentioned !== undefined && (
+            <BoolBadge value={extraction.prior_reporting_mentioned} label="Prior reporting" />
+          )}
+          {extraction.impact_described !== undefined && (
+            <BoolBadge value={extraction.impact_described} label="Impact described" />
+          )}
+          {extraction.retaliation_mentioned !== undefined && (
+            <BoolBadge value={extraction.retaliation_mentioned} label="Retaliation mentioned" />
+          )}
         </div>
       </div>
       <div className={styles.fieldRow}>
@@ -297,22 +342,39 @@ export function AnalysisPage() {
 
   const fetchAnalysis = useCallback(() => {
     setAnalysisLoading(true)
-    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_LAST_ANALYSIS}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`Failed to load: ${r.status}`)
-        return r.json()
+    setAnalysisError(null)
+    try {
+      const raw = sessionStorage.getItem(LAST_INTAKE_ANALYSIS_STORAGE_KEY)
+      if (!raw) {
+        setAnalysisResult(null)
+        return
+      }
+      const data = JSON.parse(raw) as Record<string, unknown>
+      const extraction = normalizeExtraction(data.extraction)
+      if (!extraction) {
+        setAnalysisResult(null)
+        return
+      }
+      setAnalysisResult({
+        timestamp: String(data.timestamp ?? ''),
+        extraction,
+        gaps: Array.isArray(data.gaps) ? (data.gaps as string[]) : [],
+        follow_up_questions: Array.isArray(data.follow_up_questions)
+          ? (data.follow_up_questions as FollowUpQuestion[])
+          : [],
+        used_defaults: Boolean(data.used_defaults),
       })
-      .then((data) => {
-        setAnalysisResult(data.result ?? null)
-        setAnalysisError(null)
-      })
-      .catch((e) => setAnalysisError(e instanceof Error ? e.message : 'Failed to load analysis'))
-      .finally(() => setAnalysisLoading(false))
+    } catch (e) {
+      setAnalysisError(e instanceof Error ? e.message : 'Failed to read stored analysis')
+      setAnalysisResult(null)
+    } finally {
+      setAnalysisLoading(false)
+    }
   }, [])
 
   const fetchGaps = useCallback(() => {
     setGapsLoading(true)
-    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ADMIN_INTAKE_GAPS}`)
+    fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.INTAKE_GAPS}`)
       .then((r) => {
         if (!r.ok) throw new Error(`Failed to load: ${r.status}`)
         return r.json()
@@ -336,7 +398,8 @@ export function AnalysisPage() {
     <div className={styles.container}>
       <h1 className={styles.title}>Analysis</h1>
       <p className={styles.subtitle}>
-        Internal AI evaluation of the most recent Q1 submission — extraction, gap detection, and follow-up question selection.
+        AI evaluation of your most recent intake run in this browser tab — extraction, gap detection, and follow-up
+        selection. Data is read from session storage (run analysis from the report form on the Home page first).
       </p>
 
       {/* ── Last Analysis Result ─────────────────────────────────────────────── */}
@@ -344,7 +407,7 @@ export function AnalysisPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Last Analysis Result</h2>
           <p className={styles.sectionDesc}>
-            Populated each time a user submits a Q1 narrative. Shows the full 3-layer pipeline output.
+            Populated when you complete intake analysis on the Home page (stored in this browser session only).
           </p>
         </div>
 
@@ -358,8 +421,11 @@ export function AnalysisPage() {
 
         {!analysisLoading && !analysisError && !analysisResult && (
           <div className={styles.emptyState}>
-            <p className={styles.emptyStateText}>No analysis run yet.</p>
-            <p className={styles.emptyStateHint}>Submit a Q1 narrative on the Home page to see results here.</p>
+            <p className={styles.emptyStateText}>No analysis in this session yet.</p>
+            <p className={styles.emptyStateHint}>
+              On the Home page, complete the Full Details steps through intake analysis, then return here — or open this
+              page in the same browser tab after analyzing.
+            </p>
           </div>
         )}
 
@@ -367,6 +433,9 @@ export function AnalysisPage() {
           <>
             <p className={styles.timestamp}>
               Last analyzed: <strong>{formatTimestamp(analysisResult.timestamp)}</strong>
+              {analysisResult.used_defaults ? (
+                <span className={styles.emptyNote}> — Layer 1 used fallback defaults (unparseable model output).</span>
+              ) : null}
             </p>
             <div className={styles.cardStack}>
               <Layer1Card extraction={analysisResult.extraction} />

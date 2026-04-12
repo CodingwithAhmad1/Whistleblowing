@@ -56,6 +56,10 @@ export function SummaryView({ extraction, followUpQuestions, formData }: Props) 
                   { label: 'Specific Examples Present', value: extraction.specific_examples_present },
                   { label: 'Evidence Described', value: extraction.evidence_described },
                   { label: 'Timeline Clear', value: extraction.timeline_clear },
+                  { label: 'Witnesses Mentioned', value: extraction.witnesses_mentioned },
+                  { label: 'Prior Reporting Mentioned', value: extraction.prior_reporting_mentioned },
+                  { label: 'Impact Described', value: extraction.impact_described },
+                  { label: 'Retaliation Mentioned', value: extraction.retaliation_mentioned },
                 ] as const).map(({ label, value }) => (
                   <div key={label} className={styles.badgeRowItem}>
                     <span className={styles.badgeLabel}>{label}</span>
