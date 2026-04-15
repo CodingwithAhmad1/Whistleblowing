@@ -10,13 +10,20 @@ _provider: LLMProvider | None = None
 
 
 def get_provider() -> LLMProvider:
-    """Get the active LLM provider. Uses stored apiKey from settings when available."""
+    """Return the active LLM provider singleton.
+
+    Does not load the Gemini client — that happens on ``initialize()`` or the
+    first ``generate_stream`` so the HTTP server can bind before LLM setup.
+    """
     global _provider
-    from .genai_config import ensure_genai_from_settings
-    ensure_genai_from_settings()
     if _provider is None:
         _provider = GeminiProvider()
         logger.info("Using LLM provider: gemini")
+    return _provider
+
+
+def peek_provider() -> LLMProvider | None:
+    """Return the provider if it has been created, without instantiating it."""
     return _provider
 
 

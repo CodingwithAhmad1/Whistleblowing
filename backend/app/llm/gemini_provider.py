@@ -1,5 +1,6 @@
 """Gemini LLM provider via Google Gen AI SDK."""
 
+import asyncio
 import logging
 from typing import AsyncGenerator
 
@@ -13,13 +14,23 @@ class GeminiProvider:
 
     def __init__(self):
         self._ready = False
+        self._init_lock = asyncio.Lock()
+
+    async def _ensure_ready(self) -> None:
+        """Load GenAI client and API key once (thread-safe for concurrent streams)."""
+        if self._ready:
+            return
+        async with self._init_lock:
+            if self._ready:
+                return
+            from .genai_config import ensure_genai_configured
+            ensure_genai_configured()
+            self._ready = True
 
     async def initialize(self) -> None:
         """Validate API key and warm up client."""
-        from .genai_config import ensure_genai_configured
         logger.info("Initializing Gemini Provider...")
-        ensure_genai_configured()
-        self._ready = True
+        await self._ensure_ready()
         logger.info(f"Gemini provider ready (model: {settings.GEMINI_MODEL})")
 
     async def generate_stream(
@@ -28,8 +39,7 @@ class GeminiProvider:
         max_tokens: int | None = None,
     ) -> AsyncGenerator[str, None]:
         """Generate streaming response from Gemini with automatic quota fallback."""
-        if not self._ready:
-            raise RuntimeError("Gemini not initialized. Call initialize() first.")
+        await self._ensure_ready()
 
         from .genai_config import get_client
         from .model_fallback import get_active_model, mark_model_exhausted

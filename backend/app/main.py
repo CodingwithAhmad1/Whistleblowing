@@ -1,5 +1,6 @@
 """FastAPI app with LLM-powered chat and report generation."""
 
+import asyncio
 from pathlib import Path
 from contextlib import asynccontextmanager
 import logging
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from .llm import get_provider
+from .llm.registry import peek_provider
 from .routers import chat, questions, admin, intake, rag
 from .config import settings
 
@@ -20,15 +22,30 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _warm_llm_background() -> None:
+    """Initialize Gemini after the server is accepting connections (non-blocking startup)."""
+    try:
+        provider = get_provider()
+        await provider.initialize()
+    except Exception:
+        logger.exception("Background LLM warmup failed; routes stay up, LLM calls may fail until configured.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifecycle manager: initialize provider on startup, cleanup on shutdown."""
+    """Bind HTTP immediately; warm LLM in the background so /api/health can respond."""
     logger.info("Starting application...")
-    provider = get_provider()
-    await provider.initialize()
+    warm_task = asyncio.create_task(_warm_llm_background())
     yield
     logger.info("Shutting down application...")
-    await provider.cleanup()
+    warm_task.cancel()
+    try:
+        await warm_task
+    except asyncio.CancelledError:
+        pass
+    provider = peek_provider()
+    if provider is not None:
+        await provider.cleanup()
 
 
 app = FastAPI(
@@ -57,9 +74,15 @@ app.include_router(rag.router, prefix="/api", tags=["rag"])
 
 @app.get("/api/health")
 def health():
-    """Health check endpoint."""
+    """Health check endpoint. Does not instantiate the LLM client (fast, proxy-friendly)."""
+    provider = peek_provider()
+    if provider is None:
+        return {
+            "status": "ok",
+            "provider": "gemini",
+            "ready": False,
+        }
     try:
-        provider = get_provider()
         model_ready = getattr(provider, "_ready", False)
     except Exception as e:
         return {
