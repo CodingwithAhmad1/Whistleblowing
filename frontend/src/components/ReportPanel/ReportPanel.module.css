@@ -30,6 +30,8 @@
 .formContent {
   max-width: 720px;
   margin: 0 auto;
+  /* Stronger neutral outline for inputs, textareas, comboboxes, and related controls */
+  --color-border: #cbd5e1;
 }
 
 .submitButton {
