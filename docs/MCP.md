@@ -50,6 +50,18 @@ Do not commit real secrets; the Gemini key stays in backend `.env` or admin `set
 
 - **`reportiq://form-schema`** — JSON with report field keys and short conditional notes (aligns with `frontend/src/types/report.ts`).
 
+## Verifying intake + Feed Summary (MCP or curl)
+
+1. `reportiq_health` (or `GET /api/health`) — API up.
+2. `reportiq_intake_analyze` with a non-empty `q1_text` and a flat string `form_data` map that includes e.g. `general_nature`, `when_occurred`, `where_occurred`, `management_aware` (`yes`/`no`), `sequence_of_events`, and optional `person_1_first` / `person_1_last`, `has_supporting_materials`, `evidence_description` to exercise merge rules.
+3. **Compare** the JSON to expectations (see `intake_analyze_and_feed_summary` in the `reportiq://form-schema` resource, or [form_schema.json](../mcp/reportiq_server/form_schema.json)):
+   - `extraction.summary` should not be empty when the form has `general_nature` / dates / locations, even if the narrative is short.
+   - `extraction.people_mentioned` should include names from the form; dates/locations lists should include form fields.
+   - `prior_reporting_mentioned` is often true when `management_aware` is `yes` (form merge), even if the narrative omits it.
+4. `follow_up_questions` text must match **active** gap templates from `GET /api/intake/gaps`. In local dev, `backend/data/settings.json` overrides defaults; if templates do not match the repo, use **Admin → reset gaps** or `POST /api/admin/intake-gaps/reset` so API and app stay aligned.
+5. **Feed** row: after browser Submit, open `/feed` → **Summary** — same `extraction` shape as in step 2, plus policy fields from the report when RAG completed.
+6. **Automated (no browser):** from `backend/`, run the pytest targets listed in [backend/README.md](../backend/README.md) under **Testing** — they assert gap config parity with code defaults, `GET /api/intake/gaps`, extraction field contract, and (when a Gemini key is set) a live `POST` intake run.
+
 ## Example flow (chaining)
 
 1. `reportiq_health` — confirm the API responds.

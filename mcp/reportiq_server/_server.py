@@ -13,9 +13,12 @@ mcp = FastMCP(
     "reportiq",
     instructions=(
         "Tools call the ReportIQ backend (FastAPI) at REPORTIQ_API_BASE. "
+        "reportiq_intake_analyze returns extraction AFTER deterministic merge of form_data "
+        "(summary fallbacks, entity merge, boolean OR from structured fields—see reportiq://form-schema). "
+        "Follow-up question strings come from server gap config (intakeGaps in settings, else repo defaults). "
+        "If Q2 text looks outdated vs docs, run GET /api/intake/gaps or reset gaps in Admin. "
         "The submission Feed is browser localStorage; use a browser to verify /feed. "
-        "Use reportiq_intake_analyze for AI gap analysis; chain reportiq_rag_construct_sentence then "
-        "reportiq_rag_policy_quote to mirror the in-app RAG steps."
+        "Chain reportiq_rag_construct_sentence then reportiq_rag_policy_quote to mirror the in-app RAG steps."
     ),
 )
 

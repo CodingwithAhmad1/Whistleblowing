@@ -16,5 +16,23 @@
     "supervisor_involved", "supervisor_who", "management_aware",
     "general_nature", "where_occurred", "when_occurred", "duration", "how_aware", "how_aware_other", "has_supporting_materials", "full_details_q1", "sequence_of_events", "evidence_description",
     "full_details_q2", "full_details_q2_question", "full_details_gap2", "full_details_gap2_question", "full_details_q3", "full_details_q3_question", "policy_quote_matched", "policy_section_matched", "constructed_sentence", "persons_concealing"
-  ]
+  ],
+  "intake_analyze_and_feed_summary": {
+    "mcp_tool": "reportiq_intake_analyze (same as POST /api/questions/intake/analyze)",
+    "response_extraction": {
+      "summary": "LLM neutral summary, then merged: optional fallback from general_nature/when/where if empty; optional suffix Structured form context: When…; Where… when not redundant.",
+      "dates_mentioned": "LLM plus when_occurred when set",
+      "locations_mentioned": "LLM plus where_occurred, incident_location, country when set",
+      "people_mentioned": "LLM plus person_1..10 first+last when set",
+      "specific_examples_present": "true if LLM or long sequence_of_events",
+      "evidence_described": "true if LLM or (has_supporting_materials yes and long evidence_description)",
+      "timeline_clear": "true if LLM or when/duration/sequence or long sequence_of_events",
+      "prior_reporting_mentioned": "true if LLM or management_aware is yes",
+      "witnesses_mentioned": "LLM only (not inferred from form)",
+      "impact_described": "LLM only",
+      "retaliation_mentioned": "LLM only"
+    },
+    "follow_up_question_text": "Comes from active gap templates (GET /api/intake/gaps). Persisted in backend data/settings.json in dev; reset via Admin or POST /api/admin/intake-gaps/reset to match code defaults if templates drift.",
+    "feed_summary_tab": "Submissions store extraction as returned by the last successful intake run; Summary matches this object plus followUpQuestions, policy from form, and a short merge note in the UI."
+  }
 }

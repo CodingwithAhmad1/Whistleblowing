@@ -97,6 +97,20 @@ The backend starts from whichever model is set in `GEMINI_MODEL` (default: `gemi
 | `PUT` | `/api/admin/intake-gaps/{gap_id}` | Update fields on a single gap |
 | `DELETE` | `/api/admin/intake-gaps/{gap_id}` | Delete a gap by id |
 
+## Testing
+
+From `backend/` (with venv activated and dependencies installed):
+
+```bash
+# Fast: gap regression, HTTP smoke (GET /api/intake/gaps, 422 on bad intake), extraction contract
+python3 -m pytest tests/test_intake_gaps_regression.py tests/test_intake_api_http.py tests/test_extraction_feed_contract.py tests/test_extraction_augmentation.py tests/test_intake_layer2.py -v
+```
+
+- **`test_intake_gaps_regression`** — `DEFAULT_INTAKE_GAPS` must match `get_intake_gaps()` (persisted `data/settings.json`). If this fails after pulling, run **Admin → reset intake gaps** or `POST /api/admin/intake-gaps/reset`, then align `data/settings.json` with the repo if you commit settings.
+- **`test_intake_api_http`** — `GET /api/intake/gaps`; `POST /api/questions/intake/analyze` runs only when `GEMINI_API_KEY` or `GOOGLE_API_KEY` is set (`@pytest.mark.integration`).
+
+Full integration (Chroma + Gemini): `python3 -m pytest tests/test_pipeline.py` (see that file).
+
 ## Data Files
 
 | File | Description |
