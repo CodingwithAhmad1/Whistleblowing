@@ -99,7 +99,7 @@ App
 
 - **ReportContext**: Holds `ReportData` and `updateReport`. All form sections read/write via `useReport()`.
 - **Report data**: In-memory only; lost on refresh.
-- **PDF export**: Client-side via `generateReportPdf(report)` using jsPDF and `reportSchema.ts`.
+- **PDF export**: Client-side via `generateSubmissionPdf(submission)` in `generateReportPdf.ts` (jsPDF, `reportSchema.ts`, and Feed-stored `StoredSubmission` including AI summary data).
 
 ### Report Sections
 

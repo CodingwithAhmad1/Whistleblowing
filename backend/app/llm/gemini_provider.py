@@ -24,7 +24,9 @@ class GeminiProvider:
             if self._ready:
                 return
             from .genai_config import ensure_genai_configured
-            ensure_genai_configured()
+            # Client import + construction can take seconds; never block the event loop
+            # or Uvicorn cannot accept HTTP (Vite proxy then sees connect ETIMEDOUT).
+            await asyncio.to_thread(ensure_genai_configured)
             self._ready = True
 
     async def initialize(self) -> None:

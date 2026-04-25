@@ -13,8 +13,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      /** Use IPv4 so this matches Uvicorn on 127.0.0.1:8000. `localhost` can resolve to ::1 first on macOS and the proxy then fails (ECONNREFUSED / ETIMEDOUT) while the backend is on IPv4 only. */
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
     },

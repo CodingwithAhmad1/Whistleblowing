@@ -1,8 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { ReportProvider } from '@/context/ReportContext'
-import { ModeProvider } from '@/context/ModeContext'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Navbar } from '@/components/Navbar/Navbar'
 import { BackendStatusToast } from '@/components/BackendStatusToast'
 import { useWebVitals } from '@/hooks/useWebVitals'
@@ -54,15 +51,7 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <ErrorBoundary>
-      <ModeProvider>
-        <ReportProvider>
-          <AppContent />
-        </ReportProvider>
-      </ModeProvider>
-    </ErrorBoundary>
-  )
+  return <AppContent />
 }
 
 export { App }

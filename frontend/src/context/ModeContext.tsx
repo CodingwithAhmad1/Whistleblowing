@@ -30,6 +30,10 @@ export function ModeProvider({ children }: { children: ReactNode }) {
 
 export function useMode() {
   const ctx = useContext(ModeContext)
-  if (!ctx) throw new Error('useMode must be used within ModeProvider')
+  if (!ctx) {
+    throw new Error(
+      'useMode must be used within ModeProvider. Wrap the tree (or the component under test) with <AppProviders> from @/providers/AppProviders, or use <ModeProvider> directly.',
+    )
+  }
   return ctx
 }

@@ -14,7 +14,7 @@ export function BackendStatusToast() {
     }
   }, [status])
 
-  if (!visible || status === 'ready' && !visible) return null
+  if (!visible) return null
 
   const isReady = status === 'ready'
   const isUnavailable = status === 'unavailable'
