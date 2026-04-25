@@ -362,6 +362,22 @@
   margin-top: 2px;
 }
 
+.templateGuidance {
+  font-size: var(--text-xs, 11px);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+  margin: 0 0 var(--space-6);
+}
+
+.templateWarningList {
+  list-style: disc;
+  margin: var(--space-4) 0 0 1rem;
+  padding: 0;
+  font-size: var(--text-xs, 11px);
+  color: #b45309;
+  line-height: 1.45;
+}
+
 .templatePreview {
   padding: 0 var(--space-16) var(--space-12);
   display: flex;

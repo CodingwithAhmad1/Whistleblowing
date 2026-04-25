@@ -19,13 +19,20 @@ export function SummaryView({ extraction, followUpQuestions, formData }: Props) 
       <div className={styles.section}>
         <div className={styles.sectionTitle}>AI Summary</div>
         {extraction ? (
-          <div className={styles.card}>
-            <div className={styles.cardInner}>
-              <p className={styles.summaryText}>
-                {extraction.summary || 'No summary available.'}
-              </p>
+          <>
+            <p className={styles.mergeNote}>
+              The summary and the characteristics below combine automated extraction with information from the
+              structured form, where the form adds dates, names, or context that the narrative alone may not
+              have captured.
+            </p>
+            <div className={styles.card}>
+              <div className={styles.cardInner}>
+                <p className={styles.summaryText}>
+                  {extraction.summary || 'No summary available.'}
+                </p>
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           <p className={styles.noData}>Analysis data was not captured for this submission.</p>
         )}

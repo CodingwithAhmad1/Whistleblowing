@@ -1,0 +1,20 @@
+{
+  "description": "ReportIQ report fields for intake analyze and RAG (flat string key/value). Align with frontend/src/types/report.ts",
+  "conditionals": [
+    { "show_fields": "reporter_first_name, reporter_last_name, reporter_phone, reporter_email, best_time_contact", "when": "wish_anonymous === 'no'" },
+    { "show_field": "supervisor_who", "when": "supervisor_involved === 'yes'" },
+    { "show_field": "evidence_description", "when": "has_supporting_materials === 'yes'" },
+    { "field": "how_aware_other", "note": "Relevant when how_aware is the 'other' option" }
+  ],
+  "ui_only": [
+    "AI follow-up wizard (Generate AI follow-up, follow-up answers, RAG) is not represented as single fields; use reportiq_intake_analyze and RAG tools and merge results into form_data as the app would."
+  ],
+  "keys": [
+    "organization_tier", "country", "incident_location",
+    "is_employee", "wish_anonymous", "reporter_first_name", "reporter_last_name", "reporter_phone_code", "reporter_phone", "reporter_email", "best_time_contact",
+    "person_1_first", "person_1_last", "person_1_title", "person_2_first", "person_2_last", "person_2_title", "person_3_first", "person_3_last", "person_3_title", "person_4_first", "person_4_last", "person_4_title", "person_5_first", "person_5_last", "person_5_title", "person_6_first", "person_6_last", "person_6_title", "person_7_first", "person_7_last", "person_7_title", "person_8_first", "person_8_last", "person_8_title", "person_9_first", "person_9_last", "person_9_title", "person_10_first", "person_10_last", "person_10_title",
+    "supervisor_involved", "supervisor_who", "management_aware",
+    "general_nature", "where_occurred", "when_occurred", "duration", "how_aware", "how_aware_other", "has_supporting_materials", "full_details_q1", "sequence_of_events", "evidence_description",
+    "full_details_q2", "full_details_q2_question", "full_details_gap2", "full_details_gap2_question", "full_details_q3", "full_details_q3_question", "policy_quote_matched", "policy_section_matched", "constructed_sentence", "persons_concealing"
+  ]
+}

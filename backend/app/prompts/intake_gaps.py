@@ -7,7 +7,8 @@ Each gap defines:
 - priority: lower = higher priority (1 is highest)
 - active: whether gap is evaluated by default
 - criteria: deterministic check against Layer 1 extraction JSON
-- template: standard question text
+- template: standard question text (max 300 characters; investigator-oriented prompts
+  should ask for concrete, recordable details)
 
 Layer 1 evaluates its booleans across the combined narrative
 (full_details_q1 + sequence_of_events + evidence_description), so these
@@ -27,8 +28,9 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "threshold": None,
         },
         "template": (
-            "For documentation purposes, could you provide a specific example "
-            "of when this occurred?"
+            "If you already gave this in your answers above, reply: already provided. "
+            "Otherwise describe ONE incident: (1) date or timeframe (2) place "
+            "(3) who was there (4) the key act or words (5) what happened next."
         ),
     },
     {
@@ -42,8 +44,10 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "threshold": None,
         },
         "template": (
-            "Was anyone else present who could corroborate what you've described "
-            "— witnesses or people who saw or heard the incident?"
+            "If you already gave this in your answers above, reply: already provided. "
+            "Who could independently verify this? For each, name/role, what they "
+            "saw or heard, and their team/site. If none, say none and where records "
+            "might exist (e.g. cal, sign-in, IT logs)."
         ),
     },
     {
@@ -57,8 +61,9 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "threshold": None,
         },
         "template": (
-            "Has this matter been raised or reported to anyone before "
-            "(e.g., a manager, HR, or a hotline), and if so, what was the outcome?"
+            "If you already gave this in your answers above, reply: already provided. "
+            "List any prior report: to whom, when, channel (e.g. email, hotline, "
+            "in person), and outcome or reference. If you never reported before, state that."
         ),
     },
     {
@@ -72,8 +77,9 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "threshold": None,
         },
         "template": (
-            "Who or what has been harmed by this, and in what way "
-            "(people, finances, safety, reputation)?"
+            "If you already gave this in your answers above, reply: already provided. "
+            "What harm: who or what is affected, what kind (safety, financial, people, "
+            "reputation), what you observed, and is the impact still ongoing?"
         ),
     },
     {
@@ -87,8 +93,9 @@ DEFAULT_INTAKE_GAPS: list[dict] = [
             "threshold": None,
         },
         "template": (
-            "Have you experienced any retaliation for raising this, or do you "
-            "have concerns about retaliation if you report?"
+            "If you already gave this in your answers above, reply: already provided. "
+            "Any adverse act since you raised this or because you might report: what, "
+            "by whom, when, and is it still ongoing? Any fear of future retaliation?"
         ),
     },
 ]

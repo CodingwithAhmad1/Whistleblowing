@@ -36,7 +36,7 @@ export function DocIntelligenceLayer(): JSX.Element {
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeAI}`}>AI — Layer 2</span>
             <span className={styles.pipelineStepTitle}>Gap detection</span>
           </div>
-          <p className={styles.pipelineStepBody}>Seven configurable gap rules are evaluated in priority order against the checklist. The system identifies the single most critical missing piece of information. If the narrative is already sufficiently complete, no gap is raised and Q2 is skipped.</p>
+          <p className={styles.pipelineStepBody}>Configurable gap rules (a default set of five is shipped) are evaluated in priority order against the checklist. Structured form answers can suppress a gap when they already cover that theme. If the narrative is sufficiently complete, no gap is raised and the targeted follow-up is skipped.</p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
@@ -46,7 +46,7 @@ export function DocIntelligenceLayer(): JSX.Element {
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeAI}`}>AI — Layer 3</span>
             <span className={styles.pipelineStepTitle}>Question generation</span>
           </div>
-          <p className={styles.pipelineStepBody}>A targeted follow-up question (Q2) is generated from a template matched to the identified gap and surfaced to the reporter.</p>
+          <p className={styles.pipelineStepBody}>A targeted follow-up is built from the matching template — phrased to request specific, investigation-ready detail and to allow an &ldquo;already provided&rdquo; answer when the narrative already covered it.</p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>

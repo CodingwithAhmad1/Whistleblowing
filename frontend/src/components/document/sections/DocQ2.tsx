@@ -8,14 +8,13 @@ interface GapRow {
   check: string
 }
 
+// Illustrative default set — live deployments may differ; admins configure the exact list in the Admin panel.
 const GAP_ROWS: GapRow[] = [
-  { color: '#ef4444', priority: 1, gap: 'Timeline unclear',      check: 'Can the sequence of events be reconstructed from the narrative?' },
-  { color: '#f97316', priority: 2, gap: 'No specific example',   check: 'Is at least one concrete incident described in detail?' },
-  { color: '#eab308', priority: 3, gap: 'No evidence referenced', check: 'Are any supporting materials mentioned — emails, messages, or documents?' },
-  { color: '#84cc16', priority: 4, gap: 'Date missing',          check: 'Are explicit dates or timeframes present in the narrative?' },
-  { color: '#22c55e', priority: 5, gap: 'No individuals named',  check: 'Are specific people mentioned by name or identifiable role?' },
-  { color: '#06b6d4', priority: 6, gap: 'Location missing',      check: 'Is a specific place or setting referenced?' },
-  { color: '#6366f1', priority: 7, gap: 'Narrative too short',   check: 'Is the narrative above the minimum length to be meaningfully analysed?' },
+  { color: '#f97316', priority: 1, gap: 'No specific example', check: 'Has the reporter given at least one concrete incident the AI can mark as a specific example?' },
+  { color: '#22c55e', priority: 2, gap: 'No witnesses mentioned', check: 'Does the text name anyone who could corroborate (not only the people involved in the act)?' },
+  { color: '#06b6d4', priority: 3, gap: 'No prior reporting mentioned', check: 'Does the text say whether this was raised to anyone before, and the outcome?' },
+  { color: '#ef4444', priority: 4, gap: 'No impact described', check: 'Is harm or consequence (people, safety, financial, etc.) described explicitly?' },
+  { color: '#6366f1', priority: 5, gap: 'No retaliation context', check: 'Is retaliation, fear of reprisal, or a chilling effect mentioned explicitly?' },
 ]
 
 export function DocQ2(): JSX.Element {
@@ -37,9 +36,9 @@ export function DocQ2(): JSX.Element {
 
       <p className={styles.p}>
         <strong>Step two — gap detection.</strong> A set of rules — configured by the platform admin —
-        checks that checklist. Seven gap types are evaluated in priority order. The system identifies the
-        single most important missing piece of information. It asks only about that. It does not interrogate
-        the reporter with multiple questions.
+        checks that checklist. A small default set of gap types (five) is provided out of the box; the list and
+        priority order are configurable. The system identifies the most important missing piece of
+        information under those rules. It does not interrogate the reporter with long questionnaires.
       </p>
 
       <table className={styles.table}>
@@ -65,16 +64,19 @@ export function DocQ2(): JSX.Element {
       </table>
 
       <p className={styles.p}>
-        Crucially, the system is context-aware. If the reporter already indicated "when did this occur?" in
-        the earlier form fields, the system will not ask about dates again in Q2 — even if the Q1 narrative
-        contains no explicit dates. It considers everything already provided before deciding what to ask.
+        The system is context-aware. Answers in structured fields can suppress a gap (for example, a long
+        &ldquo;sequence of events&rdquo; answer may count toward a concrete example; indicating management
+        awareness may count toward prior escalation). The combined narrative and form context are considered
+        before a template is shown.
       </p>
 
       <p className={styles.p}>
         <strong>Step three — question generation.</strong> Once the highest-priority gap is identified, the
-        system retrieves the corresponding question template and presents it to the reporter as Q2. If no gaps
-        are found — if the narrative is already sufficiently complete — Q2 is skipped and the reporter moves
-        directly to Q3.
+        system uses the corresponding template — written to ask for <strong>specific, recordable details</strong>{' '}
+        (e.g. who, when, channel, outcome), and to invite &ldquo;already provided&rdquo; if the answer is already
+        in the free text — and presents that text to the reporter as the targeted follow-up. If no gaps are
+        found, or a gap is suppressed because structured form answers already cover that theme, the follow-up
+        may be skipped and the reporter moves to the next step.
       </p>
 
       <DocCallout variant="teal">

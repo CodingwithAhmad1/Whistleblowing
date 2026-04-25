@@ -91,6 +91,8 @@
 
 .tabContent {
   padding: var(--space-32);
+  /* Match Home ReportPanel .formContent input outline */
+  --color-border: #cbd5e1;
 }
 
 /* ── Row actions (download + delete grouped, tight) ───────────────────────── */

@@ -21,9 +21,10 @@ export function DocAnalysis(): JSX.Element {
         investigator opening a case for the first time.
       </p>
       <p className={styles.p}>
-        Second, the <strong>gap analysis</strong>: a status reading for each of the seven dimensions evaluated
-        during the pipeline. Each dimension is shown as either present (sufficient information was provided) or
-        missing (a gap was identified). The dimension that was surfaced to the reporter as Q2 is highlighted.
+        Second, the <strong>gap analysis</strong>: a status reading for each configured gap rule evaluated
+        during the pipeline (the default set has five). Each is shown as either present (sufficient information
+        was provided) or missing (a gap was identified). The dimension that was surfaced to the reporter as the
+        targeted follow-up is highlighted.
         The remaining gaps — those not asked about — are listed in priority order so the investigator knows
         exactly what to pursue if they take the case further.
       </p>

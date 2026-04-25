@@ -30,6 +30,14 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+.mergeNote {
+  font-size: var(--text-xs, 12px);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin: 0 0 var(--space-4);
+  max-width: 60ch;
+}
+
 /* ── Card ──────────────────────────────────────────────────────────────────── */
 
 .card {

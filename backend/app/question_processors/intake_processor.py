@@ -276,21 +276,35 @@ def _evaluate_gap(gap: dict, layer1: Layer1Result) -> bool:
 # Maps form_data keys to gap IDs they make redundant.
 # If the form field has a non-empty value, the corresponding gap is suppressed
 # because the user already provided that information outside the narrative.
-# Currently empty: all surviving gaps are evaluated against the combined
-# narrative (q1 + sequence + evidence), which already includes all relevant
-# standardised input. Kept as an extension point.
+# Most gaps are evaluated on the combined narrative; this table covers cases where
+# a structured field alone clearly signals the same theme (see also
+# _conditional_gap_suppression).
 _FORM_FIELD_GAP_SUPPRESSION: dict[str, str] = {}
+
+
+def _conditional_gap_suppression(form_data: dict) -> set[str]:
+    """Suppress gaps when structured answers plausibly cover the same information."""
+    s: set[str] = set()
+    if (form_data.get("management_aware") or "").strip().lower() == "yes":
+        s.add("no_prior_reporting")
+    seq = (form_data.get("sequence_of_events") or "").strip()
+    if len(seq) >= 60:
+        # A substantive sequence in the standardised "sequence of events" field
+        # supplies concrete order/detail even if the extraction flag is still off.
+        s.add("no_specific_example")
+    return s
 
 
 def _suppressed_gaps(form_data: dict | None) -> set[str]:
     """Return set of gap IDs that should be suppressed based on form field values."""
-    if not form_data or not _FORM_FIELD_GAP_SUPPRESSION:
+    if not form_data:
         return set()
     suppressed: set[str] = set()
     for field_key, gap_id in _FORM_FIELD_GAP_SUPPRESSION.items():
         val = form_data.get(field_key, "")
         if val and isinstance(val, str) and val.strip():
             suppressed.add(gap_id)
+    suppressed |= _conditional_gap_suppression(form_data)
     return suppressed
 
 
@@ -387,6 +401,9 @@ class IntakeProcessor:
         gaps = get_intake_gaps()
 
         layer1_result = await self._layer1.extract(q1_text, form_data)
+        from .extraction_augmentation import augment_extraction_with_form
+
+        layer1_result = augment_extraction_with_form(layer1_result, form_data)
         identified_gaps = self._layer2.analyze(layer1_result, gaps, form_data)
         follow_up_questions = self._layer3.generate(identified_gaps, gaps)
 

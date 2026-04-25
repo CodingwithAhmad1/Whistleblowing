@@ -8,6 +8,8 @@ frontend/dist/
 # Python
 backend/venv/
 backend/.venv/
+mcp/.venv/
+mcp/dist/
 __pycache__/
 *.pyc
 

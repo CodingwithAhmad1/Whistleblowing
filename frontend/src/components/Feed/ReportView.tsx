@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { ReportData } from '@/types/report'
 import { personsFromReport } from '@/types/report'
 import { REPORT_FIELDS } from '@/data/reportSchema'
+import personFormStyles from '@/components/ReportPanel/sections/ManagementAwareness.module.css'
 import styles from './ReportView.module.css'
 
 /** When person count exceeds this, show first N rows with See more. */
@@ -117,30 +118,16 @@ export function ReportView({ formData }: Props) {
         {persons.length === 0 ? (
           <p className={styles.empty}>No persons identified</p>
         ) : (
-          <div className={styles.personsTableWrap}>
-            <div className={styles.personsTableScroll}>
-              <table className={styles.personsTable}>
-                <thead>
-                  <tr>
-                    <th className={styles.personsNumHeader} scope="col">
-                      <span className={styles.srOnly}>#</span>
-                    </th>
-                    <th scope="col">First name</th>
-                    <th scope="col">Last name</th>
-                    <th scope="col">Title / role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayedPersons.map((p, i) => (
-                    <tr key={i}>
-                      <td className={styles.personsNumCell}>#{i + 1}</td>
-                      <td className={styles.personsValueCell}>{p.first || '—'}</td>
-                      <td className={styles.personsValueCell}>{p.last || '—'}</td>
-                      <td className={styles.personsValueCell}>{p.title || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className={styles.personsBlock}>
+            <div className={personFormStyles.personRows}>
+              {displayedPersons.map((p, i) => (
+                <div key={i} className={personFormStyles.personRowRead}>
+                  <span className={personFormStyles.rowLabel}>#{i + 1}</span>
+                  <div className={personFormStyles.readOnlyField}>{p.first || '—'}</div>
+                  <div className={personFormStyles.readOnlyField}>{p.last || '—'}</div>
+                  <div className={personFormStyles.readOnlyTitle}>{p.title || '—'}</div>
+                </div>
+              ))}
             </div>
             {personCountExceedsInitial && (
               <button

@@ -36,7 +36,7 @@ export function DocInvestigatorView(): JSX.Element {
         </li>
         <li>
           <span className={styles.benefitIcon}>→</span>
-          The full gap analysis — all seven dimensions, each marked as present or missing
+          The full gap analysis — each configured dimension (default: five), marked as present or missing
         </li>
         <li>
           <span className={styles.benefitIcon}>→</span>

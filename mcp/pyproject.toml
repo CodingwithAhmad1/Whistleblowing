@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "reportiq-mcp"
+version = "0.1.0"
+description = "MCP server wrapping ReportIQ FastAPI endpoints for health, intake analysis, and RAG"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "httpx>=0.27.0",
+  "mcp>=1.2.0",
+]
+
+[project.scripts]
+reportiq-mcp = "reportiq_server.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["reportiq_server"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"reportiq_server/form_schema.json" = "reportiq_server/form_schema.json"
+
+[tool.uv]
+dev-dependencies = []

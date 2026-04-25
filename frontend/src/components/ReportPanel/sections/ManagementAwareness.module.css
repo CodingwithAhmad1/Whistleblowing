@@ -89,6 +89,14 @@
   align-items: center;
 }
 
+/* Feed report read view: same column proportions, no Remove column */
+.personRowRead {
+  display: grid;
+  grid-template-columns: 32px 1fr 1fr 1.5fr;
+  gap: var(--space-12);
+  align-items: center;
+}
+
 .rowLabel {
   font-size: var(--text-sm);
   font-weight: 500;
@@ -115,6 +123,21 @@
   outline-offset: 2px;
 }
 
+.readOnlyField,
+.readOnlyTitle {
+  box-sizing: border-box;
+  padding: var(--space-12) var(--space-16);
+  font-family: inherit;
+  font-size: var(--text-base);
+  line-height: 1.4;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-text);
+  min-width: 0;
+  word-break: break-word;
+  background: var(--color-surface);
+}
+
 .conditionalLabel {
   font-size: var(--text-sm);
   margin: 0 0 var(--space-8);
@@ -128,7 +151,8 @@
 }
 
 @media (max-width: 700px) {
-  .personRow {
+  .personRow,
+  .personRowRead {
     grid-template-columns: 1fr;
     gap: var(--space-8);
   }

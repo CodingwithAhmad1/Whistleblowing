@@ -53,6 +53,23 @@ const CRITERIA_TYPES: { value: GapCriteria['type']; label: string }[] = [
   { value: 'length_threshold', label: 'Minimum Length' },
 ]
 
+/** Non-blocking hints to encourage investigator-grade, non-vague Q2 text. */
+function templateEditorWarnings(template: string | undefined): string[] {
+  const t = (template ?? '').trim()
+  const out: string[] = []
+  if (t.length > 0 && t.length < 50) {
+    out.push('Short templates often get vague answers. Ask for 2–3 concrete items (e.g. who, when, channel, outcome).')
+  }
+  if (t.length > 0 && !t.includes('?')) {
+    out.push('Consider ending with a clear question so reporters know how to answer.')
+  }
+  const looksConcrete = /(who|whom|when|where|date|time|name|list|email|outcome|channel|reference|describe|incident|verify)/i
+  if (t.length > 80 && !looksConcrete.test(t)) {
+    out.push('This may read as generic. Name what to include (names, dates, who was told, what happened next).')
+  }
+  return out
+}
+
 function GapEditForm({
   gap,
   onSave,
@@ -68,6 +85,8 @@ function GapEditForm({
     setLocal((prev) => ({ ...prev, [key]: value }))
 
   const criteria = local.criteria ?? { type: 'boolean_false', field: '', threshold: null }
+
+  const twarn = templateEditorWarnings(local.template)
 
   return (
     <div className={styles.gapEditForm}>
@@ -133,6 +152,12 @@ function GapEditForm({
 
       <div className={styles.gapEditField}>
         <label className={styles.gapEditLabel}>Template</label>
+        <p className={styles.templateGuidance}>
+          This text is the exact follow-up shown to the reporter. Prefer one question that
+          requests recordable details investigators need (who, when, how raised, outcome).
+          You can tell reporters to answer &ldquo;already provided&rdquo; if the narrative
+          already covered it — that reduces repeat answers without hiding gaps from reviewers.
+        </p>
         <textarea
           className={styles.gapEditTextarea}
           value={local.template ?? ''}
@@ -143,6 +168,13 @@ function GapEditForm({
         <span className={styles.helperText}>
           {(local.template ?? '').length}/300 characters
         </span>
+        {twarn.length > 0 && (
+          <ul className={styles.templateWarningList}>
+            {twarn.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className={styles.gapEditActions}>
@@ -808,9 +840,10 @@ export function AdminPage() {
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Gap Configuration</h2>
           <p className={styles.sectionDesc}>
-            Define the gaps evaluated after Q1. The system selects the top 1 active gap
-            (by priority) and generates a follow-up question using the template below.
-            Changes save automatically. Drag cards to reorder priorities.
+            Define the gaps evaluated after the combined narrative (what happened, sequence, evidence). The
+            system selects the highest-priority active gap and uses its template for the one targeted
+            follow-up. Templates work best when they ask for specific, investigation-ready details — not
+            open-ended restatement. Changes save automatically. Drag cards to reorder priorities.
           </p>
         </div>
         <GapConfigSection />
