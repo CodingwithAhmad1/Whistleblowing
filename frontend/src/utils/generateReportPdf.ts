@@ -1,12 +1,15 @@
 /**
  * Client-side PDF generation for whistleblowing report.
  * Schema-driven for standard fields; Q1/Q2/Q3 rendered as a dedicated Q&A block.
+ * Use `generateSubmissionPdf` (feed row / stored submission) as the public entry point.
  */
 
 import { jsPDF } from 'jspdf'
 import type { ReportData } from '@/types/report'
 import { personsFromReport } from '@/types/report'
 import { REPORT_SECTIONS, REPORT_FIELDS, type FieldDef } from '@/data/reportSchema'
+import type { StoredSubmission } from '@/utils/feedStore'
+import { submissionPdfFilename } from '@/utils/feedStore'
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -287,34 +290,18 @@ function drawPersonsTable(
   return y
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+function formatUtcForPdfHeader(iso: string): string {
+  const d = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return (
+    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ` +
+    `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`
+  )
+}
 
-export function generateReportPdf(report: ReportData): void {
-  const doc = new jsPDF({ format: 'a4', unit: 'mm' })
-  let y = MARGIN
+// ── Report form body (all schema sections) ─────────────────────────────────
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.setTextColor(0, 0, 0)
-  doc.text('Whistleblowing Report', MARGIN, y)
-  y += 8
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(W_SMALL)
-  doc.setTextColor(120, 120, 120)
-  const dateStr = new Date().toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
-  doc.text(`Confidential  ·  Generated ${dateStr}`, MARGIN, y)
-  y += 5
-
-  doc.setDrawColor(0, 0, 0)
-  doc.setLineWidth(0.6)
-  doc.line(MARGIN, y, MARGIN + contentW(doc), y)
-  doc.setTextColor(0, 0, 0)
-  y += SECTION_GAP
-
+function appendReportFormSections(doc: jsPDF, y: number, report: ReportData): number {
   // ── Sections ──────────────────────────────────────────────────────────────
   for (const section of REPORT_SECTIONS) {
     y = ensureSpace(doc, y, LINE_H * 4)
@@ -351,7 +338,7 @@ export function generateReportPdf(report: ReportData): void {
 
     // ── Incident: Full Details Q&A block ───────────────────────────────────
     if (section.id === 'incident') {
-      // Standard incident fields (excluding full_details and persons_concealing)
+      // Standard incident fields (excluding full_details Q&A keys)
       const standardFields = REPORT_FIELDS.filter(
         (f) =>
           f.section === 'incident' &&
@@ -394,8 +381,9 @@ export function generateReportPdf(report: ReportData): void {
       }
 
       // Q3 — standardised evidence description
+      const sm = (report as unknown as Record<string, string>).has_supporting_materials
       const evidenceAnswer = (report as unknown as Record<string, string>).evidence_description?.trim() ?? ''
-      if (evidenceAnswer) {
+      if (evidenceAnswer && sm !== 'no') {
         y = drawQA(
           doc,
           'Supporting evidence or materials',
@@ -493,5 +481,171 @@ export function generateReportPdf(report: ReportData): void {
     y += SECTION_GAP
   }
 
-  doc.save(`whistleblowing-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+  return y
+}
+
+// ── Summary / analysis (matches Feed “Summary” tab content) ─────────────────
+
+function appendSummaryAndAnalysis(doc: jsPDF, y: number, submission: StoredSubmission): number {
+  const { extraction, followUpQuestions, formData } = submission
+  const generatedQuestions = followUpQuestions.length > 0
+    ? followUpQuestions.map((q) => q.question_text?.trim() ?? '').filter(Boolean)
+    : [
+        formData.full_details_q2_question?.trim() ?? '',
+        formData.full_details_gap2_question?.trim() ?? '',
+        formData.full_details_q3_question?.trim() ?? '',
+      ].filter(Boolean)
+
+  y = ensureSpace(doc, y, LINE_H * 4)
+  y = drawSectionHeading(doc, 'AI Summary & Extraction', y)
+
+  if (!extraction) {
+    y = drawField(doc, 'AI analysis', 'Analysis data was not captured for this submission.', y, false)
+  } else {
+    y = drawField(
+      doc,
+      'Summary',
+      extraction.summary?.trim() || 'No summary text.',
+      y,
+      false,
+    )
+
+    const tags = extraction.allegation_type.length > 0
+      ? extraction.allegation_type.join(', ')
+      : 'None identified'
+    y = drawField(doc, 'Allegation types', tags, y, false)
+
+    const characteristics: [string, boolean][] = [
+      ['Specific examples present', extraction.specific_examples_present],
+      ['Evidence described', extraction.evidence_described],
+      ['Timeline clear', extraction.timeline_clear],
+      ['Witnesses mentioned', extraction.witnesses_mentioned],
+      ['Prior reporting mentioned', extraction.prior_reporting_mentioned],
+      ['Impact described', extraction.impact_described],
+      ['Retaliation mentioned', extraction.retaliation_mentioned],
+    ]
+    for (const [label, val] of characteristics) {
+      y = drawField(doc, label, val ? 'Yes' : 'No', y, false)
+    }
+
+    y = drawField(
+      doc,
+      'Dates mentioned',
+      extraction.dates_mentioned.length > 0 ? extraction.dates_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'People mentioned',
+      extraction.people_mentioned.length > 0 ? extraction.people_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'Locations mentioned',
+      extraction.locations_mentioned.length > 0 ? extraction.locations_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+  }
+
+  if (formData.constructed_sentence?.trim()) {
+    y = drawField(
+      doc,
+      'AI-generated case summary',
+      formData.constructed_sentence.trim(),
+      y,
+      false,
+    )
+  }
+
+  y = ensureSpace(doc, y, LINE_H * 4)
+  y = drawSectionHeading(doc, 'Follow-Up Questions (generated)', y)
+
+  if (generatedQuestions.length === 0) {
+    y = drawField(doc, 'Questions', 'No follow-up questions were generated for this submission.', y, false)
+  } else {
+    for (let i = 0; i < generatedQuestions.length; i++) {
+      y = drawQA(doc, `Question ${i + 1}`, generatedQuestions[i], y)
+    }
+  }
+
+  y = ensureSpace(doc, y, LINE_H * 4)
+  y = drawSectionHeading(doc, 'Policy Match (summary)', y)
+
+  const policyQuote = formData.policy_quote_matched?.trim() ?? ''
+  const policySection = formData.policy_section_matched?.trim() ?? ''
+  if (!policyQuote) {
+    y = drawField(doc, 'Policy', 'No policy match found', y, false)
+  } else {
+    const quoteLines = wrap(doc, `"${policyQuote}"`, contentW(doc) - 12)
+    y = ensureSpace(doc, y, quoteLines.length * LINE_H + 8)
+    doc.setFont('helvetica', 'italic')
+    doc.setFontSize(W_SMALL)
+    doc.setTextColor(100, 100, 100)
+    for (const line of quoteLines) {
+      doc.text(line, MARGIN + 4, y)
+      y += LINE_H
+    }
+    doc.setTextColor(0, 0, 0)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(W_NORMAL)
+    if (policySection) {
+      doc.setFontSize(W_SMALL - 1)
+      doc.setTextColor(140, 140, 140)
+      y = ensureSpace(doc, y, LINE_H + 2)
+      doc.text(`— ${policySection}`, MARGIN + 4, y)
+      y += LINE_H
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(W_NORMAL)
+    }
+    y += FIELD_GAP
+  }
+
+  return y
+}
+
+// ── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Full PDF: report form content (Report tab) plus analysis/summary blocks (Summary tab).
+ */
+export function generateSubmissionPdf(submission: StoredSubmission): void {
+  const doc = new jsPDF({ format: 'a4', unit: 'mm' })
+  let y = MARGIN
+  const report = submission.formData
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(18)
+  doc.setTextColor(0, 0, 0)
+  doc.text('Whistleblowing Report', MARGIN, y)
+  y += 8
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(W_SMALL)
+  doc.setTextColor(120, 120, 120)
+  const generatedStr = new Date().toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
+  doc.text(
+    `Submission #${submission.id}  ·  Submitted ${formatUtcForPdfHeader(submission.timestamp)}`,
+    MARGIN,
+    y,
+  )
+  y += LINE_H - 1
+  doc.text(`Confidential  ·  Generated ${generatedStr}`, MARGIN, y)
+  y += 5
+
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.6)
+  doc.line(MARGIN, y, MARGIN + contentW(doc), y)
+  doc.setTextColor(0, 0, 0)
+  y += SECTION_GAP
+
+  y = appendReportFormSections(doc, y, report)
+  y = appendSummaryAndAnalysis(doc, y, submission)
+
+  doc.save(submissionPdfFilename(submission))
 }

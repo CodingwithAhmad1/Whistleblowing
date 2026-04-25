@@ -10,7 +10,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 64px 1fr 210px 40px;
+  grid-template-columns: 64px 1fr minmax(160px, 210px) auto;
   align-items: center;
   padding: var(--space-12) var(--space-16);
   cursor: pointer;
@@ -93,7 +93,51 @@
   padding: var(--space-32);
 }
 
-/* ── Delete button ─────────────────────────────────────────────────────────── */
+/* ── Row actions (download + delete grouped, tight) ───────────────────────── */
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.downloadBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  transition: color 100ms, background 100ms;
+  flex-shrink: 0;
+}
+
+.downloadBtn:hover {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.downloadBtn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.downloadIcon {
+  display: block;
+  flex-shrink: 0;
+  /* Optical alignment with the row cap-height */
+  transform: translateY(0.5px);
+}
 
 .deleteBtn {
   background: none;
@@ -112,7 +156,6 @@
   height: 28px;
   transition: color 100ms, background 100ms;
   flex-shrink: 0;
-  margin-left: auto;
 }
 
 .deleteBtn:hover {

@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import type { StoredSubmission } from '@/utils/feedStore'
+import { generateSubmissionPdf } from '@/utils/generateReportPdf'
 import { ReportView } from './ReportView'
 import { SummaryView } from './SummaryView'
 import { DeleteConfirmModal } from './DeleteConfirmModal'
@@ -38,6 +39,11 @@ export function SubmissionRow({ submission, onDelete }: Props) {
     setIsOpen(prev => !prev)
   }
 
+  function handleDownloadPdf(e: MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation()
+    generateSubmissionPdf(submission)
+  }
+
   return (
     <div className={styles.wrapper}>
       <div
@@ -56,15 +62,41 @@ export function SubmissionRow({ submission, onDelete }: Props) {
         <span className={styles.cellId}>#{submission.id}</span>
         <span className={styles.cellReporter}>{formatReporter(submission.formData)}</span>
         <span className={styles.cellDate}>{formatUtc(submission.timestamp)}</span>
-        <button
-          type="button"
-          className={styles.deleteBtn}
-          onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true) }}
-          aria-label={`Delete report #${submission.id}`}
-          title="Delete report"
-        >
-          &times;
-        </button>
+        <div className={styles.rowActions}>
+          <button
+            type="button"
+            className={styles.downloadBtn}
+            onClick={handleDownloadPdf}
+            aria-label={`Download PDF for report #${submission.id}`}
+            title="Download PDF"
+          >
+            <svg
+              className={styles.downloadIcon}
+              viewBox="0 0 24 24"
+              width={16}
+              height={16}
+              aria-hidden
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.25}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 3.5v7" />
+              <path d="M7.5 10.5 12 15 16.5 10.5" />
+              <path d="M4.5 20h15" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={styles.deleteBtn}
+            onClick={(e) => { e.stopPropagation(); setShowDeleteModal(true) }}
+            aria-label={`Delete report #${submission.id}`}
+            title="Delete report"
+          >
+            &times;
+          </button>
+        </div>
       </div>
 
       {showDeleteModal && (

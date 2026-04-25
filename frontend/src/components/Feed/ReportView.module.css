@@ -61,55 +61,133 @@
   margin: 0;
 }
 
-/* ── Persons ───────────────────────────────────────────────────────────────── */
+/* ── Persons (table) ───────────────────────────────────────────────────────── */
 
-.personCard {
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.personsTableWrap {
   border: 1px solid var(--color-border);
   border-radius: 8px;
+  background: var(--color-surface);
   overflow: hidden;
-  margin-bottom: var(--space-8);
 }
 
-.personCard:last-child {
-  margin-bottom: 0;
+.personsTableScroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-.personHeader {
-  background: var(--color-surface-muted);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--space-8) var(--space-16);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text-muted);
+.personsTable {
+  width: 100%;
+  min-width: 280px;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
-.personGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.personField {
-  padding: var(--space-12) var(--space-16);
-  border-right: 1px solid var(--color-border);
-}
-
-.personField:last-child {
-  border-right: none;
-}
-
-.personFieldLabel {
+.personsTable thead th {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--color-text-muted);
-  margin-bottom: 4px;
+  text-align: left;
+  padding: var(--space-8) var(--space-12);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  vertical-align: bottom;
 }
 
-.personFieldValue {
+.personsTable tbody tr:not(:last-child) td {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.personsNumHeader {
+  width: 2.75rem;
+  min-width: 2.75rem;
+  text-align: right;
+  padding-right: var(--space-8);
+}
+
+.personsNumCell {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  text-align: right;
+  vertical-align: top;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  padding: var(--space-10) var(--space-8) var(--space-10) var(--space-12);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+}
+
+.personsValueCell {
   font-size: var(--text-sm);
   color: var(--color-text);
   line-height: 1.4;
+  padding: var(--space-10) var(--space-12);
+  word-break: break-word;
+  vertical-align: top;
+}
+
+.personsValueCell:nth-child(2) {
+  width: 26%;
+}
+.personsValueCell:nth-child(3) {
+  width: 26%;
+}
+.personsValueCell:nth-child(4) {
+  width: auto;
+}
+
+.personsSeeMore {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: var(--space-8) var(--space-12);
+  border: none;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.personsSeeMore:hover {
+  color: var(--color-text);
+  opacity: 0.9;
+}
+
+.personsSeeMore:focus-visible {
+  outline: 2px solid var(--color-border);
+  outline-offset: -2px;
+}
+
+@media (max-width: 480px) {
+  .personsTable {
+    min-width: 100%;
+  }
+
+  .personsValueCell:nth-child(2),
+  .personsValueCell:nth-child(3) {
+    width: auto;
+  }
 }
 
 /* ── Full Details Q&A ──────────────────────────────────────────────────────── */

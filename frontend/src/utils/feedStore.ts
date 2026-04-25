@@ -48,6 +48,19 @@ export function deleteSubmission(id: number): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
 }
 
+/** Safe filesystem characters; stable per submission for PDF exports. */
+export function submissionPdfFilename(submission: StoredSubmission): string {
+  const d = new Date(submission.timestamp)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = d.getUTCFullYear()
+  const mo = pad(d.getUTCMonth() + 1)
+  const day = pad(d.getUTCDate())
+  const h = pad(d.getUTCHours())
+  const mi = pad(d.getUTCMinutes())
+  const sec = pad(d.getUTCSeconds())
+  return `whistleblowing-report-id${submission.id}-${y}${mo}${day}T${h}${mi}${sec}Z.pdf`
+}
+
 export function saveSubmission(data: Omit<StoredSubmission, 'id'>): void {
   try {
     const existing = loadSubmissions()

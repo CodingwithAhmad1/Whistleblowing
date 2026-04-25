@@ -1,7 +1,11 @@
+import { useState } from 'react'
 import type { ReportData } from '@/types/report'
 import { personsFromReport } from '@/types/report'
 import { REPORT_FIELDS } from '@/data/reportSchema'
 import styles from './ReportView.module.css'
+
+/** When person count exceeds this, show first N rows with See more. */
+const PERSON_TABLE_INITIAL_ROWS = 5
 
 const FULL_DETAILS_KEYS = new Set([
   'full_details_q1',
@@ -66,6 +70,13 @@ export function ReportView({ formData }: Props) {
     p => p.first.trim() || p.last.trim() || p.title.trim(),
   )
 
+  const [showAllPersons, setShowAllPersons] = useState(false)
+  const personCountExceedsInitial = persons.length > PERSON_TABLE_INITIAL_ROWS
+  const displayedPersons =
+    showAllPersons || !personCountExceedsInitial
+      ? persons
+      : persons.slice(0, PERSON_TABLE_INITIAL_ROWS)
+
   const q1 = getRaw(formData, 'full_details_q1')
   const sequence = getRaw(formData, 'sequence_of_events')
   const evidence = getRaw(formData, 'evidence_description')
@@ -75,8 +86,6 @@ export function ReportView({ formData }: Props) {
   const q3q = getRaw(formData, 'full_details_q3_question')
   const policyQuote = getRaw(formData, 'policy_quote_matched')
   const policySection = getRaw(formData, 'policy_section_matched')
-  const personsCon = getRaw(formData, 'persons_concealing')
-
   const showQ2 = q2 || q2q
   const showQ3 = q3 || q3q
 
@@ -108,25 +117,41 @@ export function ReportView({ formData }: Props) {
         {persons.length === 0 ? (
           <p className={styles.empty}>No persons identified</p>
         ) : (
-          persons.map((p, i) => (
-            <div className={styles.personCard} key={i}>
-              <div className={styles.personHeader}>Person {i + 1}</div>
-              <div className={styles.personGrid}>
-                <div className={styles.personField}>
-                  <div className={styles.personFieldLabel}>First Name</div>
-                  <div className={styles.personFieldValue}>{p.first || '—'}</div>
-                </div>
-                <div className={styles.personField}>
-                  <div className={styles.personFieldLabel}>Last Name</div>
-                  <div className={styles.personFieldValue}>{p.last || '—'}</div>
-                </div>
-                <div className={styles.personField}>
-                  <div className={styles.personFieldLabel}>Title / Role</div>
-                  <div className={styles.personFieldValue}>{p.title || '—'}</div>
-                </div>
-              </div>
+          <div className={styles.personsTableWrap}>
+            <div className={styles.personsTableScroll}>
+              <table className={styles.personsTable}>
+                <thead>
+                  <tr>
+                    <th className={styles.personsNumHeader} scope="col">
+                      <span className={styles.srOnly}>#</span>
+                    </th>
+                    <th scope="col">First name</th>
+                    <th scope="col">Last name</th>
+                    <th scope="col">Title / role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayedPersons.map((p, i) => (
+                    <tr key={i}>
+                      <td className={styles.personsNumCell}>#{i + 1}</td>
+                      <td className={styles.personsValueCell}>{p.first || '—'}</td>
+                      <td className={styles.personsValueCell}>{p.last || '—'}</td>
+                      <td className={styles.personsValueCell}>{p.title || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))
+            {personCountExceedsInitial && (
+              <button
+                type="button"
+                className={styles.personsSeeMore}
+                onClick={() => setShowAllPersons(v => !v)}
+              >
+                {showAllPersons ? 'See less' : 'See more'}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -147,11 +172,6 @@ export function ReportView({ formData }: Props) {
           {incidentStandardFields.map(f => (
             <FieldRow key={f.key} fieldKey={f.key} label={f.label} value={getFormatted(formData, f.key)} />
           ))}
-          <FieldRow
-            fieldKey="persons_concealing"
-            label="Please identify any persons who have attempted to conceal this problem and the steps they took to conceal it:"
-            value={personsCon}
-          />
         </div>
       </div>
 
@@ -178,7 +198,7 @@ export function ReportView({ formData }: Props) {
         )}
 
         {/* Q3 — evidence */}
-        {evidence && (
+        {evidence && formData.has_supporting_materials !== 'no' && (
           <div className={styles.qaBlock}>
             <p className={styles.qaQuestion}>Supporting evidence or materials</p>
             <p className={styles.qaAnswer}>{evidence}</p>
