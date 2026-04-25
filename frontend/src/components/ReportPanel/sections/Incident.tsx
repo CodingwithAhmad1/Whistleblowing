@@ -9,7 +9,7 @@ import { RadioField } from './RadioField'
 import styles from './Incident.module.css'
 
 export function Incident() {
-  const { report, updateReport } = useReport()
+  const { report, updateReport, fullDetailsMountKey } = useReport()
 
   return (
     <>
@@ -105,7 +105,7 @@ export function Incident() {
           placeholder="Type your answer here…"
         />
       )}
-      <FullDetailsQuestionnaire />
+      <FullDetailsQuestionnaire key={fullDetailsMountKey} />
     </>
   )
 }

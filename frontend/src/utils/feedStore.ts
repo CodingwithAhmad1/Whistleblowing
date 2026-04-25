@@ -1,4 +1,5 @@
 import type { ReportData } from '@/types/report'
+import { API_CONFIG } from '@/config'
 
 export interface Layer1Extraction {
   summary: string
@@ -23,18 +24,27 @@ export interface FollowUpQuestion {
 
 export interface StoredSubmission {
   id: number
-  timestamp: string           // ISO UTC
+  timestamp: string
   formData: ReportData
   extraction: Layer1Extraction | null
   gaps: string[]
   followUpQuestions: FollowUpQuestion[]
 }
 
-const STORAGE_KEY = 'whistleblow_submissions'
+export const SUBMISSIONS_STORAGE_KEY = 'whistleblow_submissions'
 
-export function loadSubmissions(): StoredSubmission[] {
+export const SUBMISSIONS_UPDATED_EVENT = 'whistleblow:submissions-updated'
+
+const SUBMISSIONS_API = `${API_CONFIG.BASE_URL}/api/submissions`
+
+function _notifySubmissionsChanged() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(SUBMISSIONS_UPDATED_EVENT))
+}
+
+function loadSubmissionsLocal(): StoredSubmission[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(SUBMISSIONS_STORAGE_KEY)
     if (!raw) return []
     return JSON.parse(raw) as StoredSubmission[]
   } catch {
@@ -42,13 +52,119 @@ export function loadSubmissions(): StoredSubmission[] {
   }
 }
 
-export function deleteSubmission(id: number): void {
-  const existing = loadSubmissions()
-  const updated = existing.filter(s => s.id !== id)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+function saveSubmissionLocal(data: Omit<StoredSubmission, 'id'>): StoredSubmission {
+  const existing = loadSubmissionsLocal()
+  const nextId = existing.length > 0 ? Math.max(...existing.map(s => s.id)) + 1 : 1
+  const submission: StoredSubmission = { id: nextId, ...data }
+  existing.push(submission)
+  localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(existing))
+  _notifySubmissionsChanged()
+  return submission
 }
 
-/** Safe filesystem characters; stable per submission for PDF exports. */
+function deleteSubmissionLocal(id: number): void {
+  const existing = loadSubmissionsLocal()
+  const updated = existing.filter(s => s.id !== id)
+  localStorage.setItem(SUBMISSIONS_STORAGE_KEY, JSON.stringify(updated))
+  _notifySubmissionsChanged()
+}
+
+/** Browser-only copy (for import-to-server and offline fallback). */
+export function getLocalSubmissionsOnly(): StoredSubmission[] {
+  return loadSubmissionsLocal()
+}
+
+export async function loadSubmissions(): Promise<StoredSubmission[]> {
+  try {
+    const res = await fetch(SUBMISSIONS_API)
+    if (res.ok) {
+      return (await res.json()) as StoredSubmission[]
+    }
+  } catch {
+    /* backend down */
+  }
+  console.warn('[Feed] API unavailable; using localStorage only')
+  return loadSubmissionsLocal()
+}
+
+export async function saveSubmission(data: Omit<StoredSubmission, 'id'>): Promise<StoredSubmission> {
+  const body = {
+    timestamp: data.timestamp,
+    formData: data.formData,
+    extraction: data.extraction,
+    gaps: data.gaps,
+    followUpQuestions: data.followUpQuestions,
+  }
+  try {
+    const res = await fetch(SUBMISSIONS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (res.ok) {
+      const s = (await res.json()) as StoredSubmission
+      _notifySubmissionsChanged()
+      return s
+    }
+  } catch (e) {
+    console.error('[Feed] API save failed:', e)
+  }
+  console.warn('[Feed] Saved to localStorage only; start the API to share the feed')
+  return saveSubmissionLocal(data)
+}
+
+export async function deleteSubmission(id: number): Promise<void> {
+  try {
+    const res = await fetch(`${SUBMISSIONS_API}/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      _notifySubmissionsChanged()
+      return
+    }
+  } catch {
+    /* fallback */
+  }
+  deleteSubmissionLocal(id)
+}
+
+/** Push all local-only rows to the server, then clear local storage on full success. */
+export async function importLocalSubmissionsToServer(): Promise<{
+  ok: boolean
+  imported: number
+  error?: string
+}> {
+  const local = loadSubmissionsLocal()
+  if (local.length === 0) {
+    return { ok: true, imported: 0 }
+  }
+  let imported = 0
+  for (const s of local) {
+    const { id: _id, ...rest } = s
+    try {
+      const res = await fetch(SUBMISSIONS_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: rest.timestamp,
+          formData: rest.formData,
+          extraction: rest.extraction,
+          gaps: rest.gaps,
+          followUpQuestions: rest.followUpQuestions,
+        }),
+      })
+      if (!res.ok) {
+        const t = await res.text()
+        return { ok: false, imported, error: t || `HTTP ${res.status}` }
+      }
+      imported += 1
+    } catch (e) {
+      return { ok: false, imported, error: e instanceof Error ? e.message : String(e) }
+    }
+  }
+  localStorage.removeItem(SUBMISSIONS_STORAGE_KEY)
+  _notifySubmissionsChanged()
+  return { ok: true, imported }
+}
+
 export function submissionPdfFilename(submission: StoredSubmission): string {
   const d = new Date(submission.timestamp)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -59,16 +175,4 @@ export function submissionPdfFilename(submission: StoredSubmission): string {
   const mi = pad(d.getUTCMinutes())
   const sec = pad(d.getUTCSeconds())
   return `whistleblowing-report-id${submission.id}-${y}${mo}${day}T${h}${mi}${sec}Z.pdf`
-}
-
-export function saveSubmission(data: Omit<StoredSubmission, 'id'>): void {
-  try {
-    const existing = loadSubmissions()
-    const nextId = existing.length > 0 ? Math.max(...existing.map(s => s.id)) + 1 : 1
-    const submission: StoredSubmission = { id: nextId, ...data }
-    existing.push(submission)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing))
-  } catch (e) {
-    console.error('[Feed] Failed to save submission:', e)
-  }
 }

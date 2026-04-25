@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 
 from .llm import get_provider
 from .llm.registry import peek_provider
-from .routers import chat, questions, admin, intake, rag
+from .routers import chat, questions, admin, intake, rag, submissions
 from .config import settings
 
 # Configure logging
@@ -70,6 +70,7 @@ app.include_router(questions.router, prefix="/api", tags=["questions"])
 app.include_router(intake.router, prefix="/api", tags=["intake"])
 app.include_router(admin.router, prefix="/api", tags=["admin"])
 app.include_router(rag.router, prefix="/api", tags=["rag"])
+app.include_router(submissions.router, prefix="/api", tags=["submissions"])
 
 
 @app.get("/api/health")

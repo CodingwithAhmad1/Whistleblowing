@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,7 +18,8 @@ mcp = FastMCP(
         "(summary fallbacks, entity merge, boolean OR from structured fields—see reportiq://form-schema). "
         "Follow-up question strings come from server gap config (intakeGaps in settings, else repo defaults). "
         "If Q2 text looks outdated vs docs, run GET /api/intake/gaps or reset gaps in Admin. "
-        "The submission Feed is browser localStorage; use a browser to verify /feed. "
+        "The submission Feed is stored via POST/GET/DELETE /api/submissions (file-backed in backend/data; "
+        "use reportiq_submission_create to append without a browser, then open /feed in the app to confirm). "
         "Chain reportiq_rag_construct_sentence then reportiq_rag_policy_quote to mirror the in-app RAG steps."
     ),
 )
@@ -50,6 +52,28 @@ async def _post_json(
         )
         if r.is_success:
             return r.json()
+        try:
+            detail = r.json()
+        except Exception:
+            detail = r.text
+        return {
+            "error": f"HTTP {r.status_code}",
+            "status_code": r.status_code,
+            "detail": detail,
+        }
+
+
+async def _delete(
+    path: str,
+) -> Any:
+    url = f"{_base_url()}{path}"
+    async with httpx.AsyncClient() as client:
+        r = await client.delete(url, timeout=30.0)
+        if r.is_success or r.status_code == 204:
+            try:
+                return r.json() if r.content else {"ok": True}
+            except Exception:
+                return {"ok": True}
         try:
             detail = r.json()
         except Exception:
@@ -109,6 +133,63 @@ async def reportiq_rag_policy_quote(
 async def reportiq_intake_gaps() -> dict[str, Any]:
     """GET /api/intake/gaps — public gap configuration (ordered)."""
     return await _get_json("/api/intake/gaps")
+
+
+@mcp.tool()
+async def reportiq_submission_create(
+    form_data: dict[str, str],
+    timestamp_iso: str | None = None,
+    gaps: list[str] | None = None,
+    follow_up_questions: list[dict[str, str]] | None = None,
+    extraction: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """POST /api/submissions — append a row to the shared Feed (same as in-app Submit).
+
+    Pass flat string fields in form_data (see reportiq://form-schema). Optionally run
+    reportiq_intake_analyze and pass its extraction, gaps, and follow_up_questions
+    to mirror a full client submit.
+    """
+    ts = (timestamp_iso or "").strip()
+    if not ts:
+        ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    body: dict[str, Any] = {
+        "timestamp": ts,
+        "formData": form_data,
+        "gaps": list(gaps) if gaps else [],
+        "followUpQuestions": _normalize_follow_ups(follow_up_questions or []),
+        "extraction": extraction,
+    }
+    if not form_data or not any(str(v).strip() for v in form_data.values() if v is not None):
+        return {"error": "form_data must include at least one non-empty field"}
+    return await _post_json("/api/submissions", body)
+
+
+def _normalize_follow_ups(
+    items: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    for x in items:
+        if not isinstance(x, dict):
+            continue
+        gid = x.get("gap_id", "")
+        qt = x.get("question_text", "")
+        if isinstance(gid, str) and isinstance(qt, str) and (gid or qt):
+            out.append({"gap_id": gid, "question_text": qt})
+    return out
+
+
+@mcp.tool()
+async def reportiq_submission_list() -> list[dict[str, Any]] | dict[str, Any]:
+    """GET /api/submissions — list all feed rows (id, timestamp, formData, extraction, etc.)."""
+    return await _get_json("/api/submissions")
+
+
+@mcp.tool()
+async def reportiq_submission_delete(submission_id: int) -> dict[str, Any]:
+    """DELETE /api/submissions/{id} — remove a feed row."""
+    if submission_id < 1:
+        return {"error": "submission_id must be a positive integer"}
+    return await _delete(f"/api/submissions/{submission_id}")
 
 
 @mcp.tool()

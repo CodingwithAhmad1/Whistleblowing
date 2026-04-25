@@ -23,6 +23,7 @@ __pycache__/
 
 # Backend persisted settings (may contain API key)
 backend/data/settings.json
+backend/data/submissions.json
 
 # ChromaDB vector store
 backend/data/chroma/

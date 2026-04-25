@@ -1,5 +1,5 @@
 ---
-description: "Use the ReportIQ MCP for backend API work; use the browser for Feed/localStorage. Apply when automating or testing ReportIQ against localhost and when verifying /feed."
+description: "Use the ReportIQ MCP for backend API work; Feed is shared via /api/submissions when the API is running. Apply when automating or testing ReportIQ against localhost."
 alwaysApply: false
 ---
 
@@ -9,20 +9,23 @@ alwaysApply: false
 
 When the **reportiq** MCP server is enabled and the FastAPI app is up (`REPORTIQ_API_BASE`, default `http://127.0.0.1:8000`):
 
-- Prefer **`reportiq_*` tools** (health, intake analyze, RAG, intake gaps) instead of ad-hoc `curl` for the same operations.
+- Prefer **`reportiq_*` tools** (health, intake analyze, RAG, intake gaps, submission list/create/delete) instead of ad-hoc `curl` for the same operations.
 - Intake: pass non-empty `q1_text` and optional flat `form_data` (string keys) to `reportiq_intake_analyze`, matching `POST /api/questions/intake/analyze`.
 - RAG: call `reportiq_rag_construct_sentence` then `reportiq_rag_policy_quote` with the same `form_data`; pass the constructed `sentence` into `reportiq_rag_policy_quote` as `constructed_sentence` when mirroring the app.
+- **Feed:** `reportiq_submission_create` appends to the same list the app uses (`GET/POST/DELETE /api/submissions`). Use `reportiq_submission_list` to read rows without a browser. The UI at `/feed` reads from that API when the backend is reachable.
 - Read field keys and conditionals: fetch the **resource** `reportiq://form-schema` (see [docs/MCP.md](docs/MCP.md)).
-
-**Do not** expect these tools to list or read **Feed** submissions. The Feed is `localStorage` in the browser.
 
 ## Browser and Feed (cursor-ide-browser or manual)
 
-- After **Submit** on the home form, a new row appears on **`/feed`**. There is no HTTP API for that list.
-- To verify: open the app origin, use **browser_snapshot** before structural interactions, and after any navigation. Use **browser_lock** per the host’s instructions (lock before interactions when a tab already exists; navigate first if needed). After `browser_navigate` to `/feed`, take a new snapshot, expand the `SubmissionRow`, and check the **Report** and **Summary** tabs for AI extraction when the intake run succeeded.
-- E2E checklist: fill all sections; handle conditionals (e.g. contact if not anonymous, supervisor who if “yes” to supervisor involved, evidence if “yes” to supporting materials, “if other, how” when relevant); in **AI follow-up** click **Generate AI follow-up**, wait for loading, complete **Next** on 0–2 follow-up questions, allow **construct** and **policy** steps, **Done** on the policy step, then **Submit**; navigate to **Feed** and expand the new row.
+- After **Submit** on the home form (or after `reportiq_submission_create`), a new row appears on **`/feed`** when the frontend can reach the API (Vite proxies `/api` in dev).
+- To verify in the browser: open the app origin, use **browser_snapshot** before structural interactions, and after any navigation. Use **browser_lock** per the host’s instructions. After `browser_navigate` to `/feed`, take a new snapshot, expand the `SubmissionRow`, and check the **Report** and **Summary** tabs for AI extraction when the intake run succeeded.
+- E2E checklist: fill all sections; handle conditionals; in **AI follow-up** run the pipeline if needed, then **Submit**; navigate to **Feed** and expand the new row.
 
 ## When to use which
 
-- **MCP (reportiq)**: headless health checks, intake and RAG against the **backend only**.
-- **Browser MCP**: any flow that must touch **`localStorage`**, the full wizard UI, or **Feed** rows.
+- **MCP (reportiq)**: health, intake, RAG, and **feed CRUD** against the shared API.
+- **Browser MCP**: full wizard UI, PDF, and anything that must exercise the React app end-to-end.
+
+## Dev note
+
+`localhost` and `127.0.0.1` are different origins for any remaining client-only storage. The feed list itself is server-backed; use one host consistently for bookmarks and manual testing.

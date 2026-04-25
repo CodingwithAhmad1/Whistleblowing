@@ -1,6 +1,11 @@
 /**
  * Application configuration constants
  * Centralized config to avoid hardcoded values throughout the codebase
+ *
+ * Dev note: `http://localhost:5173` and `http://127.0.0.1:5173` are different
+ * origins (separate localStorage for any client-only data). Use one consistently.
+ * The submission feed is stored on the API; CORS allows both. Vite still proxies
+ * `/api` to the backend the same for either host.
  */
 
 export const UI_CONFIG = {

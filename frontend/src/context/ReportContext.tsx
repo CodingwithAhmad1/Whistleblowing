@@ -32,6 +32,10 @@ interface ReportContextValue {
   setPipelineStatus: (status: PipelineStatus) => void
   intakeAnalysisResult: AnalysisSnapshot | null
   setIntakeAnalysisResult: (result: AnalysisSnapshot | null) => void
+  /** Increments to remount Full Details questionnaire (clears local step after errors). */
+  fullDetailsMountKey: number
+  /** Clears pipeline error state and intake snapshot; remounts the AI follow-up block so Submit is enabled. */
+  resetAIFullDetailsWorkflow: () => void
 }
 
 const ReportContext = createContext<ReportContextValue | null>(null)
@@ -48,6 +52,13 @@ export function ReportProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_AI_MESSAGE])
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus>('idle')
   const [intakeAnalysisResult, setIntakeAnalysisResult] = useState<AnalysisSnapshot | null>(null)
+  const [fullDetailsMountKey, setFullDetailsMountKey] = useState(0)
+
+  const resetAIFullDetailsWorkflow = useCallback(() => {
+    setPipelineStatus('idle')
+    setIntakeAnalysisResult(null)
+    setFullDetailsMountKey((k) => k + 1)
+  }, [])
 
   const updateReport = useCallback((updates: Partial<ReportData>) => {
     setReport((prev) => ({ ...prev, ...updates }))
@@ -91,8 +102,20 @@ export function ReportProvider({ children }: { children: ReactNode }) {
       setPipelineStatus,
       intakeAnalysisResult,
       setIntakeAnalysisResult,
+      fullDetailsMountKey,
+      resetAIFullDetailsWorkflow,
     }),
-    [report, updateReport, messages, addMessage, removeLastMessage, pipelineStatus, intakeAnalysisResult]
+    [
+      report,
+      updateReport,
+      messages,
+      addMessage,
+      removeLastMessage,
+      pipelineStatus,
+      intakeAnalysisResult,
+      fullDetailsMountKey,
+      resetAIFullDetailsWorkflow,
+    ],
   )
 
   return (

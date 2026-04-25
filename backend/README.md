@@ -103,7 +103,7 @@ From `backend/` (with venv activated and dependencies installed):
 
 ```bash
 # Fast: gap regression, HTTP smoke (GET /api/intake/gaps, 422 on bad intake), extraction contract
-python3 -m pytest tests/test_intake_gaps_regression.py tests/test_intake_api_http.py tests/test_extraction_feed_contract.py tests/test_extraction_augmentation.py tests/test_intake_layer2.py -v
+python3 -m pytest tests/test_intake_gaps_regression.py tests/test_intake_api_http.py tests/test_extraction_feed_contract.py tests/test_extraction_augmentation.py tests/test_intake_layer2.py tests/test_submissions_api.py -v
 ```
 
 - **`test_intake_gaps_regression`** — `DEFAULT_INTAKE_GAPS` must match `get_intake_gaps()` (persisted `data/settings.json`). If this fails after pulling, run **Admin → reset intake gaps** or `POST /api/admin/intake-gaps/reset`, then align `data/settings.json` with the repo if you commit settings.
@@ -116,3 +116,4 @@ Full integration (Chroma + Gemini): `python3 -m pytest tests/test_pipeline.py` (
 | File | Description |
 |------|-------------|
 | `backend/data/settings.json` | Persisted admin settings (API key, Q2/Q3 templates, intake gap configs). Created on first save. |
+| `backend/data/submissions.json` | Submission feed shared by the web UI and `GET/POST/DELETE /api/submissions` (MCP: `reportiq_submission_*`). Created on first submit. gitignored. Override path with `REPORTIQ_SUBMISSIONS_PATH` (e.g. tests). |

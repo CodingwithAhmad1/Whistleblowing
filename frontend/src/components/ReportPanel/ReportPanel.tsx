@@ -18,7 +18,7 @@ const PIPELINE_LABELS: Record<string, string> = {
 }
 
 export function ReportPanel() {
-  const { report, pipelineStatus, intakeAnalysisResult } = useReport()
+  const { report, pipelineStatus, intakeAnalysisResult, resetAIFullDetailsWorkflow } = useReport()
   const [toastPhase, setToastPhase] = useState<'hidden' | 'visible' | 'fading'>('hidden')
 
   const isProcessing = pipelineStatus === 'analyzing' || pipelineStatus === 'constructing' || pipelineStatus === 'policyLoading'
@@ -48,7 +48,7 @@ export function ReportPanel() {
       }
     }
 
-    saveSubmission({
+    await saveSubmission({
       timestamp: new Date().toISOString(),
       formData: report,
       extraction: snapshot?.extraction ?? null,
@@ -123,9 +123,18 @@ export function ReportPanel() {
               <p className={styles.statusText}>{PIPELINE_LABELS[pipelineStatus]}</p>
             )}
             {hasError && (
-              <p className={styles.statusError}>
-                A pipeline step encountered an error. Please resolve or skip it in the questionnaire above.
-              </p>
+              <div className={styles.errorRow}>
+                <p className={styles.statusError}>
+                  A pipeline step encountered an error. Please resolve or skip it in the questionnaire above.
+                </p>
+                <button
+                  type="button"
+                  onClick={resetAIFullDetailsWorkflow}
+                  className={styles.resetWorkflowBtn}
+                >
+                  Reset AI workflow
+                </button>
+              </div>
             )}
             <button
               type="button"
