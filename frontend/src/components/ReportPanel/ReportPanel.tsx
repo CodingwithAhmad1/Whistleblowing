@@ -6,22 +6,10 @@ import { ManagementAwareness } from './sections/ManagementAwareness'
 import { Incident } from './sections/Incident'
 import { FormSection } from './FormSection'
 import { useReport } from '@/context/ReportContext'
-import { generateReportPdf } from '@/utils/generateReportPdf'
 import { saveSubmission } from '@/utils/feedStore'
 import { API_CONFIG } from '@/config'
-import type { ReportData } from '@/types/report'
+import { buildAnalysisText } from '@/utils/buildAnalysisText'
 import styles from './ReportPanel.module.css'
-
-function buildAnalysisText(report: ReportData): string {
-  if (report.full_details_q1?.trim()) return report.full_details_q1.trim()
-  const parts = [
-    report.general_nature && `Nature of incident: ${report.general_nature}`,
-    report.where_occurred && `Location: ${report.where_occurred}`,
-    report.when_occurred && `When: ${report.when_occurred}`,
-    report.how_aware && `How became aware: ${report.how_aware}`,
-  ].filter(Boolean)
-  return parts.join('. ') || 'No incident details provided.'
-}
 
 const PIPELINE_LABELS: Record<string, string> = {
   analyzing: 'Analyzing your report\u2026',
@@ -67,7 +55,6 @@ export function ReportPanel() {
       gaps: snapshot?.gaps ?? [],
       followUpQuestions: snapshot?.follow_up_questions ?? [],
     })
-    generateReportPdf(report)
     setToastPhase('visible')
     setTimeout(() => setToastPhase('fading'), 2700)
     setTimeout(() => setToastPhase('hidden'), 3000)
@@ -127,10 +114,7 @@ export function ReportPanel() {
             <ManagementAwareness />
           </FormSection>
 
-          <FormSection
-            title="Incident Details"
-            subtitle="What happened, when, where, and how you became aware of it."
-          >
+          <FormSection title="Incident Details">
             <Incident />
           </FormSection>
 

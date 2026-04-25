@@ -8,6 +8,7 @@ interface FormFieldProps {
   type?: 'text' | 'textarea'
   helperText?: string
   rows?: number
+  textareaClassName?: string
 }
 
 export function FormField({
@@ -18,6 +19,7 @@ export function FormField({
   type = 'text',
   helperText,
   rows,
+  textareaClassName,
 }: FormFieldProps) {
   if (type === 'textarea') {
     return (
@@ -31,7 +33,7 @@ export function FormField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={styles.textarea}
+          className={textareaClassName ? `${styles.textarea} ${textareaClassName}` : styles.textarea}
           rows={rows ?? 4}
           aria-label={label || 'Text area'}
         />

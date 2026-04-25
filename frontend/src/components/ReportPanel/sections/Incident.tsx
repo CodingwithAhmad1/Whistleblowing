@@ -1,8 +1,11 @@
 import { useReport } from '@/context/ReportContext'
-import { DURATION_OPTIONS, HOW_AWARE_OPTIONS } from '@/data/reportSchema'
+import { DURATION_OPTIONS, HOW_AWARE_OPTIONS, YES_NO_OPTIONS } from '@/data/reportSchema'
+import { EVIDENCE_DESCRIPTION_LABEL } from '@/data/incidentIntakeCopy'
+import type { ReportData } from '@/types/report'
 import { FormField } from './FormField'
 import { SearchableSelect } from './SearchableSelect'
 import { FullDetailsQuestionnaire } from './FullDetailsQuestionnaire'
+import { RadioField } from './RadioField'
 import styles from './Incident.module.css'
 
 export function Incident() {
@@ -10,14 +13,6 @@ export function Incident() {
 
   return (
     <>
-      <FormField
-        label="What is the general nature of this matter?"
-        value={report.general_nature}
-        onChange={(v) => updateReport({ general_nature: v })}
-        type="textarea"
-        rows={6}
-        helperText="This should be a brief description only, you will be asked for specifics later."
-      />
       <FormField
         label="Where did this incident or violation occur?"
         value={report.where_occurred}
@@ -31,7 +26,8 @@ export function Incident() {
         value={report.when_occurred}
         onChange={(v) => updateReport({ when_occurred: v })}
         type="textarea"
-        rows={6}
+        rows={2}
+        textareaClassName={styles.timeOccurredTextarea}
         helperText={'Examples:\n• Tuesday, May 3, 2002\n• Two weeks ago\n• Approximately a month ago'}
       />
       <SearchableSelect
@@ -84,6 +80,31 @@ export function Incident() {
           </div>
         </div>
       </div>
+      <FormField
+        label="Please describe the incident in detail, in the order that events took place—what happened first, what happened next, and the main facts (who, what, when, and where) that you are able to share."
+        value={report.general_nature}
+        onChange={(v) => updateReport({ general_nature: v })}
+        type="textarea"
+        rows={6}
+        helperText="A clear, chronological account helps us review your report fairly. Include what you know to be true, as precisely as you can, even if some details are still uncertain."
+      />
+      <RadioField
+        name="has_supporting_materials"
+        value={report.has_supporting_materials}
+        options={YES_NO_OPTIONS}
+        onChange={(v) => updateReport({ has_supporting_materials: v as ReportData['has_supporting_materials'] })}
+        question="Do you have any supporting materials (documents, emails, photos, or other evidence) to provide?"
+      />
+      {report.has_supporting_materials === 'yes' && (
+        <FormField
+          label={EVIDENCE_DESCRIPTION_LABEL}
+          value={report.evidence_description}
+          onChange={(v) => updateReport({ evidence_description: v })}
+          type="textarea"
+          rows={8}
+          placeholder="Type your answer here…"
+        />
+      )}
       <FullDetailsQuestionnaire />
     </>
   )

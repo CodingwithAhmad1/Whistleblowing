@@ -18,6 +18,8 @@ interface SearchableSelectProps {
   compact?: boolean
   /** When true, input is read-only—selection only, no typing */
   selectOnly?: boolean
+  /** Fires once per focus on the combobox (e.g. to lazy-load options). */
+  onComboboxFocus?: () => void
 }
 
 export function SearchableSelect({
@@ -30,6 +32,7 @@ export function SearchableSelect({
   hideLabel = false,
   compact = false,
   selectOnly = false,
+  onComboboxFocus,
 }: SearchableSelectProps) {
   const listId = useId()
   const [isOpen, setIsOpen] = useState(false)
@@ -127,6 +130,7 @@ export function SearchableSelect({
   }
 
   const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    onComboboxFocus?.()
     setIsOpen(true)
     const el = e.target
     setTimeout(() => {

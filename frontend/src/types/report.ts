@@ -95,6 +95,8 @@ export interface ReportData {
   duration: string
   how_aware: string
   how_aware_other: string
+  /** Whether the reporter has supporting materials to describe (drives visibility of `evidence_description` textarea). */
+  has_supporting_materials: YesNo | ''
   full_details_q1: string
   sequence_of_events: string         // standardised Q2: sequence of events
   evidence_description: string       // standardised Q3: supporting evidence
@@ -161,6 +163,7 @@ export const initialReportData: ReportData = {
   duration: '',
   how_aware: '',
   how_aware_other: '',
+  has_supporting_materials: '',
   full_details_q1: '',
   sequence_of_events: '',
   evidence_description: '',

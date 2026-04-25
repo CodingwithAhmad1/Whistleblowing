@@ -49,7 +49,7 @@ export function ReporterPreferences() {
             </div>
           </div>
           <PhoneWithCodeInput
-            label="Your Phone Number"
+            label="Phone Number"
             codeValue={report.reporter_phone_code}
             numberValue={report.reporter_phone}
             onCodeChange={(v) => updateReport({ reporter_phone_code: v })}
@@ -57,12 +57,12 @@ export function ReporterPreferences() {
             country={report.country}
           />
           <FormField
-            label="Your Email Address"
+            label="Email Address"
             value={report.reporter_email}
             onChange={(v) => updateReport({ reporter_email: v })}
           />
           <FormField
-            label="Best time for communication with you"
+            label="Best time for communication"
             value={report.best_time_contact}
             onChange={(v) => updateReport({ best_time_contact: v })}
             type="textarea"

@@ -3,6 +3,7 @@
  * To add a new field: add to ReportData + add entry here.
  */
 
+import { EVIDENCE_DESCRIPTION_LABEL } from '@/data/incidentIntakeCopy'
 import type { ReportData } from '@/types/report'
 
 export interface SectionDef {
@@ -100,19 +101,19 @@ export const REPORT_FIELDS: FieldDef[] = [
   },
   {
     key: 'reporter_phone',
-    label: 'Your Phone Number',
+    label: 'Phone Number',
     section: 'reporter',
     hideWhen: (r) => r.wish_anonymous !== 'no',
   },
   {
     key: 'reporter_email',
-    label: 'Your Email Address',
+    label: 'Email Address',
     section: 'reporter',
     hideWhen: (r) => r.wish_anonymous !== 'no',
   },
   {
     key: 'best_time_contact',
-    label: 'Best time for communication with you',
+    label: 'Best time for communication',
     section: 'reporter',
     hideWhen: (r) => r.wish_anonymous !== 'no',
   },
@@ -136,7 +137,11 @@ export const REPORT_FIELDS: FieldDef[] = [
     formatValue: (v) => MANAGEMENT_LABELS[v] ?? v,
   },
   // Incident Details
-  { key: 'general_nature', label: 'General nature of matter', section: 'incident' },
+  {
+    key: 'general_nature',
+    label: 'Chronological account of the incident (what happened, in order)',
+    section: 'incident',
+  },
   { key: 'where_occurred', label: 'Where did it occur?', section: 'incident' },
   { key: 'when_occurred', label: 'When did it occur?', section: 'incident' },
   {
@@ -153,6 +158,17 @@ export const REPORT_FIELDS: FieldDef[] = [
   },
   { key: 'how_aware_other', label: 'If other, how?', section: 'incident' },
   {
+    key: 'has_supporting_materials',
+    label: 'Do you have supporting materials to share with this report?',
+    section: 'incident',
+    formatValue: (v) => YES_NO_LABELS[v] ?? v,
+  },
+  {
+    key: 'persons_concealing',
+    label: 'Please identify any persons who have attempted to conceal this problem and the steps they took to conceal it:',
+    section: 'incident',
+  },
+  {
     key: 'full_details_q1',
     label: 'Please describe what happened in your own words.',
     section: 'incident',
@@ -164,8 +180,9 @@ export const REPORT_FIELDS: FieldDef[] = [
   },
   {
     key: 'evidence_description',
-    label: 'Do you have any supporting evidence (documents, emails, screenshots, etc.)?',
+    label: EVIDENCE_DESCRIPTION_LABEL,
     section: 'incident',
+    hideWhen: (r) => r.has_supporting_materials === 'no',
   },
   // full_details_q1, sequence_of_events, evidence_description, full_details_q2,
   // full_details_q3, full_details_q2_question, full_details_q3_question
