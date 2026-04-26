@@ -26,6 +26,12 @@ export function FeedPage() {
   const [importing, setImporting] = useState(false)
 
   const localOnlyCount = getLocalSubmissionsOnly().length
+  const hasServerSubmissions = submissions.length > 0
+  const showTrulyEmptyFeed =
+    !loading && !hasServerSubmissions && localOnlyCount === 0
+  /** Server list empty but this profile still has offline copies — avoid "no submissions" vs "1 in local". */
+  const showLocalPendingOnly =
+    !loading && !hasServerSubmissions && localOnlyCount > 0
 
   const refresh = useCallback(async () => {
     const list = await loadSubmissions()
@@ -99,9 +105,11 @@ export function FeedPage() {
       {localOnlyCount > 0 && (
         <div className={styles.localImportBanner} role="region" aria-label="Local-only submissions">
           <p className={styles.localImportText}>
-            This browser has {localOnlyCount} report(s) stored only in local storage. Send them to the
-            server so they appear in every browser and for MCP tools. Use the same dev URL
-            (localhost vs 127.0.0.1) for the app and the API proxy.
+            This browser has {localOnlyCount} report(s) stored only in local storage (for example when
+            the API was unreachable). The table below shows the{' '}
+            <strong>server</strong> list, so it stays empty until you sync. Copy to the server so
+            rows appear here and for other browsers and MCP tools. Use the same dev URL (localhost vs
+            127.0.0.1) for the app and the API proxy.
           </p>
           <button
             type="button"
@@ -117,7 +125,11 @@ export function FeedPage() {
 
       {loading ? (
         <p className={styles.loadingText}>Loading submissions…</p>
-      ) : submissions.length === 0 ? (
+      ) : showLocalPendingOnly ? (
+        <p className={styles.afterSyncHint}>
+          Submissions will appear in the list here after a successful copy to the server.
+        </p>
+      ) : showTrulyEmptyFeed ? (
         <div className={styles.emptyState}>
           <p className={styles.emptyStateText}>No submissions yet</p>
           <p className={styles.emptyStateHint}>
