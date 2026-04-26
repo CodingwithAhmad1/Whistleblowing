@@ -52,6 +52,7 @@ export function ReportPanel() {
       timestamp: new Date().toISOString(),
       formData: report,
       extraction: snapshot?.extraction ?? null,
+      extractionBreakdown: snapshot?.extraction_breakdown ?? null,
       gaps: snapshot?.gaps ?? [],
       followUpQuestions: snapshot?.follow_up_questions ?? [],
     })

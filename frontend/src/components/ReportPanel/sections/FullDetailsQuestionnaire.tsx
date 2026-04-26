@@ -59,6 +59,7 @@ export function FullDetailsQuestionnaire() {
     if (analysisResult) {
       setIntakeAnalysisResult({
         extraction: analysisResult.extraction as Layer1Extraction | null,
+        extraction_breakdown: analysisResult.extraction_breakdown ?? null,
         gaps: analysisResult.gaps,
         follow_up_questions: analysisResult.follow_up_questions,
       })

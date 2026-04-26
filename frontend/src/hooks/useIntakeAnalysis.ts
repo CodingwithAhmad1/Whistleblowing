@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { API_CONFIG } from '@/config'
+import type { ExtractionBreakdown } from '@/utils/feedStore'
 
 /** Session-only copy of the last intake pipeline result (for Analysis page). */
 export const LAST_INTAKE_ANALYSIS_STORAGE_KEY = 'whistleblow_lastIntakeAnalysis'
@@ -11,6 +12,7 @@ export interface FollowUpQuestion {
 
 export interface FullAnalysisResult {
   extraction: Record<string, unknown> | null
+  extraction_breakdown?: ExtractionBreakdown | null
   gaps: string[]
   follow_up_questions: FollowUpQuestion[]
   used_defaults?: boolean
@@ -87,9 +89,10 @@ export function useIntakeAnalysis(
         if (!r.ok) throw new Error(r.status >= 500 ? 'Server error' : `Request failed: ${r.status}`)
         return r.json()
       })
-      .then((res: FullAnalysisResult) => {
+      .then((res: FullAnalysisResult & { extraction_breakdown?: ExtractionBreakdown }) => {
         const result: FullAnalysisResult = {
           extraction: res?.extraction ?? null,
+          extraction_breakdown: res?.extraction_breakdown ?? null,
           gaps: res?.gaps ?? [],
           follow_up_questions: res?.follow_up_questions ?? [],
           used_defaults: Boolean((res as FullAnalysisResult)?.used_defaults),
@@ -102,6 +105,7 @@ export function useIntakeAnalysis(
           const stamped = {
             timestamp: new Date().toISOString(),
             extraction: result.extraction,
+            extraction_breakdown: result.extraction_breakdown,
             gaps: result.gaps,
             follow_up_questions: result.follow_up_questions,
             used_defaults: result.used_defaults ?? false,

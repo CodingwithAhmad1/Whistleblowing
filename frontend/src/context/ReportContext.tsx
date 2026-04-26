@@ -12,12 +12,13 @@ import {
   type ReportData,
 } from '@/types/report'
 import type { ChatMessage } from '@/types/chat'
-import type { Layer1Extraction, FollowUpQuestion } from '@/utils/feedStore'
+import type { Layer1Extraction, FollowUpQuestion, ExtractionBreakdown } from '@/utils/feedStore'
 
 export type PipelineStatus = 'idle' | 'analyzing' | 'constructing' | 'policyLoading' | 'ready' | 'error'
 
 export interface AnalysisSnapshot {
   extraction: Layer1Extraction | null
+  extraction_breakdown?: ExtractionBreakdown | null
   gaps: string[]
   follow_up_questions: FollowUpQuestion[]
 }

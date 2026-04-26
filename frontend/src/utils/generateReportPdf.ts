@@ -487,7 +487,7 @@ function appendReportFormSections(doc: jsPDF, y: number, report: ReportData): nu
 // ── Summary / analysis (matches Feed “Summary” tab content) ─────────────────
 
 function appendSummaryAndAnalysis(doc: jsPDF, y: number, submission: StoredSubmission): number {
-  const { extraction, followUpQuestions, formData } = submission
+  const { extraction, extractionBreakdown, followUpQuestions, formData } = submission
   const generatedQuestions = followUpQuestions.length > 0
     ? followUpQuestions.map((q) => q.question_text?.trim() ?? '').filter(Boolean)
     : [
@@ -501,6 +501,118 @@ function appendSummaryAndAnalysis(doc: jsPDF, y: number, submission: StoredSubmi
 
   if (!extraction) {
     y = drawField(doc, 'AI analysis', 'Analysis data was not captured for this submission.', y, false)
+  } else if (extractionBreakdown) {
+    const a = extractionBreakdown.from_answers
+    const m = extractionBreakdown.from_model
+    y = drawField(
+      doc,
+      'Merged summary (operational)',
+      extraction.summary?.trim() || 'No summary text.',
+      y,
+      false,
+    )
+    y = drawSectionHeading(doc, 'From your answers (rules)', y)
+    y = drawField(
+      doc,
+      'Dates',
+      a.dates_mentioned.length > 0 ? a.dates_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'People',
+      a.people_mentioned.length > 0 ? a.people_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'Locations',
+      a.locations_mentioned.length > 0 ? a.locations_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    for (const [label, val] of [
+      ['Specific examples (form / sequence)', a.specific_examples_present],
+      ['Evidence described (form)', a.evidence_described],
+      ['Timeline clear (form)', a.timeline_clear],
+      ['Prior reporting (management aware)', a.prior_reporting_mentioned],
+    ] as [string, boolean][]) {
+      y = drawField(doc, label, val ? 'Yes' : 'No', y, false)
+    }
+    y = drawSectionHeading(doc, 'From your narrative (AI)', y)
+    if (m.used_defaults) {
+      y = drawField(doc, 'Note', 'Model used fallback JSON for this layer.', y, false)
+    }
+    y = drawField(doc, 'Model summary', m.summary?.trim() || 'No model summary.', y, false)
+    const modelTags = m.allegation_type.length > 0 ? m.allegation_type.join(', ') : 'None identified'
+    y = drawField(doc, 'Allegation types (model)', modelTags, y, false)
+    for (const [label, val] of [
+      ['Specific examples present', m.specific_examples_present],
+      ['Evidence described', m.evidence_described],
+      ['Timeline clear', m.timeline_clear],
+      ['Witnesses mentioned', m.witnesses_mentioned],
+      ['Prior reporting mentioned', m.prior_reporting_mentioned],
+      ['Impact described', m.impact_described],
+      ['Retaliation mentioned', m.retaliation_mentioned],
+    ] as [string, boolean][]) {
+      y = drawField(doc, label, val ? 'Yes' : 'No', y, false)
+    }
+    y = drawField(
+      doc,
+      'Dates (model)',
+      m.dates_mentioned.length > 0 ? m.dates_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'People (model)',
+      m.people_mentioned.length > 0 ? m.people_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'Locations (model)',
+      m.locations_mentioned.length > 0 ? m.locations_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawSectionHeading(doc, 'Final combined (gap detection)', y)
+    for (const [label, val] of [
+      ['Specific examples present', extraction.specific_examples_present],
+      ['Evidence described', extraction.evidence_described],
+      ['Timeline clear', extraction.timeline_clear],
+      ['Witnesses mentioned', extraction.witnesses_mentioned],
+      ['Prior reporting mentioned', extraction.prior_reporting_mentioned],
+      ['Impact described', extraction.impact_described],
+      ['Retaliation mentioned', extraction.retaliation_mentioned],
+    ] as [string, boolean][]) {
+      y = drawField(doc, label, val ? 'Yes' : 'No', y, false)
+    }
+    y = drawField(
+      doc,
+      'Dates (merged)',
+      extraction.dates_mentioned.length > 0 ? extraction.dates_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'People (merged)',
+      extraction.people_mentioned.length > 0 ? extraction.people_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
+    y = drawField(
+      doc,
+      'Locations (merged)',
+      extraction.locations_mentioned.length > 0 ? extraction.locations_mentioned.join(', ') : 'None',
+      y,
+      false,
+    )
   } else {
     y = drawField(
       doc,

@@ -130,6 +130,7 @@ export function SubmissionRow({ submission, onDelete }: Props) {
             {activeTab === 'summary' && (
               <SummaryView
                 extraction={submission.extraction}
+                extractionBreakdown={submission.extractionBreakdown}
                 followUpQuestions={submission.followUpQuestions}
                 formData={submission.formData}
               />

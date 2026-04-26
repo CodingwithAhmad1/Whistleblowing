@@ -17,6 +17,40 @@ export interface Layer1Extraction {
   length_character_count: number
 }
 
+/** Rule-based slice from structured form fields (no LLM). */
+export interface ExtractionBreakdownFromAnswers {
+  dates_mentioned: string[]
+  people_mentioned: string[]
+  locations_mentioned: string[]
+  specific_examples_present: boolean
+  evidence_described: boolean
+  timeline_clear: boolean
+  prior_reporting_mentioned: boolean
+}
+
+/** Pre-merge Layer-1 (narrative inference) for display; lists are model-only. */
+export interface ExtractionBreakdownFromModel {
+  summary: string
+  dates_mentioned: string[]
+  people_mentioned: string[]
+  locations_mentioned: string[]
+  specific_examples_present: boolean
+  evidence_described: boolean
+  timeline_clear: boolean
+  witnesses_mentioned: boolean
+  prior_reporting_mentioned: boolean
+  impact_described: boolean
+  retaliation_mentioned: boolean
+  allegation_type: string[]
+  length_character_count: number
+  used_defaults: boolean
+}
+
+export interface ExtractionBreakdown {
+  from_answers: ExtractionBreakdownFromAnswers
+  from_model: ExtractionBreakdownFromModel
+}
+
 export interface FollowUpQuestion {
   gap_id: string
   question_text: string
@@ -27,6 +61,8 @@ export interface StoredSubmission {
   timestamp: string
   formData: ReportData
   extraction: Layer1Extraction | null
+  /** Algorithmic vs model narrative breakdown (optional for legacy rows). */
+  extractionBreakdown?: ExtractionBreakdown | null
   gaps: string[]
   followUpQuestions: FollowUpQuestion[]
 }
@@ -92,6 +128,7 @@ export async function saveSubmission(data: Omit<StoredSubmission, 'id'>): Promis
     timestamp: data.timestamp,
     formData: data.formData,
     extraction: data.extraction,
+    extractionBreakdown: data.extractionBreakdown,
     gaps: data.gaps,
     followUpQuestions: data.followUpQuestions,
   }
@@ -147,6 +184,7 @@ export async function importLocalSubmissionsToServer(): Promise<{
           timestamp: rest.timestamp,
           formData: rest.formData,
           extraction: rest.extraction,
+          extractionBreakdown: rest.extractionBreakdown,
           gaps: rest.gaps,
           followUpQuestions: rest.followUpQuestions,
         }),
