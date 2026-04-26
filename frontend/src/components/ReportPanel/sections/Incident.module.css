@@ -2,6 +2,11 @@
   margin-bottom: var(--space-24);
 }
 
+/* Let rows={4} size the box; SharedField .textarea uses min-height: 180px otherwise. */
+.whereOccurredTextarea {
+  min-height: unset !important;
+}
+
 /* Shorter than default .textarea (180px) from SharedField; between prior 120px and prior 3.5rem. */
 .timeOccurredTextarea {
   min-height: 5.5rem !important; /* 88px — midpoint of ~120px and ~56px */

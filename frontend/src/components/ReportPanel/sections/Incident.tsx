@@ -18,7 +18,8 @@ export function Incident() {
         value={report.where_occurred}
         onChange={(v) => updateReport({ where_occurred: v })}
         type="textarea"
-        rows={6}
+        rows={4}
+        textareaClassName={styles.whereOccurredTextarea}
         helperText="We recognize that this incident may not have occurred in a particular location. However, if this incident was observed in some documentation or business transactions, please indicate this accordingly."
       />
       <FormField
