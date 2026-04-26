@@ -18,6 +18,11 @@ class LLMProvider(Protocol):
         self,
         prompt: str,
         max_tokens: int | None = None,
+        *,
+        temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
-        """Stream tokens from the model. Yields string chunks."""
+        """Stream tokens from the model. Yields string chunks.
+
+        When ``temperature`` is None, the provider uses its default (usually ``TEMPERATURE``).
+        """
         ...

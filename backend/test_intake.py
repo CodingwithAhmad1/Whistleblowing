@@ -408,6 +408,8 @@ else:
         )
         result = await processor.process(q1)
         assert "extraction" in result
+        assert "extraction_breakdown" in result
+        assert "from_answers" in result["extraction_breakdown"]
         assert "gaps" in result
         assert "follow_up_questions" in result
         assert isinstance(result["gaps"], list)

@@ -11,6 +11,7 @@ import logging
 import re
 from typing import Any, TypedDict
 
+from ..config import settings
 from ..llm import get_provider, collect_stream
 from ..settings import get_intake_gaps
 
@@ -47,6 +48,7 @@ class IntakeResult(TypedDict):
     extraction: Layer1Result
     gaps: list[str]
     follow_up_questions: list[FollowUpQuestion]
+    extraction_breakdown: dict[str, Any]
 
 
 # ── Layer 1 – Structured Extraction ───────────────────────────────────────────
@@ -194,15 +196,12 @@ def _safe_layer1_defaults(q1_text: str) -> Layer1Result:
 
 
 def _build_narrative_input(q1_text: str, form_data: dict | None) -> str:
-    """Concatenate the three standardised narrative answers into one input.
+    """Concatenate primary and follow-up narrative segments into one Layer-1 input.
 
-    The wizard asks three free-text questions before the AI pipeline runs:
-      Q1 full_details_q1      — what happened
-      Q2 sequence_of_events   — sequence of events
-      Q3 evidence_description — evidence the reporter has
-
-    Layer 1 evaluates its boolean flags across the combined text so the
-    reporter isn't penalised for splitting information across the questions.
+    Order: primary ``q1_text`` (usually from ``full_details_q1`` or stitched basics),
+    then answers to AI follow-up questions, then ``sequence_of_events`` and
+    ``evidence_description``. Layer 1 and gap checks use this single combined text
+    so reporters are not penalised for answering in separate fields.
     """
     parts: list[str] = []
     q1_text = (q1_text or "").strip()
@@ -210,6 +209,8 @@ def _build_narrative_input(q1_text: str, form_data: dict | None) -> str:
         parts.append(q1_text)
     if form_data:
         for key, label in (
+            ("full_details_q2", "Follow-up answer (AI question 1)"),
+            ("full_details_gap2", "Follow-up answer (AI question 2)"),
             ("sequence_of_events", "Sequence of events"),
             ("evidence_description", "Evidence described"),
         ):
@@ -236,11 +237,19 @@ class IntakeLayer1:
 
         prompt = _build_layer1_prompt(narrative, form_data)
         provider = get_provider()
-        raw = await collect_stream(provider, prompt, max_tokens=512)
+        raw = await collect_stream(
+            provider,
+            prompt,
+            max_tokens=512,
+            temperature=settings.INTAKE_TEMPERATURE,
+        )
         result = _parse_layer1_json(raw, narrative)
         if result.get("_used_defaults"):
             raw_retry = await collect_stream(
-                provider, prompt + _LAYER1_RETRY_HINT, max_tokens=512
+                provider,
+                prompt + _LAYER1_RETRY_HINT,
+                max_tokens=512,
+                temperature=settings.INTAKE_TEMPERATURE,
             )
             result = _parse_layer1_json(raw_retry, narrative)
         return result
@@ -400,15 +409,17 @@ class IntakeProcessor:
         """
         gaps = get_intake_gaps()
 
-        layer1_result = await self._layer1.extract(q1_text, form_data)
-        from .extraction_augmentation import augment_extraction_with_form
+        layer1_raw = await self._layer1.extract(q1_text, form_data)
+        from .extraction_augmentation import augment_extraction_with_form, build_extraction_breakdown
 
-        layer1_result = augment_extraction_with_form(layer1_result, form_data)
-        identified_gaps = self._layer2.analyze(layer1_result, gaps, form_data)
+        extraction_breakdown = build_extraction_breakdown(layer1_raw, form_data)
+        layer1_merged = augment_extraction_with_form(layer1_raw, form_data)
+        identified_gaps = self._layer2.analyze(layer1_merged, gaps, form_data)
         follow_up_questions = self._layer3.generate(identified_gaps, gaps)
 
         return IntakeResult(
-            extraction=layer1_result,
+            extraction=layer1_merged,
             gaps=identified_gaps,
             follow_up_questions=follow_up_questions,
+            extraction_breakdown=extraction_breakdown,
         )

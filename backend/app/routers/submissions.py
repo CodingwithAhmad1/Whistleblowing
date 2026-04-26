@@ -40,6 +40,7 @@ class SubmissionCreate(BaseModel):
     timestamp: str
     formData: dict[str, Any] = Field(..., description="Full report form object")
     extraction: dict[str, Any] | None = None
+    extractionBreakdown: dict[str, Any] | None = None
     gaps: list[str] = Field(default_factory=list)
     followUpQuestions: list[FollowUpQ] = Field(default_factory=list)
 
@@ -58,6 +59,7 @@ class SubmissionOut(SubmissionCreate):
             timestamp=row["timestamp"],
             formData=row.get("formData") or row.get("form_data") or {},
             extraction=row.get("extraction"),
+            extractionBreakdown=row.get("extractionBreakdown"),
             gaps=list(row.get("gaps") or []),
             followUpQuestions=[FollowUpQ(**f) for f in fups],
         )
@@ -111,6 +113,7 @@ def create_submission(body: SubmissionCreate):
             "timestamp": body.timestamp,
             "formData": body.formData,
             "extraction": body.extraction,
+            "extractionBreakdown": body.extractionBreakdown,
             "gaps": list(body.gaps),
             "followUpQuestions": [x.model_dump() for x in body.followUpQuestions],
         }

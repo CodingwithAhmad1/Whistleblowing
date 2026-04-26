@@ -68,6 +68,7 @@ async def intake_analyze(body: dict[str, Any] = Body(default_factory=dict)):
     Body: { "q1_text": str }
     Returns: {
       "extraction": { ...Layer1JSON },
+      "extraction_breakdown": { "from_answers": {...}, "from_model": {...} },
       "gaps": ["gap_id_1", ...],
       "follow_up_questions": [{ "gap_id": str, "question_text": str }]
     }
@@ -84,6 +85,7 @@ async def intake_analyze(body: dict[str, Any] = Body(default_factory=dict)):
         used_defaults = bool(extraction.pop("_used_defaults", False))
         return {
             "extraction": extraction,
+            "extraction_breakdown": result["extraction_breakdown"],
             "gaps": result["gaps"],
             "follow_up_questions": result["follow_up_questions"],
             "used_defaults": used_defaults,

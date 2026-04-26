@@ -1,5 +1,5 @@
 """
-Regression: intake gap config in code vs persisted store, and investigator-grade templates.
+Regression: intake gap config in code vs persisted store, including default template text.
 
 Failing tests here mean data/settings.json (or admin) drifted from app/prompts/intake_gaps.py.
 Reset via Admin "reset gaps" or POST /api/admin/intake-gaps/reset, then re-save to repo if desired.
@@ -22,8 +22,8 @@ def _gap_sig(g: dict) -> tuple:
     )
 
 
-def test_code_default_gaps_use_investigator_template_opener() -> None:
-    """New templates should invite 'already provided' to reduce repeat answers."""
+def test_code_default_gap_templates_allow_already_provided() -> None:
+    """Templates should invite 'already provided' so reporters can skip duplicate answers."""
     for g in DEFAULT_INTAKE_GAPS:
         t = (g.get("template") or "").lower()
         assert "already provided" in t, f"Gap {g['id']!r} template should include 'already provided'"

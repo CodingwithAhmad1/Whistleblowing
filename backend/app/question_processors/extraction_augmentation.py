@@ -8,7 +8,7 @@ impact, or retaliation from form alone to avoid false positives.
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from .intake_processor import Layer1Result
 
@@ -199,3 +199,70 @@ def augment_extraction_with_form(
             "_used_defaults": used_defaults,
         },
     )
+
+
+def algorithmic_from_form(form_data: dict | None) -> dict[str, Any]:
+    """Facts and flags derivable from structured form fields only (no LLM)."""
+    if not form_data:
+        return {
+            "dates_mentioned": [],
+            "people_mentioned": [],
+            "locations_mentioned": [],
+            "specific_examples_present": False,
+            "evidence_described": False,
+            "timeline_clear": False,
+            "prior_reporting_mentioned": False,
+        }
+
+    fd = form_data
+    when_line = _s(fd.get("when_occurred"))
+    date_additions = [when_line] if _nonempty_line(when_line) else []
+    seq = _s(fd.get("sequence_of_events"))
+    ev = _s(fd.get("evidence_description"))
+    has_mats = _s(fd.get("has_supporting_materials")).lower() == "yes"
+    dur = _s(fd.get("duration"))
+    mgmt = _s(fd.get("management_aware")).lower()
+
+    return {
+        "dates_mentioned": list(date_additions),
+        "people_mentioned": _people_from_form(fd),
+        "locations_mentioned": _locations_from_form(fd),
+        "specific_examples_present": bool(len(seq) >= _MIN_SUBSTANTIVE_SEQUENCE_CHARS),
+        "evidence_described": bool(has_mats and len(ev) >= _MIN_EVIDENCE_TEXT_CHARS),
+        "timeline_clear": bool(
+            _nonempty_line(when_line) or _nonempty_line(dur) or len(seq) >= _MIN_SUBSTANTIVE_SEQUENCE_CHARS
+        ),
+        "prior_reporting_mentioned": mgmt == "yes",
+    }
+
+
+def layer1_to_public_model_slice(layer1: Layer1Result) -> dict[str, Any]:
+    """Pre-merge Layer 1 fields for the narrative-inference (model) view."""
+    out: dict[str, Any] = {
+        "summary": _s(layer1.get("summary", "")),
+        "dates_mentioned": list(layer1.get("dates_mentioned") or []),
+        "people_mentioned": list(layer1.get("people_mentioned") or []),
+        "locations_mentioned": list(layer1.get("locations_mentioned") or []),
+        "specific_examples_present": bool(layer1.get("specific_examples_present", False)),
+        "evidence_described": bool(layer1.get("evidence_described", False)),
+        "timeline_clear": bool(layer1.get("timeline_clear", False)),
+        "witnesses_mentioned": bool(layer1.get("witnesses_mentioned", False)),
+        "prior_reporting_mentioned": bool(layer1.get("prior_reporting_mentioned", False)),
+        "impact_described": bool(layer1.get("impact_described", False)),
+        "retaliation_mentioned": bool(layer1.get("retaliation_mentioned", False)),
+        "allegation_type": list(layer1.get("allegation_type") or []),
+        "length_character_count": int(layer1.get("length_character_count", 0)),
+        "used_defaults": bool(layer1.get("_used_defaults", False)),
+    }
+    return out
+
+
+def build_extraction_breakdown(
+    layer1_raw: Layer1Result,
+    form_data: dict | None,
+) -> dict[str, Any]:
+    """Algorithmic (form) vs model (raw Layer-1) slices for API and UI."""
+    return {
+        "from_answers": algorithmic_from_form(form_data),
+        "from_model": layer1_to_public_model_slice(layer1_raw),
+    }

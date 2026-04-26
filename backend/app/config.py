@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     # Inference settings
     TEMPERATURE: float = 0.7
+    # Layer-1 intake JSON uses stricter decoding; lower variance than chat/Q2/Q3.
+    INTAKE_TEMPERATURE: float = 0.2
     TOP_P: float = 0.9
     MAX_TOKENS: int = 512
 

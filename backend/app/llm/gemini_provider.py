@@ -39,6 +39,8 @@ class GeminiProvider:
         self,
         prompt: str,
         max_tokens: int | None = None,
+        *,
+        temperature: float | None = None,
     ) -> AsyncGenerator[str, None]:
         """Generate streaming response from Gemini with automatic quota fallback."""
         await self._ensure_ready()
@@ -50,6 +52,9 @@ class GeminiProvider:
 
         client = get_client()
         max_tokens = max_tokens or settings.MAX_TOKENS
+        eff_temperature = (
+            settings.TEMPERATURE if temperature is None else float(temperature)
+        )
 
         tried: set[str] = set()
 
@@ -71,7 +76,7 @@ class GeminiProvider:
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         max_output_tokens=max_tokens,
-                        temperature=settings.TEMPERATURE,
+                        temperature=eff_temperature,
                         top_p=settings.TOP_P,
                     ),
                 )

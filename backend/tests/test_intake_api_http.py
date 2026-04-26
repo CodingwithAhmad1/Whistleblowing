@@ -47,9 +47,14 @@ def test_post_intake_analyze_returns_extraction_when_llm_configured() -> None:
     assert r.status_code == 200, r.text
     payload = r.json()
     assert "extraction" in payload
+    assert "extraction_breakdown" in payload
     assert "gaps" in payload
     assert "follow_up_questions" in payload
     assert "used_defaults" in payload
+
+    b = payload["extraction_breakdown"]
+    assert "from_answers" in b and "from_model" in b
+    assert "people_mentioned" in b["from_answers"]
 
     ext = payload["extraction"]
     assert isinstance(ext.get("summary"), str)
