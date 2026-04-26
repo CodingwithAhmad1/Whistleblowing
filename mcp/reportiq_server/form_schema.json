@@ -33,6 +33,10 @@
       "retaliation_mentioned": "LLM only"
     },
     "follow_up_question_text": "Comes from active gap templates (GET /api/intake/gaps). Persisted in backend data/settings.json in dev; reset via Admin or POST /api/admin/intake-gaps/reset to match code defaults if templates drift.",
-    "feed_summary_tab": "Submissions store extraction as returned by the last successful intake run; Summary matches this object plus followUpQuestions, policy from form, and a short merge note in the UI."
+    "feed_summary_tab": "Submissions store extraction (merged) as returned by the last successful intake run. When present, extractionBreakdown splits from_answers (pure form rules) vs from_model (pre-merge Layer 1) for the Feed Summary tab; followUpQuestions and policy from form unchanged.",
+    "extraction_breakdown": {
+      "from_answers": "Algorithmic: dates/people/locations from structured fields; flags from form-only rules (sequence length, evidence fields, management_aware).",
+      "from_model": "Narrative inference: pre-merge Layer 1 output (summary, allegation_type, booleans, lists as the model extracted before form merge)."
+    }
   }
 }

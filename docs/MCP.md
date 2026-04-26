@@ -16,6 +16,20 @@ The [`mcp`](../mcp) package is a stdio MCP server that wraps the FastAPI routes 
 1. **Backend** running and reachable, usually `http://127.0.0.1:8000` (see `backend` README; set `GEMINI_API_KEY` or admin key for AI routes).
 2. **Python 3.11+** in your environment.
 
+### Enabling the server in Cursor
+
+The agent only sees `reportiq_*` tools when the **reportiq** MCP server is enabled in Cursor. If tools are missing, the MCP is not connected—this repo does not ship Cursor’s internal tool descriptors under `.cursor/`.
+
+1. Install the MCP package once: from the `mcp` directory, `pip install -e .` (or `uv pip install -e .`) into a venv; see [mcp/README.md](../mcp/README.md).
+2. Generate a **project** or **user** MCP config fragment with an absolute `cwd` (Cursor does not resolve `${workspaceFolder}` in `mcp.json` for MCP cwd at the time of writing):
+
+   ```bash
+   ./scripts/print-reportiq-mcp-snippet.sh
+   ```
+
+   Optional: `REPORTIQ_API_BASE=https://…` and `REPORTIQ_MCP_PYTHON=/path/to/mcp/.venv/bin/python` if you run the server from the MCP venv.
+3. Merge the JSON into **Cursor Settings → MCP** (or `.cursor/mcp.json` in the project) and restart MCP / reload the window. Start the FastAPI app before using tools that call the API.
+
 ## Install and run the server
 
 From the `mcp` directory:
@@ -46,14 +60,15 @@ Do not commit real secrets; the Gemini key stays in backend `.env` or admin `set
 | Tool | API |
 |------|-----|
 | `reportiq_health` | `GET /api/health` |
-| `reportiq_intake_analyze` | `POST /api/questions/intake/analyze` (`q1_text`, optional `form_data`) |
+| `reportiq_intake_analyze` | `POST /api/questions/intake/analyze` (`q1_text`, optional `form_data`) — response includes `extraction` (merged) and `extraction_breakdown` (`from_answers` / `from_model`); include `full_details_q2` / `full_details_gap2` in `form_data` so AI follow-up answers are part of the combined narrative |
+| `reportiq_intake_with_followup_answers` | Same as `reportiq_intake_analyze` but convenience parameters `full_details_q2` and `full_details_gap2` merged into `form_data` before the POST |
 | `reportiq_rag_construct_sentence` | `POST /api/rag/construct-sentence` |
 | `reportiq_rag_policy_quote` | `POST /api/rag/policy-quote` (optional `constructed_sentence`) |
 | `reportiq_intake_gaps` | `GET /api/intake/gaps` |
 | `reportiq_q2_generate` | `POST /api/questions/q2/generate` |
 | `reportiq_q3_generate` | `POST /api/questions/q3/generate` |
 | `reportiq_submission_list` | `GET /api/submissions` |
-| `reportiq_submission_create` | `POST /api/submissions` |
+| `reportiq_submission_create` | `POST /api/submissions` (optional `extraction_breakdown` to mirror intake, passed as `extractionBreakdown` in the JSON body) |
 | `reportiq_submission_delete` | `DELETE /api/submissions/{id}` |
 
 ## Resource
@@ -69,7 +84,7 @@ Do not commit real secrets; the Gemini key stays in backend `.env` or admin `set
    - `extraction.people_mentioned` should include names from the form; dates/locations lists should include form fields.
    - `prior_reporting_mentioned` is often true when `management_aware` is `yes` (form merge), even if the narrative omits it.
 4. `follow_up_questions` text must match **active** gap templates from `GET /api/intake/gaps`. In local dev, `backend/data/settings.json` overrides defaults; if templates do not match the repo, use **Admin → reset gaps** or `POST /api/admin/intake-gaps/reset` so API and app stay aligned.
-5. **Feed** row: after browser **Submit** or `reportiq_submission_create`, open `/feed` → **Summary** — same `extraction` shape as in step 2 when intake ran, plus policy fields when RAG completed.
+5. **Feed** row: after browser **Submit** or `reportiq_submission_create`, open `/feed` → **Summary** — merged `extraction` when intake ran; optional `extractionBreakdown` splits **From your answers (rules)** vs **From your narrative (AI)** in the UI; plus policy fields when RAG completed.
 6. **Automated (no browser):** from `backend/`, run the pytest targets listed in [backend/README.md](../backend/README.md) under **Testing** — they assert gap config parity with code defaults, `GET /api/intake/gaps`, extraction field contract, and (when a Gemini key is set) a live `POST` intake run.
 
 ## Example flow (chaining)

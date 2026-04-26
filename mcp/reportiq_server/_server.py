@@ -20,7 +20,9 @@ mcp = FastMCP(
         "If Q2 text looks outdated vs docs, run GET /api/intake/gaps or reset gaps in Admin. "
         "The submission Feed is stored via POST/GET/DELETE /api/submissions (file-backed in backend/data; "
         "use reportiq_submission_create to append without a browser, then open /feed in the app to confirm). "
-        "Chain reportiq_rag_construct_sentence then reportiq_rag_policy_quote to mirror the in-app RAG steps."
+        "Chain reportiq_rag_construct_sentence then reportiq_rag_policy_quote to mirror the in-app RAG steps. "
+        "For a second pass after follow-ups, use reportiq_intake_with_followup_answers or pass full_details_q2 "
+        "in form_data to reportiq_intake_analyze."
     ),
 )
 
@@ -110,6 +112,33 @@ async def reportiq_intake_analyze(
 
 
 @mcp.tool()
+async def reportiq_intake_with_followup_answers(
+    q1_text: str,
+    form_data: dict[str, str] | None = None,
+    full_details_q2: str | None = None,
+    full_details_gap2: str | None = None,
+) -> dict[str, Any]:
+    """Call intake after merging follow-up answer fields into ``form_data``.
+
+    The backend appends ``full_details_q2`` and ``full_details_gap2`` to the same
+    combined narrative as ``sequence_of_events`` and ``evidence_description``. Use
+    after a first ``reportiq_intake_analyze`` to simulate answering AI follow-up
+    questions without editing the full form by hand.
+    """
+    if not (q1_text and q1_text.strip()):
+        return {"error": "q1_text must be a non-empty string"}
+    fd: dict[str, str] = dict(form_data) if form_data else {}
+    if full_details_q2 and str(full_details_q2).strip():
+        fd["full_details_q2"] = str(full_details_q2).strip()
+    if full_details_gap2 and str(full_details_gap2).strip():
+        fd["full_details_gap2"] = str(full_details_gap2).strip()
+    return await _post_json(
+        "/api/questions/intake/analyze",
+        {"q1_text": q1_text.strip(), "form_data": fd},
+    )
+
+
+@mcp.tool()
 async def reportiq_rag_construct_sentence(
     form_data: dict[str, str],
 ) -> dict[str, Any]:
@@ -142,12 +171,13 @@ async def reportiq_submission_create(
     gaps: list[str] | None = None,
     follow_up_questions: list[dict[str, str]] | None = None,
     extraction: dict[str, Any] | None = None,
+    extraction_breakdown: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """POST /api/submissions — append a row to the shared Feed (same as in-app Submit).
 
     Pass flat string fields in form_data (see reportiq://form-schema). Optionally run
-    reportiq_intake_analyze and pass its extraction, gaps, and follow_up_questions
-    to mirror a full client submit.
+    reportiq_intake_analyze and pass its extraction, extraction_breakdown, gaps, and
+    follow_up_questions to mirror a full client submit.
     """
     ts = (timestamp_iso or "").strip()
     if not ts:
@@ -158,6 +188,7 @@ async def reportiq_submission_create(
         "gaps": list(gaps) if gaps else [],
         "followUpQuestions": _normalize_follow_ups(follow_up_questions or []),
         "extraction": extraction,
+        "extractionBreakdown": extraction_breakdown,
     }
     if not form_data or not any(str(v).strip() for v in form_data.values() if v is not None):
         return {"error": "form_data must include at least one non-empty field"}
