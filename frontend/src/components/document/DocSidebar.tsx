@@ -17,6 +17,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { id: 'introduction', label: 'Introduction' },
       { id: 'who-it-serves', label: 'Who it serves' },
+      { id: 'roles-access', label: 'Roles & navigation' },
       { id: 'the-problem', label: 'The problem it solves' },
     ],
   },

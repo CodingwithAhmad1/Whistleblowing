@@ -1,6 +1,7 @@
 import { DocSidebar } from '@/components/document/DocSidebar'
 import { DocIntroduction } from '@/components/document/sections/DocIntroduction'
 import { DocWhoItServes } from '@/components/document/sections/DocWhoItServes'
+import { DocRoles } from '@/components/document/sections/DocRoles'
 import { DocTheProblem } from '@/components/document/sections/DocTheProblem'
 import { DocHowFormWorks } from '@/components/document/sections/DocHowFormWorks'
 import { DocIntelligenceLayer } from '@/components/document/sections/DocIntelligenceLayer'
@@ -21,16 +22,19 @@ export function DocumentPage() {
 
       <main className={styles.content}>
         <div className={styles.hero}>
-          <div className={styles.heroLabel}>Product Overview — April 2026</div>
-          <h1 className={styles.heroTitle}>ClearPath</h1>
+          <div className={styles.heroLabel}>Product overview — May 2026</div>
+          <h1 className={styles.heroTitle}>ReportIQ</h1>
           <p className={styles.heroDesc}>
-            An AI-assisted workplace misconduct reporting platform built for 3M — designed to help reporters
-            say more, and help investigators act faster.
+            An AI-assisted workplace misconduct reporting prototype: Gemini-powered intake and summaries,
+            embedding-based policy retrieval (Chroma index), and a Feed shared via the API when the backend is
+            running — designed so reporters can say more with less friction, and investigators can act sooner
+            with a structured briefing.
           </p>
         </div>
 
         <DocIntroduction />
         <DocWhoItServes />
+        <DocRoles />
         <DocTheProblem />
         <DocHowFormWorks />
         <DocIntelligenceLayer />

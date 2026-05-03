@@ -2,7 +2,7 @@
 
 ## Overview
 
-ReportIQ is a whistleblowing report form application. Users fill out a structured report across four sections. The **Full Details** subsection drives a dynamic wizard powered by a 3-layer deterministic intake analysis pipeline: Q1 (free-text narrative) is analyzed by the backend, which returns 0–2 targeted gap-driven follow-up questions; the user answers them, then continues through case summary and policy steps before review. An Admin page lets administrators configure Q2/Q3 prompt templates and manage intake gap configurations. The **Analysis** page reads the latest intake result from **session storage** in the browser (not from the server). A PDF can be exported when the report is complete. A WebSocket chat backend exists for future chat UI integration.
+ReportIQ is a whistleblowing report form application. Users fill out a structured report across four sections. The **Full Details** subsection drives a dynamic wizard powered by a 3-layer intake pipeline: Q1 (free-text narrative) plus labeled form sections are analyzed by the backend, which returns **0–2** gap-driven follow-up questions from admin-configured templates; the user answers them, then continues through an LLM **case summary**, **RAG policy quote** retrieval, a fixed policy question, and **review** before overall submit. The **Admin** page configures intake gaps, runs Gemini connectivity checks, and includes AI pipeline diagnostics (legacy `POST /api/questions/q2|q3/generate` endpoints remain for tooling but are not the primary Full Details flow). The **Analysis** page reads the latest intake result from **session storage** in the browser (not from the server). The **Feed** lists submissions via `GET /api/submissions` when the API is available (with `localStorage` fallback). **Manager** mode in the navbar exposes **Document** (`/document`) as stakeholder-facing product copy. A PDF can be exported when the report is complete. A WebSocket chat backend exists for future chat UI integration.
 
 ```mermaid
 flowchart TB
@@ -17,6 +17,9 @@ flowchart TB
         App --> ReportProvider
         ReportProvider --> HomePage
         ReportProvider --> AdminPage
+        ReportProvider --> FeedPage[FeedPage]
+        ReportProvider --> AnalysisPage[AnalysisPage]
+        ReportProvider --> DocumentPage[DocumentPage]
         HomePage --> ReportPanel
         ReportPanel --> Org[Organization & Context]
         ReportPanel --> Reporter[Reporter Preferences]
@@ -68,32 +71,48 @@ flowchart TB
 | Embeddings | `models/text-embedding-004` via `google-genai` |
 | Settings | JSON file (`backend/data/settings.json`) with file locking |
 | Quota fallback | In-process only: models that return HTTP 429 are skipped for the rest of the UTC day in that server process (no `usage.json`) |
-| Data | In-memory (React context + backend chat sessions); Analysis page uses `sessionStorage` for the last intake run |
+| Data | In-memory (React context + backend chat sessions); Feed uses `localStorage` plus optional `POST /api/submissions`; Analysis page uses `sessionStorage` for the last intake run |
 
 ---
 
 ## Frontend Architecture
+
+### Modes and navigation
+
+[`ModeProvider`](frontend/src/context/ModeContext.tsx) sets `document.documentElement` `data-mode` to `reporter` | `investigator` | `manager`. The navbar shows **Feed** for investigator and manager; **Admin** and **Document** only for manager. This affects styling (for example larger type on the Document page in manager mode) rather than routing guards.
 
 ### Routing
 
 | Path | Component | Description |
 |------|-----------|-------------|
 | `/` | HomePage | Report form |
-| `/admin` | AdminPage | Settings (Q2/Q3 prompt templates) and intake gap configuration |
+| `/feed` | FeedPage | Submission list (API-backed when reachable, else localStorage) |
+| `/admin` | AdminPage | Intake gap configuration, Gemini test, pipeline diagnostics |
 | `/analysis` | AnalysisPage | Read-only view of last intake run (session storage) + public gap config |
+| `/document` | DocumentPage | Manager-visible stakeholder overview (ReportIQ product copy) |
 
 ### Layout
 
 ```
 App
 ├── ErrorBoundary
+├── ModeProvider
 ├── ReportProvider (ReportContext)
-├── Navbar (Home, Admin links)
+├── Navbar (mode-aware: Home; Feed; Admin; Document)
 └── Routes
     ├── / → HomePage
     │   └── ReportPanel
-    └── /admin → AdminPage
+    ├── /feed → FeedPage
+    ├── /admin → AdminPage
+    ├── /analysis → AnalysisPage
+    └── /document → DocumentPage
 ```
+
+### Manager Document page
+
+Long-form orientation for stakeholders lives in [`frontend/src/pages/DocumentPage.tsx`](frontend/src/pages/DocumentPage.tsx) with sections under [`frontend/src/components/document/sections/`](frontend/src/components/document/sections/). It should stay aligned with the real Full Details pipeline (`FullDetailsQuestionnaire.tsx`, `intake_processor.py`, RAG service).
+
+---
 
 ### State Management
 
@@ -227,7 +246,7 @@ app/prompts/
 ├── formats.py         # format_for_provider() — formats system prompt + history as plain text
 ├── display_content.py # DEFAULT_Q2_PROMPT_TEMPLATE, DEFAULT_Q3_PROMPT_TEMPLATE,
 │                      # Q2_WORD_LIMIT=10, Q3_WORD_LIMIT=20, FULL_DETAILS_Q3_QUESTION
-└── intake_gaps.py     # DEFAULT_INTAKE_GAPS (7 default gap configs), VALID_CRITERIA_TYPES
+└── intake_gaps.py     # DEFAULT_INTAKE_GAPS (5 default gap configs), VALID_CRITERIA_TYPES
 ```
 
 **Two-layer chat workflow (WebSocket):**

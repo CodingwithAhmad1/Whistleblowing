@@ -841,9 +841,10 @@ export function AdminPage() {
           <h2 className={styles.sectionTitle}>Gap Configuration</h2>
           <p className={styles.sectionDesc}>
             Define the gaps evaluated after the combined narrative (what happened, sequence, evidence). The
-            system selects the highest-priority active gap and uses its template for the one targeted
-            follow-up. Templates work best when they ask for specific, investigation-ready details — not
-            open-ended restatement. Changes save automatically. Drag cards to reorder priorities.
+            backend walks active gaps in priority order and may surface <strong>up to two</strong> template
+            follow-ups per intake run — never more. Templates work best when they ask for specific,
+            investigation-ready details rather than open-ended restatement. Edits, deletes, and drag-reorder
+            save to the backend immediately via the intake-gaps API.
           </p>
         </div>
         <GapConfigSection />

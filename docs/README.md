@@ -17,3 +17,4 @@
 1. **New developers**: Start with [SETUP.md](SETUP.md)
 2. **Architecture**: See [ARCHITECTURE.md](ARCHITECTURE.md)
 3. **API integration**: See [api/README.md](api/README.md)
+4. **Manager overview (in-app)**: With the app in **Manager** mode, open `/document` for the stakeholder-facing ReportIQ narrative (source: `frontend/src/pages/DocumentPage.tsx`).

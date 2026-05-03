@@ -8,7 +8,7 @@ A structured whistleblowing report application. Users complete a multi-section f
 |-------|-------------|
 | Frontend | React 18, TypeScript, Vite |
 | Backend | FastAPI, Pydantic |
-| AI | Gemini 1.5 Flash |
+| AI | Gemini via `google-genai` (default / chain from `GEMINI_MODEL` in `backend/.env`; see [ARCHITECTURE.md](docs/ARCHITECTURE.md)) |
 
 ## Quick Start
 

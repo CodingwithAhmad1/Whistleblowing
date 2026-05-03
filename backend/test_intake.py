@@ -54,7 +54,9 @@ def skip(name: str, reason: str = "") -> None:
 print("\n=== 1. Layer 1 Prompt Building ===")
 
 from app.question_processors.intake_processor import (
-    _build_layer1_prompt,
+    _build_layer1_sections,
+    _LAYER1_STRICT_PROMPT_HEAD,
+    _LAYER1_STRICT_PROMPT_TAIL,
     _parse_layer1_json,
     _safe_layer1_defaults,
     _normalize_layer1,
@@ -64,10 +66,11 @@ from app.question_processors.intake_processor import (
     Layer1Result,
 )
 
-# Test: curly braces in Q1 text don't crash (Bug 1)
+# Test: curly braces in Q1 text don't crash (Bug 1) — strict prompt concatenates sections (no str.format on user text)
 q1_with_braces = "John told {me} to use the {form} and pay ~${500} per month."
 try:
-    prompt = _build_layer1_prompt(q1_with_braces)
+    sections = _build_layer1_sections(q1_with_braces, None)
+    prompt = _LAYER1_STRICT_PROMPT_HEAD + sections + _LAYER1_STRICT_PROMPT_TAIL
     if q1_with_braces in prompt:
         ok("Curly braces in Q1 text don't crash prompt builder")
     else:
@@ -78,17 +81,18 @@ except (KeyError, ValueError, IndexError) as e:
 # Test: normal Q1 text
 q1_normal = "My supervisor, John Smith, told me on January 15 at Building A that the contracts were falsified."
 try:
-    prompt = _build_layer1_prompt(q1_normal)
-    assert "{schema}" not in prompt, "Placeholder not substituted"
-    assert "{q1_text}" not in prompt, "Placeholder not substituted"
-    assert "Building A" in prompt
+    sections_n = _build_layer1_sections(q1_normal, None)
+    prompt_n = _LAYER1_STRICT_PROMPT_HEAD + sections_n + _LAYER1_STRICT_PROMPT_TAIL
+    assert "[NARRATIVE]" in prompt_n
+    assert "Building A" in prompt_n
     ok("Normal Q1 text builds prompt correctly")
 except Exception as e:
     fail("Normal Q1 prompt build failed", str(e))
 
 # Test: empty string in Q1 (edge case)
 try:
-    prompt = _build_layer1_prompt("")
+    sections_e = _build_layer1_sections("", None)
+    prompt_e = _LAYER1_STRICT_PROMPT_HEAD + sections_e + _LAYER1_STRICT_PROMPT_TAIL
     ok("Empty Q1 text builds prompt without crash")
 except Exception as e:
     fail("Empty Q1 crashes prompt builder", str(e))

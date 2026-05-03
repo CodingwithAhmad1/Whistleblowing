@@ -2,7 +2,7 @@
 
 ## Introduction
 
-ReportIQ helps you create structured whistleblowing reports through a multi-section form. Complete each section and export a PDF when ready.
+ReportIQ helps you create structured whistleblowing reports through a multi-section form. Complete each section, run the Full Details assistant when prompted, then submit; you can export a PDF when ready.
 
 ## Getting Started
 
@@ -10,13 +10,16 @@ ReportIQ helps you create structured whistleblowing reports through a multi-sect
 
 - Modern browser (Chrome, Firefox, Safari, Edge)
 - JavaScript enabled
-- No special hardware required
+- Backend reachable if you want live AI intake, case summaries, policy retrieval, and a shared Feed
 
 ### Opening the Application
 
 1. Navigate to the ReportIQ URL.
-2. Use the navigation bar: **Home** (report form) and **Admin** (settings, for administrators).
-3. On Home, you see the report form with the header "Whistleblower Report".
+2. **Mode selector** (header): choose **Reporter**, **Investigator**, or **Manager**.
+   - **Reporter:** **Home** only — focus on filing.
+   - **Investigator:** **Home** + **Feed** (submitted cases).
+   - **Manager:** **Home**, **Feed**, **Admin** (gap configuration and diagnostics), and **Document** (long-form product overview).
+3. On Home, complete the report form (header: “Whistleblower Report”).
 4. Scroll through the four sections and fill in the fields.
 
 ## Form Sections
@@ -33,6 +36,7 @@ ReportIQ helps you create structured whistleblowing reports through a multi-sect
 - **Do you wish to remain ANONYMOUS?** Yes / No
 
 If you select **No** for anonymous:
+
 - **Your Name**: First and last name
 - **Your Phone Number**: Country code + number
 - **Your Email Address**
@@ -40,7 +44,7 @@ If you select **No** for anonymous:
 
 ### 3. Identifying Persons and Management
 
-- **Person(s) engaged in this behavior**: Add people with first name, last name, title. Use "Add another person" for more.
+- **Person(s) engaged in this behavior**: Add people with first name, last name, title. Use “Add another person” for more.
 - **Is a supervisor or management involved?** Yes / No / Do Not Know / Do Not Wish To Disclose
 - **If yes, who?** (textarea)
 - **Is management aware of this problem?** Yes / No / Do Not Know / Do Not Wish To Disclose
@@ -54,27 +58,41 @@ If you select **No** for anonymous:
 - **How did you become aware?**
 - **If other, how?** (conditional)
 - **Persons concealing** (with examples)
-- **Full details** — a dynamic wizard:
-  1. **Q1**: Describe what happened in your own words (violation, witnesses, evidence, timeline, etc.). Click **Next** when done.
-  2. **Analyzing**: The system briefly analyzes your response to identify any important details that may be missing.
-  3. **Follow-up questions** *(0–2, depending on your Q1 response)*: Targeted questions are shown one at a time based on gaps identified in your narrative (e.g. missing timeline, no specific example, unclear individuals involved). Answer each question and click **Next** or **Done**.
-  4. **Review**: All your answers are shown together in an editable panel. You can edit any answer before submitting.
+- **Full details** — a dynamic wizard with these stages:
+
+| Stage | What you see |
+|-------|----------------|
+| **Q1 — Narrative** | Free-text description of what happened. |
+| **Analyzing** | “Analyzing your report…” while the client POSTs to `/api/questions/intake/analyze` with your narrative plus form fields. |
+| **Gap follow-ups (0–2)** | Template questions, shown **one at a time**, based on priority-ordered gap rules. Answer each, or you may see none if no gaps fired. |
+| **Case summary** | Loading while the app requests a short **constructed sentence** summarising the matter for policy search. |
+| **Finding relevant policy…** | Retrieves a policy excerpt (RAG) when the backend and index are available. |
+| **Policy question** | Reviews the excerpt (if any) and asks **“How well does this policy excerpt describe your experience?”** — respond in your own words. |
+| **Review** | Editable recap of Full Details answers before you continue with the rest of the form. |
+
+If intake or downstream AI/RAG calls fail, use **Back**, **Skip & Continue**, or other recovery controls shown in the UI so you can still progress — the exact behavior depends on the error surfaced.
+
+## After you leave Full Details
+
+Finish any remaining incident fields, scroll to the bottom of the form, and **Submit**. Submissions sync to the **Feed** (`/feed`) for investigators when the API is running; otherwise they may store locally until the backend is available.
+
+## Analysis Page (`/analysis`)
+
+Developers and trainers can open **Analysis** for a read-only view of the **last intake response** cached in the browser’s session storage. Investigators should rely on **Feed** rows for real submissions.
 
 ## Exporting Your Report
 
-1. Complete the sections (required fields marked with *).
-2. Click **Submit** at the bottom.
-3. A PDF is generated and downloaded with your responses.
+1. Complete required fields (marked with \*).
+2. Click **Submit** when the full form is ready.
+3. When offered, download the generated PDF with your responses.
 
-## Admin Page (Administrators)
+## Admin (Managers only)
 
-If you have access to **Admin** (via the navigation bar), you can configure the **intake gap types** — the categories of missing information the system checks for after Q1 — as well as prompt templates and model usage. See [Admin Guide](admin-guide.md) for details.
+Managers configure gap templates and run diagnostics on `/admin`. See [Admin Guide](admin-guide.md).
 
 ## Tips
 
-- Use specific dates, names, and locations in your Q1 response — this reduces the number of follow-up questions the system needs to ask.
-- Mention any evidence you have (emails, documents, screenshots) in your Q1 response.
-- The "Persons concealing" section lists example actions (e.g. "Ignored it", "Changed documents").
-- You can edit any field before submitting.
-- Report data is stored in your browser session; refreshing clears it.
-- If the analysis step fails (network error or backend unavailable), you can click **Skip & Continue** to proceed without follow-up questions.
+- Richer Q1 answers and incident context reduce follow-up questions — mention dates, names, witnesses, and evidence where you safely can.
+- Sequence-of-events and evidence-description fields count toward intake even before follow-ups.
+- Report data in the editor is primarily in-memory until submit; refreshing the page can clear unsaved work.
+- Keep **localhost** vs **127.0.0.1** consistent if you test browser storage edge cases — they are different origins.

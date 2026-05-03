@@ -9,6 +9,7 @@ alwaysApply: false
 
 When the **reportiq** MCP server is enabled and the FastAPI app is up (`REPORTIQ_API_BASE`, default `http://127.0.0.1:8000`):
 
+- **Stakeholder overview (UI):** set the app header to **Manager** and open **`/document`** for the in-app **ReportIQ** product narrative (aligned with repo naming, not legacy “ClearPath”-only titles).
 - Prefer **`reportiq_*` tools** (health, intake analyze, RAG, intake gaps, submission list/create/delete) instead of ad-hoc `curl` for the same operations.
 - Intake: pass non-empty `q1_text` and optional flat `form_data` (string keys) to `reportiq_intake_analyze`, matching `POST /api/questions/intake/analyze`.
 - RAG: call `reportiq_rag_construct_sentence` then `reportiq_rag_policy_quote` with the same `form_data`; pass the constructed `sentence` into `reportiq_rag_policy_quote` as `constructed_sentence` when mirroring the app.

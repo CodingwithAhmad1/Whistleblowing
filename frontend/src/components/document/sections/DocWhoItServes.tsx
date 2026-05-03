@@ -6,29 +6,36 @@ export function DocWhoItServes(): JSX.Element {
       <h2 className={styles.h2}>Who it serves</h2>
       <div className={styles.cardRow}>
         <div className={styles.card}>
-          <div className={styles.cardLabel} style={{ color: '#1d4ed8' }}>Reporter</div>
+          <div className={styles.cardLabel} style={{ color: '#1d4ed8' }}>
+            Reporter
+          </div>
           <div className={styles.cardTitle}>The employee</div>
           <p className={styles.cardDesc}>
-            Files a report through a clean, guided form. The AI pipeline works entirely in the background —
-            the reporter simply writes, answers one or two questions, and submits. Anonymity controls are
-            built in throughout.
+            Files a report through a guided multi-section form. Inside Full Details, the intake pipeline runs in
+            the background: up to two template follow-ups, then a short case summary, policy retrieval, and a
+            final policy question before review and submit. Anonymity controls are built in throughout.
           </p>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel} style={{ color: '#0f766e' }}>Investigator</div>
+          <div className={styles.cardLabel} style={{ color: '#0f766e' }}>
+            Investigator
+          </div>
           <div className={styles.cardTitle}>HR or legal counsel</div>
           <p className={styles.cardDesc}>
-            Reviews an organised feed of submitted reports. Every case arrives pre-loaded with a structured
-            AI summary, gap analysis, and matched policy excerpt — the preparatory work is already done
-            before they open the case.
+            Uses the <strong>Feed</strong> to review submissions (server-backed when the API is available, with
+            browser storage as fallback). Each case can show an extraction breakdown, gap list, and matched
+            policy excerpt on the Summary tab.
           </p>
         </div>
         <div className={styles.card}>
-          <div className={styles.cardLabel} style={{ color: '#b45309' }}>Admin</div>
-          <div className={styles.cardTitle}>Platform administrator</div>
+          <div className={styles.cardLabel} style={{ color: '#b45309' }}>
+            Admin / Manager
+          </div>
+          <div className={styles.cardTitle}>Platform configuration</div>
           <p className={styles.cardDesc}>
-            Configures the gap-detection rules that govern which questions the AI asks, monitors AI model
-            health, and manages platform-wide settings. No technical background required.
+            Edits intake gap rules and templates, runs Gemini connectivity checks, and uses pipeline diagnostics
+            to validate extraction, gaps, case summary, and RAG steps end-to-end. Managers also have this
+            Document page for stakeholder orientation.
           </p>
         </div>
       </div>

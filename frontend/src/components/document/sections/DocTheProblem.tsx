@@ -20,12 +20,15 @@ export function DocTheProblem(): JSX.Element {
       </p>
 
       <DocCallout variant="amber">
-        <p><strong>The core insight:</strong> if we can identify what is missing at the point of submission —
-        and ask just one targeted question before the report is filed — we dramatically improve the quality of
-        every case that reaches an investigator, without adding meaningful burden to the reporter.</p>
+        <p>
+          <strong>The core insight:</strong> if we identify what is missing at the point of submission — and
+          ask at most <strong>two</strong> targeted questions tied to admin-defined gaps before the report is
+          filed — we improve the quality of every case that reaches an investigator while capping extra burden
+          on the reporter.
+        </p>
       </DocCallout>
 
-      <p className={styles.p}>By the time an investigator opens a ClearPath report, they already have:</p>
+      <p className={styles.p}>By the time an investigator opens a ReportIQ submission in the Feed, they already have:</p>
 
       <ul className={styles.benefitList}>
         <li>
@@ -38,11 +41,11 @@ export function DocTheProblem(): JSX.Element {
         </li>
         <li>
           <span className={styles.benefitIcon}>✓</span>
-          The most relevant section of 3M's policy documentation, automatically retrieved and matched to the case
+          The most relevant section from indexed conduct policy, when retrieval clears quality thresholds
         </li>
         <li>
           <span className={styles.benefitIcon}>✓</span>
-          A ranked list of remaining follow-up questions if the investigation needs to go further
+          A ranked list of remaining follow-up themes if the investigation needs to go further
         </li>
       </ul>
 

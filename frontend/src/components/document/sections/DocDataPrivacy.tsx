@@ -9,35 +9,35 @@ export function DocDataPrivacy(): JSX.Element {
 
       <h3 className={styles.h3}>AI processing and third-party services</h3>
       <p className={styles.p}>
-        In the current prototype, ClearPath's AI processing — gap analysis, policy search, and summary
-        generation — is powered by Google's Gemini language model, accessed via API. This means report content
-        is transmitted to Google's servers during AI processing steps. For a production deployment, 3M would
-        need to determine whether this is acceptable under its data governance and legal obligations, or
-        configure the platform to use an approved on-premises or enterprise-contracted AI service that keeps
-        all data within 3M's own infrastructure.
+        ReportIQ&apos;s prototype stack sends report text to <strong>Google Gemini</strong> for Layer 1
+        extraction, constructed sentences, reranking, and related LLM steps. Embedding calls (for example
+        text-embedding-004) also route through Google&apos;s API for both policy indexing and query-time
+        retrieval. Policy chunks themselves live in a local <strong>Chroma</strong> database under{' '}
+        <code>backend/data/chroma</code> after ingestion — the content is on disk in the deployment, but
+        generating new embeddings still uses the remote embedding service unless reconfigured.
       </p>
 
       <DocCallout variant="amber">
         <p>
-          <strong>Prototype note:</strong> the current build transmits report content to an external AI API
-          for demonstration purposes. Any live deployment handling real employee reports would require either
-          a data processing agreement with the AI provider or a switch to an on-premises model.
+          <strong>Prototype note:</strong> treat current traffic as demonstration data. A production deployment
+          at an enterprise such as 3M would need DPAs, regional residency choices, or private inference as
+          required by policy.
         </p>
       </DocCallout>
 
       <h3 className={styles.h3}>Reporter anonymity</h3>
       <p className={styles.p}>
-        Anonymity is handled at the form level. Reporters may choose to submit without disclosing their
-        identity. If they do, no identifying information is stored anywhere in the system. If they choose to
-        provide their name, it is stored only within the submission record and is visible solely to authorised
-        investigators — it does not appear in any aggregate view or administrative interface.
+        Reporters may withhold identifying fields. When they remain anonymous, contact data should be absent from
+        the stored submission; when they disclose identity, those values reside inside the submission payload and
+        appear to reviewers who open that row — they are not meant for public aggregates in this prototype.
       </p>
 
       <h3 className={styles.h3}>Submission storage</h3>
       <p className={styles.p}>
-        The current prototype stores submissions in local browser storage — no server-side database is used.
-        This is purely for demonstration. A production deployment would integrate with 3M's existing secure
-        data infrastructure, with appropriate access controls, retention policies, and audit logging in place.
+        Every save writes to <strong>localStorage</strong> as a fallback. When the backend is reachable,
+        submissions also post to <code>/api/submissions</code>, which is how Feed rows stay consistent across
+        teammates testing against the same API. There is no production-grade database in-repo; wire persistent
+        storage and access control before handling real matters.
       </p>
     </section>
   )

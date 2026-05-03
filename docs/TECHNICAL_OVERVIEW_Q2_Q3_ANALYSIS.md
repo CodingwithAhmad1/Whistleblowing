@@ -304,7 +304,9 @@ The quote and section are stored in `report.policy_quote_matched` and `report.po
 
 Q3 is the final question before the review step. It is **not AI-generated** — the question text is hardcoded:
 
-> "Do you believe this policy has been violated? If Yes, to what extent?"
+> "How well does this policy excerpt describe your experience?"
+
+Canonical definition: `FULL_DETAILS_Q3_QUESTION` in `backend/app/prompts/display_content.py` and `frontend/src/constants/policyQuestion.ts` (keep in sync).
 
 What is AI-powered is the **context shown alongside it**: the retrieved policy excerpt from Step 9, displayed in a blockquote with its section citation.
 
@@ -328,7 +330,7 @@ full_details_q3: string           // Answer to policy question
 
 // AI-generated question text (stored for audit/display)
 full_details_q2_question: string  // Text of the gap question that was asked
-full_details_q3_question: string  // Always: "Do you believe this policy has been violated..."
+full_details_q3_question: string  // Always: "How well does this policy excerpt describe your experience?"
 
 // Pipeline outputs (stored for traceability)
 policy_quote_matched: string      // Verbatim policy excerpt

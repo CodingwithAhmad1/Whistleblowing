@@ -25,18 +25,20 @@ export interface IntakeAnalysisResult {
 // Any admin settings save bumps this key to invalidate cached analysis results.
 const SETTINGS_MODIFIED_KEY = 'whistleblow_settingsModified'
 
-function cacheKey(q1Text: string): string {
+function cacheKey(q1Text: string, runId: number): string {
   const settingsVersion =
     typeof window !== 'undefined'
       ? (sessionStorage.getItem(SETTINGS_MODIFIED_KEY) ?? '0')
       : '0'
-  return q1Text + '::' + settingsVersion
+  return `${q1Text}::${settingsVersion}::${runId}`
 }
 
 export function useIntakeAnalysis(
   q1Text: string,
   enabled: boolean,
   formData?: Record<string, string>,
+  /** Increment each “Generate AI follow-up” so cache cannot reuse a prior run with different form_data. */
+  runId: number = 0,
 ): {
   followUpQuestions: FollowUpQuestion[]
   analysisResult: FullAnalysisResult | null
@@ -56,7 +58,7 @@ export function useIntakeAnalysis(
   useEffect(() => {
     if (!enabled || !q1Text.trim()) return
 
-    const key = cacheKey(q1Text)
+    const key = cacheKey(q1Text, runId)
     const cached = cacheRef.current.get(key)
     if (cached) {
       setFollowUpQuestions(cached.follow_up_questions)
@@ -125,8 +127,7 @@ export function useIntakeAnalysis(
       })
 
     return () => ac.abort()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q1Text, enabled])  // cacheKey() reads sessionStorage but is not reactive; reset() clears if needed
+  }, [q1Text, enabled, runId])
 
   const reset = () => {
     abortRef.current?.abort()

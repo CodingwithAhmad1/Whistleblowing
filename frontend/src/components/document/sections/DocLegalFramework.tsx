@@ -5,8 +5,9 @@ export function DocLegalFramework(): JSX.Element {
     <section id="legal" className={styles.section}>
       <h2 className={styles.h2}>Legal framework</h2>
       <p className={styles.p}>
-        ClearPath's design is consistent with established whistleblower protection frameworks across 3M's
-        key operating jurisdictions. Two frameworks are particularly relevant:
+        ReportIQ&apos;s UX patterns align with common whistleblower protection expectations in jurisdictions
+        such as those highlighted in a 3M-oriented deployment narrative. Two frameworks are often cited in that
+        context:
       </p>
 
       <blockquote className={styles.blockquote}>
@@ -16,21 +17,19 @@ export function DocLegalFramework(): JSX.Element {
       </blockquote>
 
       <blockquote className={styles.blockquote}>
-        Federal Law No. 4 of 2016 establishes protections for individuals reporting violations within
-        regulated entities, with confidentiality of reporter identity as a baseline obligation.
+        Federal Law No. 4 of 2016 establishes protections for individuals reporting violations within regulated
+        entities, with confidentiality of reporter identity as a baseline obligation.
         <cite>— UAE Federal Law No. 4 of 2016</cite>
       </blockquote>
 
       <p className={styles.p}>
-        ClearPath supports compliance with both frameworks through its anonymity controls, restricted
-        investigator access (only authorised personnel can view submissions), and the separation of reporter
-        identity from case content.
+        ReportIQ supports alignment with those themes through anonymity controls, investigator-only visibility of
+        submissions in the prototype&apos;s intended workflow, and clear separation between case content and
+        optional identity fields.
       </p>
       <p className={styles.p}>
-        Compliance is not automatic, however. The data processing considerations outlined in the previous
-        section — particularly around AI services and third-party data transmission — have direct legal
-        implications that would need to be resolved before any production deployment. Any live rollout should
-        be reviewed by 3M's legal counsel against applicable jurisdiction-specific requirements.
+        Compliance is not automatic. AI vendor usage, data residency, and retention must be reviewed with counsel
+        before any live rollout covering real employees.
       </p>
     </section>
   )

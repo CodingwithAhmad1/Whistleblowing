@@ -1,13 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { API_CONFIG } from '@/config'
 
-export type BackendStatus = 'checking' | 'ready' | 'unavailable'
+/** `warming` = HTTP API is up but LLM (`ready` in JSON) is still initializing. */
+export type BackendStatus = 'checking' | 'warming' | 'ready' | 'degraded' | 'unavailable'
 
 const INITIAL_BACKOFF_MS = 2000
 const BACKOFF_MULTIPLIER = 1.35
 const MAX_BACKOFF_MS = 12000
-const MAX_POLLS = 150
-const FETCH_TIMEOUT_MS = 3000
+/** Retries when the API is not reachable at all (connection errors / no listener). */
+const MAX_CONNECT_POLLS = 150
+/** Poll interval once `/api/health` returns 200 but `ready` is still false (Gemini warming). */
+const WARMING_POLL_MS = 4000
+/** Stop waiting for LLM readiness after this many slow polls (~6.7 min at 4s). */
+const MAX_WARMING_POLLS = 100
+const FETCH_TIMEOUT_MS = 8000
 
 function nextDelayMs(failedSinceReadyCheck: number): number {
   if (failedSinceReadyCheck <= 0) return 0
@@ -32,13 +38,20 @@ export function useBackendStatus() {
     let pollTimer: ReturnType<typeof setTimeout> | undefined
 
     let failedStreak = 0
-    let totalPolls = 0
+    let connectPolls = 0
+    let warmingPolls = 0
 
-    const runCheck = () => {
+    const runConnectBackoff = () => {
       if (cancelled) return
       if (pollTimer) clearTimeout(pollTimer)
       const delay = nextDelayMs(failedStreak)
       pollTimer = setTimeout(tick, delay)
+    }
+
+    const scheduleWarming = () => {
+      if (cancelled) return
+      if (pollTimer) clearTimeout(pollTimer)
+      pollTimer = setTimeout(tick, WARMING_POLL_MS)
     }
 
     const tick = async () => {
@@ -48,26 +61,46 @@ export function useBackendStatus() {
           signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         })
         if (cancelled) return
-        if (res.ok) {
-          const data = (await res.json()) as { ready?: boolean }
-          if (data.ready) {
-            setStatus('ready')
-            sendNotification('ReportIQ', 'Backend is ready.')
-            return
-          }
-        }
-      } catch {
-        // backend not up or network error
-      }
 
-      if (cancelled) return
-      totalPolls += 1
-      failedStreak += 1
-      if (totalPolls >= MAX_POLLS) {
-        setStatus('unavailable')
-        return
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`)
+        }
+
+        const data = (await res.json()) as {
+          ready?: boolean
+          status?: string
+          error?: string
+        }
+
+        if (data.ready) {
+          setStatus('ready')
+          sendNotification('ReportIQ', 'Backend is ready.')
+          return
+        }
+
+        // API is responding; LLM may still be initializing (or misconfigured).
+        failedStreak = 0
+        connectPolls = 0
+        setStatus('warming')
+
+        warmingPolls += 1
+        if (warmingPolls >= MAX_WARMING_POLLS) {
+          setStatus('degraded')
+          return
+        }
+
+        scheduleWarming()
+      } catch {
+        if (cancelled) return
+        connectPolls += 1
+        failedStreak += 1
+        setStatus('checking')
+        if (connectPolls >= MAX_CONNECT_POLLS) {
+          setStatus('unavailable')
+          return
+        }
+        runConnectBackoff()
       }
-      runCheck()
     }
 
     void tick()

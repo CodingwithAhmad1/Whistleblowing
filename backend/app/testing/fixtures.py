@@ -37,9 +37,8 @@ TEST_FIXTURES: list[dict] = [
             },
             "intake_layer2_gaps": {
                 "should_pass": True,
-                # Strict Layer-1 (low intake temperature) often flags both: narrative
-                # does not explicitly name corroborating witnesses or a prior report to HR.
-                "max_gaps": 2,
+                # Two-pass Layer-1 infers examples/impact/timeline; fewer spurious gaps remain.
+                "max_gaps": 1,
             },
             "intake_layer3_questions": {
                 "should_pass": True,

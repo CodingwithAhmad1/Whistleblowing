@@ -76,6 +76,16 @@
   opacity: 0.85;
 }
 
+.intakeFallbackNotice {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  line-height: 1.6;
+  margin: 0 0 var(--space-16);
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-md, 8px);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
 .errorText {
   font-size: var(--text-sm);
   color: #b91c1c;

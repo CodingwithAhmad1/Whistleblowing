@@ -7,9 +7,8 @@ import { FormField } from './FormField'
 import type { Layer1Extraction } from '@/utils/feedStore'
 import { EVIDENCE_DESCRIPTION_LABEL } from '@/data/incidentIntakeCopy'
 import { buildAnalysisText } from '@/utils/buildAnalysisText'
+import { FULL_DETAILS_Q3_QUESTION } from '@/constants/policyQuestion'
 import styles from './FullDetailsQuestionnaire.module.css'
-
-const Q3_QUESTION = 'Do you believe this policy has been violated? If Yes, to what extent?'
 
 type Step =
   | 'idle'
@@ -32,8 +31,10 @@ export function FullDetailsQuestionnaire() {
   const intakeQ1Text = useMemo(() => buildAnalysisText(report), [report])
 
   const [analyzeEnabled, setAnalyzeEnabled] = useState(false)
+  const [intakeRunId, setIntakeRunId] = useState(0)
+  const [intakeFallbackNotice, setIntakeFallbackNotice] = useState(false)
   const { followUpQuestions, analysisResult, isLoading: isAnalyzing, hasAnalyzed, error: analyzeError, reset: resetIntake } =
-    useIntakeAnalysis(intakeQ1Text, analyzeEnabled, report as unknown as Record<string, string>)
+    useIntakeAnalysis(intakeQ1Text, analyzeEnabled, report as unknown as Record<string, string>, intakeRunId)
 
   const [constructEnabled, setConstructEnabled] = useState(false)
   const { sentence: constructedSentence, isLoading: isConstructing, error: constructError, reset: resetConstruct } =
@@ -72,6 +73,8 @@ export function FullDetailsQuestionnaire() {
       updateReport({ full_details_gap2_question: followUpQuestions[1].question_text })
     }
 
+    setIntakeFallbackNotice(Boolean(analysisResult?.used_defaults))
+
     if (followUpQuestions.length > 0) {
       fq1WasShownRef.current = true
       setStep('fq1')
@@ -80,6 +83,8 @@ export function FullDetailsQuestionnaire() {
       setConstructEnabled(true)
       setStep('constructing')
     }
+
+    setAnalyzeEnabled(false)
   }, [step, isAnalyzing, analyzeError, hasAnalyzed, followUpQuestions, analysisResult, setIntakeAnalysisResult, setPipelineStatus, updateReport])
 
   useEffect(() => {
@@ -97,6 +102,7 @@ export function FullDetailsQuestionnaire() {
     setPipelineStatus('policyLoading')
     setPolicyEnabled(true)
     setStep('policyLoading')
+    setIntakeFallbackNotice(false)
   }, [step, isConstructing, constructedSentence, constructError, setPipelineStatus, updateReport])
 
   useEffect(() => {
@@ -108,7 +114,7 @@ export function FullDetailsQuestionnaire() {
     }
 
     updateReport({
-      full_details_q3_question: Q3_QUESTION,
+      full_details_q3_question: FULL_DETAILS_Q3_QUESTION,
       ...(policyQuote ? { policy_quote_matched: policyQuote } : {}),
       ...(policySection ? { policy_section_matched: policySection } : {}),
     })
@@ -129,6 +135,8 @@ export function FullDetailsQuestionnaire() {
   }
 
   const handleStartAi = () => {
+    setIntakeFallbackNotice(false)
+    setIntakeRunId((n) => n + 1)
     setPipelineStatus('analyzing')
     setAnalyzeEnabled(true)
     setStep('analyzing')
@@ -136,6 +144,7 @@ export function FullDetailsQuestionnaire() {
 
   const handleBack = () => {
     if (step === 'fq1') {
+      setIntakeFallbackNotice(false)
       goBackToIdle()
       resetIntake()
     }
@@ -151,6 +160,7 @@ export function FullDetailsQuestionnaire() {
   }
 
   const handleFq1Done = () => {
+    setIntakeFallbackNotice(false)
     if (fq2) {
       fq2WasShownRef.current = true
       setStep('fq2')
@@ -162,6 +172,7 @@ export function FullDetailsQuestionnaire() {
   }
 
   const handleFq2Done = () => {
+    setIntakeFallbackNotice(false)
     setPipelineStatus('constructing')
     setConstructEnabled(true)
     setStep('constructing')
@@ -176,6 +187,7 @@ export function FullDetailsQuestionnaire() {
     setPipelineStatus('idle')
     setStep('idle')
     setAnalyzeEnabled(false)
+    setIntakeFallbackNotice(false)
     setConstructEnabled(false)
     setPolicyEnabled(false)
     resetIntake()
@@ -212,7 +224,7 @@ export function FullDetailsQuestionnaire() {
       ...((q3Stored || report.full_details_q3)
         ? [{
             answerKey: 'full_details_q3' as const,
-            question: q3Stored || Q3_QUESTION,
+            question: q3Stored || FULL_DETAILS_Q3_QUESTION,
             policyQuote: report.policy_quote_matched || policyQuote || undefined,
             policySection: report.policy_section_matched || policySection || undefined,
           }]
@@ -318,6 +330,12 @@ export function FullDetailsQuestionnaire() {
     return (
       <div ref={stepRef} className={styles.block}>
         <div className={styles.stepContent}>
+          {intakeFallbackNotice && (
+            <p className={styles.intakeFallbackNotice} role="status">
+              We couldn&apos;t extract every detail from your narrative automatically; no additional questions were
+              suggested. You can continue as usual.
+            </p>
+          )}
           {isConstructing && (
             <p className={styles.loadingText}>Building case summary…</p>
           )}
@@ -418,6 +436,11 @@ export function FullDetailsQuestionnaire() {
       <div ref={stepRef} className={styles.block}>
         <p className={styles.stepIndicator}>Question 1</p>
         <div className={styles.stepContent}>
+          {intakeFallbackNotice && (
+            <p className={styles.intakeFallbackNotice} role="status">
+              We couldn&apos;t extract every detail from your narrative automatically; you can continue as usual.
+            </p>
+          )}
           <p className={styles.questionText}>{fq1.question_text}</p>
           <FormField
             label=""
@@ -504,7 +527,7 @@ export function FullDetailsQuestionnaire() {
               No specific policy section was identified for your report. You can still share your perspective on how you believe organisational policies apply to this situation.
             </p>
           )}
-          <p className={styles.questionText}>{Q3_QUESTION}</p>
+          <p className={styles.questionText}>{FULL_DETAILS_Q3_QUESTION}</p>
           <FormField
             label=""
             value={report.full_details_q3}

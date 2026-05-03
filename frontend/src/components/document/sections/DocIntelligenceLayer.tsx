@@ -5,9 +5,9 @@ export function DocIntelligenceLayer(): JSX.Element {
     <section id="final-section" className={styles.section}>
       <h2 className={styles.h2}>The intelligence layer</h2>
       <p className={styles.p}>
-        The three questions in the Full Details section are not independent — they are connected by a pipeline
-        that runs automatically in the background. Below is that pipeline in full, from the reporter's first
-        keystroke to the moment the report lands with an investigator.
+        Full Details is a connected pipeline from the reporter&apos;s narrative through intake, optional
+        follow-ups, case summary, policy retrieval, and the policy question. Below is the end-to-end path the
+        product implements today.
       </p>
 
       <div className={styles.pipeline}>
@@ -16,7 +16,11 @@ export function DocIntelligenceLayer(): JSX.Element {
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeReporter}`}>Reporter</span>
             <span className={styles.pipelineStepTitle}>Q1 — Free-text narrative</span>
           </div>
-          <p className={styles.pipelineStepBody}>The reporter describes the incident in their own words. No imposed structure, no leading prompts.</p>
+          <p className={styles.pipelineStepBody}>
+            The reporter describes the incident in their own words. Earlier incident fields (chronology,
+            sequence of events, evidence description, etc.) are included in the same submission and are passed
+            to the backend as separate labeled blocks when present.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
@@ -26,27 +30,42 @@ export function DocIntelligenceLayer(): JSX.Element {
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeAI}`}>AI — Layer 1</span>
             <span className={styles.pipelineStepTitle}>Extraction</span>
           </div>
-          <p className={styles.pipelineStepBody}>The AI reads the narrative alongside all form fields and builds a structured internal checklist: who is named, whether a timeline can be reconstructed, whether concrete examples or evidence are referenced, and so on.</p>
+          <p className={styles.pipelineStepBody}>
+            A Gemini prompt ingests labeled sections — including{' '}
+            <strong>NARRATIVE</strong>, <strong>CHRONOLOGY</strong>, <strong>SEQUENCE</strong>,{' '}
+            <strong>EVIDENCE_DESCRIPTION</strong>, concealment, how-aware, structured metadata, and follow-up
+            answers when they exist — and returns structured JSON (booleans, lists, summary) used as the checklist
+            for gaps.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
 
-        <div className={`${styles.pipelineStep} ${styles.pipelineStepAI}`}>
+        <div className={`${styles.pipelineStep} ${styles.pipelineStepSystem}`}>
           <div className={styles.pipelineStepHeader}>
-            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeAI}`}>AI — Layer 2</span>
+            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeSystem}`}>Rules — Layer 2</span>
             <span className={styles.pipelineStepTitle}>Gap detection</span>
           </div>
-          <p className={styles.pipelineStepBody}>Configurable gap rules (a default set of five is shipped) are evaluated in priority order against the checklist. Structured form answers can suppress a gap when they already cover that theme. If the narrative is sufficiently complete, no gap is raised and the targeted follow-up is skipped.</p>
+          <p className={styles.pipelineStepBody}>
+            Active gap configurations (default: five) are evaluated in priority order against the merged
+            checklist. Conditional rules can suppress specific gaps when form answers already cover the theme
+            (for example a long sequence-of-events or management-awareness). At most <strong>two</strong> gap
+            ids proceed to the next step; if none fire, follow-ups are skipped.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
 
-        <div className={`${styles.pipelineStep} ${styles.pipelineStepAI}`}>
+        <div className={`${styles.pipelineStep} ${styles.pipelineStepSystem}`}>
           <div className={styles.pipelineStepHeader}>
-            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeAI}`}>AI — Layer 3</span>
-            <span className={styles.pipelineStepTitle}>Question generation</span>
+            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeSystem}`}>Templates — Layer 3</span>
+            <span className={styles.pipelineStepTitle}>Follow-up text</span>
           </div>
-          <p className={styles.pipelineStepBody}>A targeted follow-up is built from the matching template — phrased to request specific, investigation-ready detail and to allow an &ldquo;already provided&rdquo; answer when the narrative already covered it.</p>
+          <p className={styles.pipelineStepBody}>
+            No additional LLM call: each selected gap maps to its admin-defined template (trimmed to a maximum
+            length), phrased to invite concrete detail and an &ldquo;already provided&rdquo; reply when
+            appropriate.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
@@ -54,9 +73,25 @@ export function DocIntelligenceLayer(): JSX.Element {
         <div className={`${styles.pipelineStep} ${styles.pipelineStepReporter}`}>
           <div className={styles.pipelineStepHeader}>
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeReporter}`}>Reporter</span>
-            <span className={styles.pipelineStepTitle}>Q2 — Targeted follow-up</span>
+            <span className={styles.pipelineStepTitle}>Gap follow-ups (0–2)</span>
           </div>
-          <p className={styles.pipelineStepBody}>One question, chosen specifically based on what this report was missing. The reporter answers it, or moves on if Q2 was skipped.</p>
+          <p className={styles.pipelineStepBody}>
+            The reporter answers each surfaced template question in sequence, or continues immediately when no
+            gaps were selected.
+          </p>
+        </div>
+
+        <div className={styles.pipelineArrow}>↓</div>
+
+        <div className={`${styles.pipelineStep} ${styles.pipelineStepAI}`}>
+          <div className={styles.pipelineStepHeader}>
+            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeAI}`}>AI</span>
+            <span className={styles.pipelineStepTitle}>Case summary sentence</span>
+          </div>
+          <p className={styles.pipelineStepBody}>
+            The client requests a compact constructed sentence from the backend so policy search has a stable
+            semantic query anchored in the full report context.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
@@ -64,9 +99,13 @@ export function DocIntelligenceLayer(): JSX.Element {
         <div className={`${styles.pipelineStep} ${styles.pipelineStepSystem}`}>
           <div className={styles.pipelineStepHeader}>
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeSystem}`}>System</span>
-            <span className={styles.pipelineStepTitle}>Policy search</span>
+            <span className={styles.pipelineStepTitle}>Policy search (RAG)</span>
           </div>
-          <p className={styles.pipelineStepBody}>The full report is distilled into a compact summary sentence. That summary is compared against 3M's indexed policy document using semantic search — matching by meaning, not keywords — and the most relevant excerpt is retrieved and scored for quality.</p>
+          <p className={styles.pipelineStepBody}>
+            Embeddings retrieve the top candidates from an indexed policy corpus (for example 3M Code of Conduct
+            chunks in Chroma), apply a similarity floor, then an LLM re-ranker scores each passage (1–5); scores
+            below 3 are discarded so weak matches are not forced on reporters.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
@@ -74,26 +113,33 @@ export function DocIntelligenceLayer(): JSX.Element {
         <div className={`${styles.pipelineStep} ${styles.pipelineStepReporter}`}>
           <div className={styles.pipelineStepHeader}>
             <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeReporter}`}>Reporter</span>
-            <span className={styles.pipelineStepTitle}>Q3 — Policy confirmation</span>
+            <span className={styles.pipelineStepTitle}>Policy question (fixed wording)</span>
           </div>
-          <p className={styles.pipelineStepBody}>The retrieved policy excerpt is shown to the reporter alongside a single question: does the described conduct align with this policy? The reporter's response is recorded alongside the excerpt.</p>
+          <p className={styles.pipelineStepBody}>
+            The excerpt (when available) is shown with the standard prompt:{' '}
+            <strong>&ldquo;How well does this policy excerpt describe your experience?&rdquo;</strong> The
+            answer is stored with the submission for investigators.
+          </p>
         </div>
 
         <div className={styles.pipelineArrow}>↓</div>
 
         <div className={`${styles.pipelineStep} ${styles.pipelineStepSubmit}`}>
           <div className={styles.pipelineStepHeader}>
-            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeSubmit}`}>Filed</span>
-            <span className={styles.pipelineStepTitle}>Report submitted — investigator package ready</span>
+            <span className={`${styles.pipelineBadge} ${styles.pipelineBadgeSubmit}`}>Review</span>
+            <span className={styles.pipelineStepTitle}>Editable recap, then submit</span>
           </div>
-          <p className={styles.pipelineStepBody}>The report arrives in the investigator feed pre-packaged with the full narrative, AI analysis, gap summary, matched policy excerpt, and a ranked list of remaining follow-up questions.</p>
+          <p className={styles.pipelineStepBody}>
+            The reporter confirms answers, then the full package (including extraction, gaps, follow-up text,
+            policy fields, and summary data available at submit time) is available in the Feed for authorised
+            reviewers.
+          </p>
         </div>
       </div>
 
       <p className={styles.p}>
-        The pipeline is resilient by design. If any AI step fails — due to a network interruption or an
-        unexpected model response — the form continues and the reporter can still submit. No failure silently
-        drops a report.
+        The pipeline is resilient by design: failures during AI or RAG steps surface recovery options in the
+        UI where implemented so a report is not abandoned silently.
       </p>
     </section>
   )

@@ -410,5 +410,7 @@ Defined in `backend/app/models.py` (Pydantic) and `frontend/src/types/report.ts`
 | `full_details_q1` | User input | Free-text Q1 narrative |
 | `full_details_q2_question` | Intake analysis | 1st follow-up question text (persisted for PDF) |
 | `full_details_q2` | User input | User's answer to 1st follow-up |
-| `full_details_q3_question` | Intake analysis | 2nd follow-up question text (persisted for PDF) |
-| `full_details_q3` | User input | User's answer to 2nd follow-up |
+| `full_details_gap2_question` | Intake analysis | 2nd follow-up question text when a second gap is shown (persisted for PDF) |
+| `full_details_gap2` | User input | User's answer to 2nd follow-up |
+| `full_details_q3_question` | Full Details wizard | Policy-step question text (same as `FULL_DETAILS_Q3_QUESTION`; persisted for PDF) |
+| `full_details_q3` | User input | User's answer to the policy question |

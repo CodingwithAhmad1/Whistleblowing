@@ -10,6 +10,7 @@ import { personsFromReport } from '@/types/report'
 import { REPORT_SECTIONS, REPORT_FIELDS, type FieldDef } from '@/data/reportSchema'
 import type { StoredSubmission } from '@/utils/feedStore'
 import { submissionPdfFilename } from '@/utils/feedStore'
+import { FULL_DETAILS_Q3_QUESTION } from '@/constants/policyQuestion'
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 
@@ -449,7 +450,7 @@ function appendReportFormSections(doc: jsPDF, y: number, report: ReportData): nu
         }
         y = drawQA(
           doc,
-          q3Question || 'Do you believe this policy has been violated? If Yes, to what extent?',
+          q3Question || FULL_DETAILS_Q3_QUESTION,
           q3Answer,
           y,
         )

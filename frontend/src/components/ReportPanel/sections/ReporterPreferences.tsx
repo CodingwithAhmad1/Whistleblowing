@@ -66,6 +66,8 @@ export function ReporterPreferences() {
             value={report.best_time_contact}
             onChange={(v) => updateReport({ best_time_contact: v })}
             type="textarea"
+            rows={3}
+            textareaCompact
           />
         </div>
       )}

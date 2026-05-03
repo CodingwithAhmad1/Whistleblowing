@@ -6,52 +6,60 @@ export function DocHowFormWorks(): JSX.Element {
       <hr className={styles.hr} />
       <h2 className={styles.h2}>How the form works</h2>
       <p className={styles.p}>
-        The reporting form has two parts. The first collects structured context: the nature of the incident,
-        where and when it occurred, whether there were witnesses, and the reporter's identity or anonymity
-        preference. These fields use dropdowns and short text inputs — they are quick to complete and feed
-        directly into the AI pipeline as supporting context alongside the narrative.
+        The reporting form has two parts. The first collects structured context: organization and incident
+        location, the nature of the matter, where and when it occurred, how the reporter became aware,
+        people involved, and anonymity preference. These fields feed the intake pipeline as labeled context
+        alongside the long-form narrative.
       </p>
       <p className={styles.p}>
-        The second part is the <strong>Full Details section</strong> — where ClearPath's intelligence does its
-        work. It contains three questions, each serving a distinct purpose and each built on what came before it.
+        The second part sits under <strong>Incident Details</strong>: the <strong>Full Details</strong>{' '}
+        wizard. It starts with the free-text narrative (Q1), then optional gap-driven follow-ups (up to two),
+        an automatic <strong>case summary</strong> step, <strong>policy retrieval</strong>, a fixed{' '}
+        <strong>policy question</strong> with the excerpt, and finally an editable <strong>review</strong>{' '}
+        before the overall form is submitted.
       </p>
 
       <div className={styles.stepFlow}>
         <div className={styles.stepPill}>
           <span className={styles.stepNum}>Q1</span>
-          Reporter narrative
+          Narrative
         </div>
         <span className={styles.stepArrow}>→</span>
         <div className={styles.stepPill}>
           <span className={`${styles.stepNum} ${styles.stepNumAI}`}>AI</span>
-          Gap analysis
+          Intake
         </div>
         <span className={styles.stepArrow}>→</span>
         <div className={styles.stepPill}>
-          <span className={styles.stepNum}>Q2</span>
-          Targeted follow-up
+          <span className={styles.stepNum}>0–2</span>
+          Gap Qs
         </div>
         <span className={styles.stepArrow}>→</span>
         <div className={styles.stepPill}>
           <span className={`${styles.stepNum} ${styles.stepNumAI}`}>AI</span>
-          Policy search
+          Summary
         </div>
         <span className={styles.stepArrow}>→</span>
         <div className={styles.stepPill}>
-          <span className={styles.stepNum}>Q3</span>
-          Policy question
+          <span className={`${styles.stepNum} ${styles.stepNumAI}`}>RAG</span>
+          Policy
+        </div>
+        <span className={styles.stepArrow}>→</span>
+        <div className={styles.stepPill}>
+          <span className={styles.stepNum}>PQ</span>
+          Policy Q
         </div>
         <span className={styles.stepArrow}>→</span>
         <div className={styles.stepPill}>
           <span className={`${styles.stepNum} ${styles.stepNumGreen}`}>✓</span>
-          Submitted
+          Review
         </div>
       </div>
 
       <p className={styles.p}>
-        The form is not static: it reads the reporter's narrative and responds to it. Each AI step runs in
-        the background so the reporter experiences a smooth, linear flow — they never see the analysis
-        happening.
+        Long-running steps use loading states so the flow feels linear. If intake or policy retrieval fails, the
+        reporter can fall back (for example skip and continue where the UI allows) so submissions are not
+        silently dropped.
       </p>
     </section>
   )

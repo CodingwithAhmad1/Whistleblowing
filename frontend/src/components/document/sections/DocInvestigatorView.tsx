@@ -7,55 +7,65 @@ export function DocInvestigatorView(): JSX.Element {
       <hr className={styles.hr} />
       <h2 className={styles.h2}>What investigators see</h2>
       <p className={styles.p}>
-        Investigators access ClearPath through a dedicated view — the Feed — which lists all submitted
-        reports in reverse-chronological order. Each row shows the case reference number, the date and time
-        of submission, and the reporter's name or an anonymity indicator if they chose not to disclose their
-        identity.
+        Investigators open the <strong>Feed</strong> (<code>/feed</code>), which lists submitted reports in
+        reverse-chronological order. When the FastAPI backend is running, rows are loaded from{' '}
+        <code>GET /api/submissions</code> so multiple browsers share the same queue; if the API is offline, the
+        UI falls back to local browser storage until connectivity returns.
       </p>
       <p className={styles.p}>
-        Clicking on any report opens it into a two-tab view.
+        Each row shows reference, submission time, and whether the reporter identified themselves or chose
+        anonymity. Expanding a row opens <strong>Report</strong> and <strong>Summary</strong> tabs.
       </p>
 
       <h3 className={styles.h3}>Report tab</h3>
       <p className={styles.p}>
-        A read-only display of everything the reporter submitted: all structured form fields (nature of
-        incident, location, date, witnesses, anonymity preference), the Q1 narrative, the Q2 follow-up
-        question and the reporter's response, and the Q3 policy question and response. Fields left blank or
-        questions that were skipped are clearly indicated rather than silently omitted. The layout is designed
-        for reading — clean and uncluttered, with no input boxes.
+        Read-only answers for structured sections, the Full Details narrative (
+        <code>full_details_q1</code>), up to two gap follow-up question-and-answer pairs when present, the
+        constructed case summary where stored, policy excerpt and section metadata, and the fixed policy question
+        with the reporter&apos;s reply. Skipped steps and empty fields are visible states, not silent omissions.
       </p>
 
       <h3 className={styles.h3}>Summary tab</h3>
       <p className={styles.p}>
-        The AI-generated analysis of the report, presented as a structured briefing. This includes:
+        The briefing captured at submission typically includes:
       </p>
       <ul className={styles.benefitList}>
         <li>
           <span className={styles.benefitIcon}>→</span>
-          A neutral, factual summary of the incident as described by the reporter
+          A neutral incident summary derived from the filed content
         </li>
         <li>
           <span className={styles.benefitIcon}>→</span>
-          The full gap analysis — each configured dimension (default: five), marked as present or missing
+          Gap coverage across configured dimensions (default five), with emphasis on the gaps surfaced to the
+          reporter when applicable
         </li>
         <li>
           <span className={styles.benefitIcon}>→</span>
-          The matched policy excerpt, labelled with its source section from 3M's Code of Conduct
+          Model vs form-backed <strong>extraction breakdown</strong>, when the stored submission includes it
         </li>
         <li>
           <span className={styles.benefitIcon}>→</span>
-          A prioritised list of remaining follow-up questions for the investigator to pursue if the case progresses
+          Policy excerpt and section label when RAG succeeded; otherwise an explicit &ldquo;no match&rdquo;
+          style state
+        </li>
+        <li>
+          <span className={styles.benefitIcon}>→</span>
+          Remaining investigative prompts implied by the gap list
         </li>
       </ul>
 
       <DocCallout variant="teal">
         <p>
-          <strong>For investigators:</strong> by the time a report is opened, the preparatory work is done.
-          The AI has read the report, identified what is strong and what is missing, matched the relevant
-          policy, and organised everything into a briefing. The investigator's role is to assess and act —
-          not to prepare.
+          <strong>For investigators:</strong> by the time a report is opened, much of the preparatory reading and
+          policy lookup work is already packaged. The investigator&apos;s role is to assess and act — not to
+          reconstruct the filing flow by hand.
         </p>
       </DocCallout>
+
+      <p className={styles.p}>
+        For debugging or training, <code>/analysis</code> can replay the last intake JSON stored in session
+        storage from the current browser; operational review should rely on Feed rows tied to submissions.
+      </p>
     </section>
   )
 }

@@ -8,6 +8,8 @@ interface FormFieldProps {
   type?: 'text' | 'textarea'
   helperText?: string
   rows?: number
+  /** Use compact height (no large min-height); pair with `rows` for short answers. */
+  textareaCompact?: boolean
   textareaClassName?: string
 }
 
@@ -19,9 +21,17 @@ export function FormField({
   type = 'text',
   helperText,
   rows,
+  textareaCompact,
   textareaClassName,
 }: FormFieldProps) {
   if (type === 'textarea') {
+    const textareaClass = [
+      styles.textarea,
+      textareaCompact ? styles.textareaCompact : '',
+      textareaClassName ?? '',
+    ]
+      .filter(Boolean)
+      .join(' ')
     return (
       <div className={styles.field}>
         {label ? (
@@ -33,7 +43,7 @@ export function FormField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={textareaClassName ? `${styles.textarea} ${textareaClassName}` : styles.textarea}
+          className={textareaClass}
           rows={rows ?? 4}
           aria-label={label || 'Text area'}
         />

@@ -11,7 +11,7 @@ FULL_DETAILS_Q3_POLICY_EXCERPT = (
     "exercitation ullamco laboris."
 )
 
-# Question shown below the policy excerpt for Q3
+# Question shown below the policy excerpt for Q3 (keep in sync with frontend/src/constants/policyQuestion.ts)
 FULL_DETAILS_Q3_QUESTION = "How well does this policy excerpt describe your experience?"
 
 # Q2: default prompt (10-word question). Placeholders: {context}, {word_limit}

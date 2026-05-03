@@ -18,6 +18,7 @@ export function BackendStatusToast() {
 
   const isReady = status === 'ready'
   const isUnavailable = status === 'unavailable'
+  const isDegraded = status === 'degraded'
 
   return (
     <div style={{
@@ -30,11 +31,11 @@ export function BackendStatusToast() {
       gap: '10px',
       padding: '12px 20px',
       borderRadius: '10px',
-      background: isUnavailable ? '#fef2f2' : isReady ? '#f0fdf4' : '#f8fafc',
-      border: `1px solid ${isUnavailable ? '#fca5a5' : isReady ? '#86efac' : '#e2e8f0'}`,
+      background: isUnavailable ? '#fef2f2' : isDegraded ? '#fffbeb' : isReady ? '#f0fdf4' : '#f8fafc',
+      border: `1px solid ${isUnavailable ? '#fca5a5' : isDegraded ? '#fcd34d' : isReady ? '#86efac' : '#e2e8f0'}`,
       boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
       fontSize: '14px',
-      color: isUnavailable ? '#991b1b' : isReady ? '#166534' : '#334155',
+      color: isUnavailable ? '#991b1b' : isDegraded ? '#92400e' : isReady ? '#166534' : '#334155',
       fontFamily: 'system-ui, sans-serif',
       transition: 'opacity 0.3s ease',
       opacity: visible ? 1 : 0,
@@ -42,13 +43,25 @@ export function BackendStatusToast() {
       {status === 'checking' && (
         <>
           <Spinner />
-          <span>Backend starting up...</span>
+          <span>Connecting to backend...</span>
+        </>
+      )}
+      {status === 'warming' && (
+        <>
+          <Spinner />
+          <span>Starting AI services...</span>
         </>
       )}
       {status === 'ready' && (
         <>
           <span style={{ fontSize: '16px' }}>&#10003;</span>
           <span>Backend ready</span>
+        </>
+      )}
+      {status === 'degraded' && (
+        <>
+          <span style={{ fontSize: '16px' }}>&#9888;</span>
+          <span>AI services did not become ready in time. Check API keys or try again.</span>
         </>
       )}
       {status === 'unavailable' && (

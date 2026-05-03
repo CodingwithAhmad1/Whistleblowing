@@ -55,3 +55,8 @@
   resize: vertical;
   min-height: 180px;
 }
+
+/* Overrides min-height so HTML `rows` controls short fields (e.g. best time to call). */
+.textarea.textareaCompact {
+  min-height: unset;
+}

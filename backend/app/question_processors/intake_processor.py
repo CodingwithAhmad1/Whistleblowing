@@ -1,15 +1,19 @@
 """
 Deterministic AI intake workflow – 3-layer pipeline for Full Details Q1 analysis.
 
-Layer 1: LLM extracts structured JSON from Q1 narrative.
+Layer 1: LLM extracts structured JSON from labeled form sections (two passes:
+        strict literal-evidence fields + inference narrative-judgement booleans).
 Layer 2: Deterministic gap analysis using Layer 1 JSON and gap configs (no LLM).
 Layer 3: Template-based question generation.
 """
 
+from __future__ import annotations
+
+import asyncio
 import json
 import logging
 import re
-from typing import Any, TypedDict
+from typing import Any, Callable, TypedDict
 
 from ..config import settings
 from ..llm import get_provider, collect_stream
@@ -36,7 +40,7 @@ class Layer1Result(TypedDict):
     retaliation_mentioned: bool
     allegation_type: list[str]
     length_character_count: int
-    _used_defaults: bool  # True if LLM parse failed and safe defaults were used
+    _used_defaults: bool  # True only if BOTH Layer-1 passes failed to parse
 
 
 class FollowUpQuestion(TypedDict):
@@ -51,9 +55,297 @@ class IntakeResult(TypedDict):
     extraction_breakdown: dict[str, Any]
 
 
-# ── Layer 1 – Structured Extraction ───────────────────────────────────────────
+# Ordered section headers emitted by _build_layer1_sections (prompts + tests rely on this).
+LAYER1_SECTION_ORDER = (
+    "NARRATIVE",
+    "CHRONOLOGY",
+    "SEQUENCE",
+    "EVIDENCE_DESCRIPTION",
+    "FOLLOW_UP_1",
+    "FOLLOW_UP_2",
+    "CONCEALMENT",
+    "HOW_AWARE",
+    "STRUCTURED",
+)
 
-_LAYER1_SCHEMA = """{
+
+# ── Layer 1 – Labeled sections input ──────────────────────────────────────────
+
+
+def _strip_val(val: Any) -> str:
+    if val is None:
+        return ""
+    if not isinstance(val, str):
+        return str(val).strip()
+    return val.strip()
+
+
+def _build_layer1_sections(q1_text: str, form_data: dict | None) -> str:
+    """Build labeled per-field blocks for Layer 1 (strict + inference passes).
+
+    Empty sections are omitted. Order matches LAYER1_SECTION_ORDER.
+    """
+    blocks: list[str] = []
+    narrative = _strip_val(q1_text)
+    if narrative:
+        blocks.append("[NARRATIVE]\n" + narrative)
+
+    fd = form_data or {}
+
+    chron = _strip_val(fd.get("general_nature"))
+    if chron:
+        blocks.append("[CHRONOLOGY]\n" + chron)
+
+    seq = _strip_val(fd.get("sequence_of_events"))
+    if seq:
+        blocks.append("[SEQUENCE]\n" + seq)
+
+    ev = _strip_val(fd.get("evidence_description"))
+    if ev:
+        blocks.append("[EVIDENCE_DESCRIPTION]\n" + ev)
+
+    fq1 = _strip_val(fd.get("full_details_q2"))
+    if fq1:
+        blocks.append("[FOLLOW_UP_1]\n" + fq1)
+
+    fq2 = _strip_val(fd.get("full_details_gap2"))
+    if fq2:
+        blocks.append("[FOLLOW_UP_2]\n" + fq2)
+
+    conceal = _strip_val(fd.get("persons_concealing"))
+    if conceal:
+        blocks.append("[CONCEALMENT]\n" + conceal)
+
+    how = _strip_val(fd.get("how_aware"))
+    how_other = _strip_val(fd.get("how_aware_other"))
+    how_parts = [p for p in (how, how_other) if p]
+    if how_parts:
+        blocks.append("[HOW_AWARE]\n" + "\n".join(how_parts))
+
+    struct_lines: list[str] = []
+    structured_pairs: list[tuple[str, str]] = [
+        ("when_occurred", "When"),
+        ("where_occurred", "Where"),
+        ("duration", "Duration"),
+        ("country", "Country"),
+        ("incident_location", "Incident location"),
+        ("organization_tier", "Organization tier"),
+        ("supervisor_involved", "Supervisor involved"),
+        ("supervisor_who", "Supervisor who"),
+        ("management_aware", "Management aware"),
+        ("has_supporting_materials", "Supporting materials"),
+        ("wish_anonymous", "Wish anonymous"),
+    ]
+    for key, label in structured_pairs:
+        v = _strip_val(fd.get(key))
+        if v:
+            struct_lines.append(f"- {label}: {v}")
+
+    for i in range(1, 11):
+        first = _strip_val(fd.get(f"person_{i}_first"))
+        last = _strip_val(fd.get(f"person_{i}_last"))
+        title = _strip_val(fd.get(f"person_{i}_title"))
+        if not first and not last and not title:
+            continue
+        name = f"{first} {last}".strip()
+        line = f"- Person {i}: {name}" if name else f"- Person {i}:"
+        if title:
+            line += f", {title}" if name else f" {title}"
+        struct_lines.append(line)
+
+    if struct_lines:
+        blocks.append("[STRUCTURED]\n" + "\n".join(struct_lines))
+
+    return "\n\n".join(blocks)
+
+
+# ── Layer 1 – Two-pass prompts (no .format() on user text — brace-safe) ───────
+
+_LAYER1_STRICT_SCHEMA = """{
+  "summary": "Neutral 2-4 sentence summary using only NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_1, FOLLOW_UP_2",
+  "dates_mentioned": ["explicit calendar references only — scan NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*, STRUCTURED When"],
+  "people_mentioned": ["explicitly named individuals — scan NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*, CONCEALMENT, STRUCTURED Supervisor who / Person rows"],
+  "locations_mentioned": ["explicit place names — scan NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*, STRUCTURED Where / Incident location / Country"],
+  "evidence_described": false,
+  "allegation_type": ["category labels only when clearly stated — scan NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*"]
+}"""
+
+_LAYER1_STRICT_PROMPT_HEAD = """You are a structured extractor (PASS 1 — STRICT).
+
+Use ONLY the labeled sections below. Each section starts with [SECTION_NAME].
+
+Rules:
+- summary: Neutral 2-4 sentences from NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_1, FOLLOW_UP_2 only.
+- dates_mentioned: Literal dates/time phrases written in text (include STRUCTURED When if it adds a date). Do not invent dates.
+- people_mentioned: Only individuals explicitly named (not pronouns alone). Include STRUCTURED person rows and Supervisor who when names appear there.
+- locations_mentioned: Explicit places only. Include STRUCTURED Where, Incident location, Country when present.
+- evidence_described: true if the reporter clearly references concrete evidence — documents, files, emails, screenshots, photos, recordings, logs, spreadsheets, links, or similar — in EVIDENCE_DESCRIPTION, NARRATIVE, FOLLOW_UP_*, or STRUCTURED Supporting materials=yes with supporting detail in text. Obvious phrasing counts (e.g. "the spreadsheet I downloaded"); vague "I have proof" without any artifact type stays false.
+- allegation_type: Short labels only when the text clearly states the nature (e.g. fraud, harassment). Do not invent.
+
+Output ONLY valid JSON matching this schema (no markdown, no commentary):
+""" + _LAYER1_STRICT_SCHEMA + """
+
+Labeled input:
+"""
+
+_LAYER1_STRICT_PROMPT_TAIL = """
+
+JSON output:"""
+
+_STRICT_RETRY_HINT = (
+    "\n\nYour previous reply was not valid JSON. Output ONLY one JSON object matching "
+    "the schema above, with no markdown or other text.\nJSON output:"
+)
+
+_LAYER1_INFERENCE_SCHEMA = """{
+  "specific_examples_present": false,
+  "witnesses_mentioned": false,
+  "impact_described": false,
+  "retaliation_mentioned": false,
+  "prior_reporting_mentioned": false,
+  "timeline_clear": false
+}"""
+
+_LAYER1_INFERENCE_PROMPT_HEAD = """You are a structured extractor (PASS 2 — REASONABLE INFERENCE).
+
+Use ONLY the labeled sections below. Each section starts with [SECTION_NAME].
+
+Set each boolean true when reasonably supported by the text (clear implication counts). When unsure, false.
+
+Rules (each lists which sections matter):
+- specific_examples_present: true if at least one concrete situation is described (who/what/when/where style detail). Sections: NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*, STRUCTURED When/Where.
+  Example true: "On Tuesday in Lab 2 they altered the results." Example false: only vague unease with no instance.
+- witnesses_mentioned: true if anyone besides the reporter and the main wrongdoer could observe, corroborate, or was told — colleagues, bystanders, another department, "someone else saw", HOW_AWARE=told_by_coworker, etc. Sections: NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*, CONCEALMENT, HOW_AWARE.
+  Not enough: only the reporter and one accused party with no third party.
+- impact_described: true if harm or consequences are stated or clearly implied — financial loss, safety risk, stress/time off, morale, customers/public affected, etc. Sections: NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*.
+  Example true: "people lost savings." False: wrongdoing stated with no hint of effect on anyone.
+- retaliation_mentioned: true for retaliation, threats, intimidation, punishment for speaking up, fear of reprisal, chilling effect. Sections: NARRATIVE, FOLLOW_UP_*, STRUCTURED Wish anonymous combined with fear/reprisal language (anonymity alone is NOT enough).
+- prior_reporting_mentioned: true if they say they already raised this (manager, HR, hotline, compliance, lawyer, etc.). Sections: NARRATIVE, CHRONOLOGY, SEQUENCE, FOLLOW_UP_*, HOW_AWARE, STRUCTURED Management aware (yes implies awareness — treat as prior organizational exposure only if the narrative supports raising/reporting, not merely that management knows abstractly).
+- timeline_clear: true if event order or timing can be reconstructed (sequence words, dates, or STRUCTURED When + Duration). Sections: NARRATIVE, CHRONOLOGY, SEQUENCE, STRUCTURED When, Duration.
+
+Output ONLY valid JSON matching this schema (no markdown, no commentary):
+""" + _LAYER1_INFERENCE_SCHEMA + """
+
+Labeled input:
+"""
+
+_LAYER1_INFERENCE_PROMPT_TAIL = """
+
+JSON output:"""
+
+_INFERENCE_RETRY_HINT = (
+    "\n\nYour previous reply was not valid JSON. Output ONLY one JSON object matching "
+    "the schema above, with no markdown or other text.\nJSON output:"
+)
+
+
+def _extract_json_dict(raw: str) -> dict[str, Any] | None:
+    match = re.search(r"\{[\s\S]*\}", raw)
+    if not match:
+        return None
+    try:
+        data = json.loads(match.group())
+        return data if isinstance(data, dict) else None
+    except json.JSONDecodeError:
+        return None
+
+
+def _as_str_list(v: Any) -> list[str]:
+    if not isinstance(v, list):
+        return []
+    return [str(x) for x in v if x]
+
+
+def _default_strict_partial() -> dict[str, Any]:
+    return {
+        "summary": "",
+        "dates_mentioned": [],
+        "people_mentioned": [],
+        "locations_mentioned": [],
+        "evidence_described": False,
+        "allegation_type": [],
+    }
+
+
+def _default_inference_partial() -> dict[str, Any]:
+    return {
+        "specific_examples_present": False,
+        "witnesses_mentioned": False,
+        "impact_described": False,
+        "retaliation_mentioned": False,
+        "prior_reporting_mentioned": False,
+        "timeline_clear": False,
+    }
+
+
+def _normalize_strict_partial(data: dict[str, Any]) -> dict[str, Any]:
+    d = _default_strict_partial()
+    d["summary"] = str(data.get("summary", "")).strip()
+    d["dates_mentioned"] = _as_str_list(data.get("dates_mentioned"))
+    d["people_mentioned"] = _as_str_list(data.get("people_mentioned"))
+    d["locations_mentioned"] = _as_str_list(data.get("locations_mentioned"))
+    d["evidence_described"] = bool(data.get("evidence_described", False))
+    d["allegation_type"] = _as_str_list(data.get("allegation_type"))
+    return d
+
+
+def _normalize_inference_partial(data: dict[str, Any]) -> dict[str, Any]:
+    d = _default_inference_partial()
+    d["specific_examples_present"] = bool(data.get("specific_examples_present", False))
+    d["witnesses_mentioned"] = bool(data.get("witnesses_mentioned", False))
+    d["impact_described"] = bool(data.get("impact_described", False))
+    d["retaliation_mentioned"] = bool(data.get("retaliation_mentioned", False))
+    d["prior_reporting_mentioned"] = bool(data.get("prior_reporting_mentioned", False))
+    d["timeline_clear"] = bool(data.get("timeline_clear", False))
+    return d
+
+
+def _try_strict_pass(raw: str) -> tuple[bool, dict[str, Any]]:
+    data = _extract_json_dict(raw)
+    if data is None:
+        logger.warning("Layer 1 strict pass: invalid JSON")
+        return False, _default_strict_partial()
+    return True, _normalize_strict_partial(data)
+
+
+def _try_inference_pass(raw: str) -> tuple[bool, dict[str, Any]]:
+    data = _extract_json_dict(raw)
+    if data is None:
+        logger.warning("Layer 1 inference pass: invalid JSON")
+        return False, _default_inference_partial()
+    return True, _normalize_inference_partial(data)
+
+
+def _merge_layer1_passes(
+    strict_ok: bool,
+    inference_ok: bool,
+    strict_part: dict[str, Any],
+    inference_part: dict[str, Any],
+    measure_len: int,
+) -> Layer1Result:
+    """Combine strict + inference partials. _used_defaults only when both passes failed."""
+    return Layer1Result(
+        summary=strict_part["summary"],
+        dates_mentioned=list(strict_part["dates_mentioned"]),
+        people_mentioned=list(strict_part["people_mentioned"]),
+        locations_mentioned=list(strict_part["locations_mentioned"]),
+        specific_examples_present=inference_part["specific_examples_present"],
+        evidence_described=strict_part["evidence_described"],
+        timeline_clear=inference_part["timeline_clear"],
+        witnesses_mentioned=inference_part["witnesses_mentioned"],
+        prior_reporting_mentioned=inference_part["prior_reporting_mentioned"],
+        impact_described=inference_part["impact_described"],
+        retaliation_mentioned=inference_part["retaliation_mentioned"],
+        allegation_type=list(strict_part["allegation_type"]),
+        length_character_count=measure_len,
+        _used_defaults=(not strict_ok) and (not inference_ok),
+    )
+
+
+# Legacy single-shot schema / helpers (manual test script + older JSON fixtures)
+
+
+_LAYER1_FULL_SCHEMA = """{
   "summary": "Neutral 2-4 sentence summary of the narrative",
   "dates_mentioned": ["only explicit dates written in the text"],
   "people_mentioned": ["only explicitly named individuals"],
@@ -69,7 +361,7 @@ _LAYER1_SCHEMA = """{
   "length_character_count": 0
 }"""
 
-_LAYER1_PROMPT_TEMPLATE = """You are a structured data extractor. Extract information ONLY from the text below.
+_LAYER1_LEGACY_PROMPT_TEMPLATE = """You are a structured data extractor. Extract information ONLY from the text below.
 Do NOT infer, assume, or add anything not explicitly written.
 
 Rules (each boolean flips to true ONLY when the text EXPLICITLY addresses the topic; never infer):
@@ -87,20 +379,19 @@ Rules (each boolean flips to true ONLY when the text EXPLICITLY addresses the to
 - length_character_count: exact character count of the input text
 
 Output ONLY valid JSON matching this exact schema. No other text:
-{schema}
+""" + _LAYER1_FULL_SCHEMA + """
 
 Input text:
 {q1_text}
 {form_context}
 JSON output:"""
 
-_LAYER1_RETRY_HINT = (
+_LAYER1_LEGACY_RETRY_HINT = (
     "\n\nYour previous reply was not valid JSON. Output ONLY one JSON object matching "
     "the schema above, with no markdown or other text.\nJSON output:"
 )
 
-# Fields from the form that provide useful context for extraction
-_CONTEXT_FIELDS: list[tuple[str, str]] = [
+_CONTEXT_FIELDS_FOR_LEGACY: list[tuple[str, str]] = [
     ("general_nature", "General nature of the issue"),
     ("where_occurred", "Where the incident occurred"),
     ("when_occurred", "When the incident occurred"),
@@ -114,148 +405,128 @@ _CONTEXT_FIELDS: list[tuple[str, str]] = [
 ]
 
 
-def _build_form_context(form_data: dict | None) -> str:
-    """Build additional context from form fields for Layer 1 prompt."""
+def _build_legacy_form_context(form_data: dict | None) -> str:
     if not form_data:
         return ""
     lines: list[str] = []
-    for key, label in _CONTEXT_FIELDS:
+    for key, label in _CONTEXT_FIELDS_FOR_LEGACY:
         val = form_data.get(key, "")
         if val and isinstance(val, str) and val.strip():
             lines.append(f"- {label}: {val.strip()}")
     if not lines:
         return ""
-    return "\nAdditional context from form fields (use only to disambiguate, not as primary source):\n" + "\n".join(lines) + "\n"
-
-
-def _build_layer1_prompt(q1_text: str, form_data: dict | None = None) -> str:
-    form_context = _build_form_context(form_data)
-    return _LAYER1_PROMPT_TEMPLATE.format(
-        schema=_LAYER1_SCHEMA, q1_text=q1_text, form_context=form_context
+    return (
+        "\nAdditional context from form fields (use only to disambiguate, "
+        "not as primary source):\n" + "\n".join(lines) + "\n"
     )
 
 
-def _parse_layer1_json(raw: str, q1_text: str) -> Layer1Result:
-    """Extract Layer 1 JSON from LLM response, with safe defaults on parse failure."""
-    # Try to find first {...} block
-    match = re.search(r"\{[\s\S]*\}", raw)
-    if match:
-        try:
-            data = json.loads(match.group())
-            if isinstance(data, dict):
-                return _normalize_layer1(data, q1_text)
-        except json.JSONDecodeError:
-            logger.warning("Layer 1 JSON parse failed; using safe defaults")
-
-    logger.warning("Layer 1: no valid JSON found in response, using safe defaults")
-    return _safe_layer1_defaults(q1_text)
+def _build_layer1_prompt_legacy(q1_text: str, form_data: dict | None = None) -> str:
+    """Legacy single-pass prompt (manual tests only; production uses two-pass + sections)."""
+    form_context = _build_legacy_form_context(form_data)
+    return _LAYER1_LEGACY_PROMPT_TEMPLATE.format(q1_text=q1_text, form_context=form_context)
 
 
-def _normalize_layer1(data: dict, q1_text: str) -> Layer1Result:
-    """Normalize and validate Layer 1 JSON, filling missing keys with safe defaults."""
-    def as_str_list(v: Any) -> list[str]:
-        if not isinstance(v, list):
-            return []
-        return [str(x) for x in v if x]
+def _normalize_layer1(data: dict, measure_text: str) -> Layer1Result:
+    """Normalize full legacy Layer 1 JSON (used by test_intake.py).
 
-    return Layer1Result(
-        summary=str(data.get("summary", "")).strip(),
-        dates_mentioned=as_str_list(data.get("dates_mentioned")),
-        people_mentioned=as_str_list(data.get("people_mentioned")),
-        locations_mentioned=as_str_list(data.get("locations_mentioned")),
-        specific_examples_present=bool(data.get("specific_examples_present", False)),
-        evidence_described=bool(data.get("evidence_described", False)),
-        timeline_clear=bool(data.get("timeline_clear", False)),
-        witnesses_mentioned=bool(data.get("witnesses_mentioned", False)),
-        prior_reporting_mentioned=bool(data.get("prior_reporting_mentioned", False)),
-        impact_described=bool(data.get("impact_described", False)),
-        retaliation_mentioned=bool(data.get("retaliation_mentioned", False)),
-        allegation_type=as_str_list(data.get("allegation_type")),
-        length_character_count=len(q1_text),  # always use actual length, never trust LLM
-        _used_defaults=False,
-    )
-
-
-def _safe_layer1_defaults(q1_text: str) -> Layer1Result:
-    return Layer1Result(
-        summary="",
-        dates_mentioned=[],
-        people_mentioned=[],
-        locations_mentioned=[],
-        specific_examples_present=False,
-        evidence_described=False,
-        timeline_clear=False,
-        witnesses_mentioned=False,
-        prior_reporting_mentioned=False,
-        impact_described=False,
-        retaliation_mentioned=False,
-        allegation_type=[],
-        length_character_count=len(q1_text),
-        _used_defaults=True,
-    )
-
-
-def _build_narrative_input(q1_text: str, form_data: dict | None) -> str:
-    """Concatenate primary and follow-up narrative segments into one Layer-1 input.
-
-    Order: primary ``q1_text`` (usually from ``full_details_q1`` or stitched basics),
-    then answers to AI follow-up questions, then ``sequence_of_events`` and
-    ``evidence_description``. Layer 1 and gap checks use this single combined text
-    so reporters are not penalised for answering in separate fields.
+    Reads strict-slot keys via _normalize_strict_partial and judgement booleans
+    via _normalize_inference_partial so single-shot responses remain complete.
     """
-    parts: list[str] = []
-    q1_text = (q1_text or "").strip()
-    if q1_text:
-        parts.append(q1_text)
-    if form_data:
-        for key, label in (
-            ("full_details_q2", "Follow-up answer (AI question 1)"),
-            ("full_details_gap2", "Follow-up answer (AI question 2)"),
-            ("sequence_of_events", "Sequence of events"),
-            ("evidence_description", "Evidence described"),
-        ):
-            val = form_data.get(key, "")
-            if val and isinstance(val, str) and val.strip():
-                parts.append(f"{label}: {val.strip()}")
-    return "\n\n".join(parts)
+    strict_like = _normalize_strict_partial(data)
+    inf_like = _normalize_inference_partial(data)
+    return _merge_layer1_passes(True, True, strict_like, inf_like, len(measure_text))
+
+
+def _safe_layer1_defaults(measure_text: str) -> Layer1Result:
+    return _merge_layer1_passes(
+        False,
+        False,
+        _default_strict_partial(),
+        _default_inference_partial(),
+        len(measure_text),
+    )
+
+
+def _parse_layer1_json(raw: str, measure_text: str) -> Layer1Result:
+    """Parse legacy combined JSON (manual tests)."""
+    data = _extract_json_dict(raw)
+    if data is None:
+        logger.warning("Layer 1: no valid JSON found in response, using safe defaults")
+        return _safe_layer1_defaults(measure_text)
+    return _normalize_layer1(data, measure_text)
+
+
+async def _run_layer1_pass_with_retry(
+    provider: Any,
+    prompt: str,
+    retry_hint: str,
+    try_pass: Callable[[str], tuple[bool, dict[str, Any]]],
+) -> tuple[bool, dict[str, Any]]:
+    raw = await collect_stream(
+        provider,
+        prompt,
+        max_tokens=512,
+        temperature=settings.INTAKE_TEMPERATURE,
+    )
+    ok, part = try_pass(raw)
+    if ok:
+        return ok, part
+    raw_retry = await collect_stream(
+        provider,
+        prompt + retry_hint,
+        max_tokens=512,
+        temperature=settings.INTAKE_TEMPERATURE,
+    )
+    ok2, part2 = try_pass(raw_retry)
+    return ok2, part2
 
 
 class IntakeLayer1:
-    """Layer 1: LLM extracts structured JSON from the combined narrative."""
+    """Layer 1: two concurrent LLM passes over labeled sections."""
 
     async def extract(self, q1_text: str, form_data: dict | None = None) -> Layer1Result:
-        """Run Layer 1 extraction. Returns normalized Layer1Result.
-
-        The narrative input is the concatenation of full_details_q1,
-        sequence_of_events, and evidence_description (when present) so gap
-        detection sees everything the reporter wrote. Additional form fields
-        are passed as context to help disambiguate.
-        """
-        narrative = _build_narrative_input(q1_text, form_data)
-        if not narrative:
+        """Run strict + inference extraction. Returns normalized Layer1Result."""
+        sections = _build_layer1_sections(q1_text, form_data)
+        if not sections.strip():
             raise ValueError("Narrative is empty; cannot run intake analysis")
 
-        prompt = _build_layer1_prompt(narrative, form_data)
-        provider = get_provider()
-        raw = await collect_stream(
-            provider,
-            prompt,
-            max_tokens=512,
-            temperature=settings.INTAKE_TEMPERATURE,
+        measure_len = len(sections)
+        strict_prompt = _LAYER1_STRICT_PROMPT_HEAD + sections + _LAYER1_STRICT_PROMPT_TAIL
+        inference_prompt = (
+            _LAYER1_INFERENCE_PROMPT_HEAD + sections + _LAYER1_INFERENCE_PROMPT_TAIL
         )
-        result = _parse_layer1_json(raw, narrative)
-        if result.get("_used_defaults"):
-            raw_retry = await collect_stream(
-                provider,
-                prompt + _LAYER1_RETRY_HINT,
-                max_tokens=512,
-                temperature=settings.INTAKE_TEMPERATURE,
+
+        provider = get_provider()
+        strict_task = _run_layer1_pass_with_retry(
+            provider, strict_prompt, _STRICT_RETRY_HINT, _try_strict_pass
+        )
+        inference_task = _run_layer1_pass_with_retry(
+            provider, inference_prompt, _INFERENCE_RETRY_HINT, _try_inference_pass
+        )
+
+        (strict_ok, strict_part), (inference_ok, inference_part) = await asyncio.gather(
+            strict_task,
+            inference_task,
+        )
+
+        if not strict_ok:
+            logger.warning("Layer 1 strict pass failed after retry; using strict defaults")
+        if not inference_ok:
+            logger.warning("Layer 1 inference pass failed after retry; using inference defaults")
+
+        result = _merge_layer1_passes(
+            strict_ok, inference_ok, strict_part, inference_part, measure_len
+        )
+        if result["_used_defaults"]:
+            logger.warning(
+                "Layer 1 both passes failed JSON parse; merged result uses full defaults"
             )
-            result = _parse_layer1_json(raw_retry, narrative)
         return result
 
 
 # ── Layer 2 – Deterministic Gap Analysis ─────────────────────────────────────
+
 
 def _evaluate_gap(gap: dict, layer1: Layer1Result) -> bool:
     """Evaluate a single gap criteria against Layer 1 JSON. Returns True if gap is present."""
@@ -264,7 +535,6 @@ def _evaluate_gap(gap: dict, layer1: Layer1Result) -> bool:
     field = criteria.get("field")
 
     if ctype == "boolean_false":
-        # Gap present when the boolean field is False
         return not bool(layer1.get(field, False))
 
     if ctype == "empty_array":
@@ -282,30 +552,20 @@ def _evaluate_gap(gap: dict, layer1: Layer1Result) -> bool:
     return False
 
 
-# Maps form_data keys to gap IDs they make redundant.
-# If the form field has a non-empty value, the corresponding gap is suppressed
-# because the user already provided that information outside the narrative.
-# Most gaps are evaluated on the combined narrative; this table covers cases where
-# a structured field alone clearly signals the same theme (see also
-# _conditional_gap_suppression).
 _FORM_FIELD_GAP_SUPPRESSION: dict[str, str] = {}
 
 
 def _conditional_gap_suppression(form_data: dict) -> set[str]:
-    """Suppress gaps when structured answers plausibly cover the same information."""
     s: set[str] = set()
     if (form_data.get("management_aware") or "").strip().lower() == "yes":
         s.add("no_prior_reporting")
     seq = (form_data.get("sequence_of_events") or "").strip()
     if len(seq) >= 60:
-        # A substantive sequence in the standardised "sequence of events" field
-        # supplies concrete order/detail even if the extraction flag is still off.
         s.add("no_specific_example")
     return s
 
 
 def _suppressed_gaps(form_data: dict | None) -> set[str]:
-    """Return set of gap IDs that should be suppressed based on form field values."""
     if not form_data:
         return set()
     suppressed: set[str] = set()
@@ -326,21 +586,13 @@ class IntakeLayer2:
         gaps: list[dict] | None = None,
         form_data: dict | None = None,
     ) -> list[str]:
-        """
-        Evaluate active gaps against Layer 1 JSON.
-        Returns list of up to 2 gap ids (highest-priority matches).
-
-        If form_data is provided, gaps already answered by form fields are suppressed
-        to avoid asking the user for information they already provided.
-
-        If Layer 1 used safe defaults (LLM parse failure), returns empty list
-        instead of evaluating meaningless default values.
-        """
         if gaps is None:
             gaps = get_intake_gaps()
 
         if layer1.get("_used_defaults", False):
-            logger.warning("Layer 1 used safe defaults (LLM parse failure); skipping gap evaluation")
+            logger.warning(
+                "Layer 1 used safe defaults (both passes failed); skipping gap evaluation"
+            )
             return []
 
         suppressed = _suppressed_gaps(form_data)
@@ -359,8 +611,6 @@ class IntakeLayer2:
         return identified
 
 
-# ── Layer 3 – Template-based Question Generation ──────────────────────────────
-
 class IntakeLayer3:
     """Layer 3: Template-based question generation."""
 
@@ -369,10 +619,6 @@ class IntakeLayer3:
         identified_gaps: list[str],
         gaps: list[dict] | None = None,
     ) -> list[FollowUpQuestion]:
-        """
-        Generate follow-up question from the top gap template.
-        Returns list of FollowUpQuestion dicts.
-        """
         if gaps is None:
             gaps = get_intake_gaps()
 
@@ -391,8 +637,6 @@ class IntakeLayer3:
         return questions
 
 
-# ── Orchestrator ──────────────────────────────────────────────────────────────
-
 class IntakeProcessor:
     """Orchestrates the full 3-layer intake pipeline."""
 
@@ -402,11 +646,6 @@ class IntakeProcessor:
         self._layer3 = IntakeLayer3()
 
     async def process(self, q1_text: str, form_data: dict | None = None) -> IntakeResult:
-        """Run full 3-layer pipeline on Q1 text. Returns combined IntakeResult.
-
-        If form_data is provided, additional form fields are passed to Layer 1
-        to enrich the extraction context.
-        """
         gaps = get_intake_gaps()
 
         layer1_raw = await self._layer1.extract(q1_text, form_data)
@@ -423,3 +662,8 @@ class IntakeProcessor:
             follow_up_questions=follow_up_questions,
             extraction_breakdown=extraction_breakdown,
         )
+
+
+# Backwards-compatible names for scripts/tests
+_build_layer1_prompt = _build_layer1_prompt_legacy
+_LAYER1_RETRY_HINT = _LAYER1_LEGACY_RETRY_HINT

@@ -10,10 +10,10 @@ Each gap defines:
 - template: standard question text (max 300 characters; calm, professional wording
   for stressed reporters while still inviting concrete detail when they can share it)
 
-Layer 1 evaluates its booleans across the combined narrative
-(full_details_q1 + sequence_of_events + evidence_description), so these
-gaps fire only when the reporter has not addressed the topic in ANY of
-the three standardised narrative answers.
+Layer 1 evaluates its booleans across labeled intake sections built from the report
+(full narrative field plus chronology, sequence, evidence, AI follow-ups, concealment,
+how-aware, and structured metadata). Gap configs merge model output with deterministic
+form augmentation before Layer 2 runs.
 """
 
 DEFAULT_INTAKE_GAPS: list[dict] = [
