@@ -1,0 +1,474 @@
+/* Activity tab — Component C reviewer surface. Reuses the design tokens and
+   visual language of AdminPage / SummaryView (.policyQuote, .gapCard, badges). */
+
+.loadingText {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-24) 0;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-24);
+  margin-bottom: var(--space-16);
+}
+
+.sectionTitle {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin: 0 0 var(--space-8);
+}
+
+.sectionDesc {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0;
+}
+
+.analyzeBtn {
+  flex-shrink: 0;
+  padding: var(--space-8) var(--space-16);
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.analyzeBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  color: #b91c1c;
+  font-size: var(--text-sm);
+  margin: var(--space-8) 0;
+}
+
+.retryBtn {
+  background: none;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.analyzeSummary {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: var(--space-8) var(--space-12);
+  margin: var(--space-8) 0 0;
+}
+
+/* ── Metrics strip (standing figures, spec C3) ───────────────────────────── */
+
+.metricsStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+  margin: var(--space-24) 0;
+}
+
+.metricTile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  min-width: 120px;
+  max-width: 240px;
+}
+
+.metricValue {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.metricLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+/* ── Cluster gate config ─────────────────────────────────────────────────── */
+
+.configRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  padding: var(--space-12) var(--space-16);
+  border: 1px dashed var(--color-border);
+  border-radius: 10px;
+  margin-bottom: var(--space-24);
+  font-size: var(--text-sm);
+}
+
+.configLabel {
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.configField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--color-text-muted);
+}
+
+.configField input {
+  width: 80px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+
+.configSaveBtn {
+  padding: 4px 14px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.configSaveBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Proposal cards ──────────────────────────────────────────────────────── */
+
+.cardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  margin-bottom: var(--space-32);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: var(--space-16) var(--space-24);
+  background: var(--color-surface);
+}
+
+.noticeCard {
+  border-style: dashed;
+  background: var(--color-surface-muted);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.statusBadge {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.statusPending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusAccepted {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.statusModified {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.statusRejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.kindLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.proposalId {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: ui-monospace, monospace;
+}
+
+.evidenceLine {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.noticeText {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  line-height: 1.6;
+  margin: 0 0 var(--space-8);
+}
+
+/* Anchor vs revision, side by side (stacks when narrow) */
+
+.diffColumns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-16);
+  margin-bottom: var(--space-12);
+}
+
+.diffColTitle {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-8);
+}
+
+.anchorQuote,
+.proposedQuote {
+  margin: 0;
+  padding: var(--space-12) var(--space-16);
+  border-left: 3px solid var(--color-border);
+  background: var(--color-surface-muted);
+  border-radius: 0 8px 8px 0;
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.proposedQuote {
+  border-left-color: var(--color-accent);
+}
+
+.markDeleted {
+  background: #fee2e2;
+  color: #991b1b;
+  text-decoration: line-through;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.markInserted {
+  background: #dcfce7;
+  color: #166534;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.citation {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin: var(--space-8) 0 0;
+  font-style: italic;
+}
+
+/* Model-authored text: always visually separate + labeled */
+
+.rationale {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--color-text-muted);
+  border-left: 3px dotted var(--color-border);
+  padding-left: var(--space-12);
+  margin: var(--space-12) 0;
+}
+
+.aiLabel {
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.provenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-16);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+.decisionLog {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  border-radius: 8px;
+  padding: var(--space-8) var(--space-12);
+  margin: var(--space-12) 0 0;
+}
+
+/* ── Actions (accept / modify / two-click reject à la GapConfigSection) ──── */
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+.acceptBtn {
+  padding: 6px 16px;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.modifyBtn,
+.cancelBtn {
+  padding: 6px 16px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rejectBtn {
+  padding: 6px 16px;
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 8px;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rejectConfirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.rejectReasonInput {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  min-width: 240px;
+}
+
+.rejectBtnConfirm {
+  padding: 6px 16px;
+  background: #b91c1c;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.rejectBtnConfirm:disabled,
+.acceptBtn:disabled,
+.modifyBtn:disabled,
+.rejectBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.modifyArea {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+}
+
+.modifyTextarea {
+  width: 100%;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.noticesTitle {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-12);
+}
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.emptyState {
+  text-align: center;
+  padding: var(--space-48, 48px) var(--space-24);
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+}
+
+.emptyStateText {
+  font-size: var(--text-base);
+  font-weight: 600;
+  margin: 0 0 var(--space-8);
+}
+
+.emptyStateHint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.6;
+}

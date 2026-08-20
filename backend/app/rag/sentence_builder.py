@@ -2,8 +2,6 @@
 
 import logging
 
-from ..llm.genai_config import get_client
-from ..llm.model_fallback import get_active_model
 from ..prompts.sentence_builder import SENTENCE_FIELDS, SENTENCE_PROMPT_TEMPLATE
 
 logger = logging.getLogger(__name__)
@@ -48,23 +46,12 @@ def build_constructed_sentence(form_data: dict) -> str:
         return ""
 
     try:
-        from google.genai import types
+        from ..llm.generate import generate_with_fallback
 
-        model = get_active_model()
-        client = get_client()
         prompt = SENTENCE_PROMPT_TEMPLATE.format(field_pairs=field_pairs)
-
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=256,
-            ),
-        )
-        text = (response.text or "").strip()
+        text = generate_with_fallback(prompt, temperature=0.2, max_output_tokens=256)
         if text:
-            logger.info(f"Constructed sentence generated ({len(text)} chars) using {model}")
+            logger.info(f"Constructed sentence generated ({len(text)} chars)")
             return text
         else:
             logger.warning("Constructed sentence: empty LLM response, falling back")

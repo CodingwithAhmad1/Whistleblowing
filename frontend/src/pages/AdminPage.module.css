@@ -689,3 +689,35 @@
 .diagHistoryItem:nth-child(odd) {
   background: var(--color-surface-alt, #f9fafb);
 }
+
+/* ── Admin tab bar (pattern from Feed SubmissionRow) ─────────────────────── */
+
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-32);
+}
+
+.tab {
+  padding: var(--space-12) var(--space-24);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 100ms, border-color 100ms;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.tabActive {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: 600;
+}

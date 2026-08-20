@@ -16,6 +16,8 @@ export interface FullAnalysisResult {
   gaps: string[]
   follow_up_questions: FollowUpQuestion[]
   used_defaults?: boolean
+  /** False when the LLM extraction failed entirely — gaps=[] then means "analysis unavailable", not "complete". */
+  analysis_available?: boolean
 }
 
 export interface IntakeAnalysisResult {
@@ -98,6 +100,7 @@ export function useIntakeAnalysis(
           gaps: res?.gaps ?? [],
           follow_up_questions: res?.follow_up_questions ?? [],
           used_defaults: Boolean((res as FullAnalysisResult)?.used_defaults),
+          analysis_available: (res as FullAnalysisResult)?.analysis_available !== false,
         }
         cacheRef.current.set(key, result)
         setFollowUpQuestions(result.follow_up_questions)

@@ -132,6 +132,7 @@ export function SubmissionRow({ submission, onDelete }: Props) {
                 extraction={submission.extraction}
                 extractionBreakdown={submission.extractionBreakdown}
                 followUpQuestions={submission.followUpQuestions}
+                coverage={submission.coverage}
                 formData={submission.formData}
               />
             )}

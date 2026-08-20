@@ -2,8 +2,6 @@
 
 import logging
 
-from ..llm.genai_config import get_client
-from ..llm.model_fallback import get_active_model
 from ..prompts.quote_extractor import QUOTE_EXTRACTOR_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -16,21 +14,10 @@ def extract_clean_quote(query: str, raw_text: str) -> str | None:
     This is a fallback path — the re-ranker now extracts quotes inline.
     """
     try:
-        from google.genai import types
+        from ..llm.generate import generate_with_fallback
 
         prompt = QUOTE_EXTRACTOR_PROMPT.format(query=query, raw_text=raw_text)
-        model = get_active_model()
-        client = get_client()
-
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=512,
-            ),
-        )
-        result = (response.text or "").strip()
+        result = generate_with_fallback(prompt, temperature=0.1, max_output_tokens=512)
 
         if not result or result == "NO_QUOTE":
             logger.info("Quote extraction returned no usable quote")

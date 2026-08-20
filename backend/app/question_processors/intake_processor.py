@@ -53,6 +53,9 @@ class IntakeResult(TypedDict):
     gaps: list[str]
     follow_up_questions: list[FollowUpQuestion]
     extraction_breakdown: dict[str, Any]
+    # False when both Layer-1 passes failed: gaps=[] then means "analysis
+    # unavailable", never "the account is complete".
+    analysis_available: bool
 
 
 # Ordered section headers emitted by _build_layer1_sections (prompts + tests rely on this).
@@ -240,14 +243,22 @@ _INFERENCE_RETRY_HINT = (
 
 
 def _extract_json_dict(raw: str) -> dict[str, Any] | None:
-    match = re.search(r"\{[\s\S]*\}", raw)
-    if not match:
-        return None
-    try:
-        data = json.loads(match.group())
-        return data if isinstance(data, dict) else None
-    except json.JSONDecodeError:
-        return None
+    """Extract the first complete JSON object from LLM output.
+
+    Uses a balanced decode (raw_decode) rather than a greedy regex so trailing
+    prose — including prose containing braces — cannot break parsing.
+    """
+    decoder = json.JSONDecoder()
+    idx = raw.find("{")
+    while idx != -1:
+        try:
+            data, _ = decoder.raw_decode(raw, idx)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
+        idx = raw.find("{", idx + 1)
+    return None
 
 
 def _as_str_list(v: Any) -> list[str]:
@@ -482,6 +493,19 @@ async def _run_layer1_pass_with_retry(
     return ok2, part2
 
 
+def _narrative_length(q1_text: str, form_data: dict | None) -> int:
+    """Character count of the reporter's own narrative text: Q1 plus follow-up
+    answers. This is what length-based gap criteria are meant to measure — not
+    the assembled prompt blocks, which grow with unrelated structured fields."""
+    fd = form_data or {}
+    parts = [
+        _strip_val(q1_text),
+        _strip_val(fd.get("full_details_q2")),
+        _strip_val(fd.get("full_details_gap2")),
+    ]
+    return sum(len(p) for p in parts if p)
+
+
 class IntakeLayer1:
     """Layer 1: two concurrent LLM passes over labeled sections."""
 
@@ -491,7 +515,7 @@ class IntakeLayer1:
         if not sections.strip():
             raise ValueError("Narrative is empty; cannot run intake analysis")
 
-        measure_len = len(sections)
+        measure_len = _narrative_length(q1_text, form_data)
         strict_prompt = _LAYER1_STRICT_PROMPT_HEAD + sections + _LAYER1_STRICT_PROMPT_TAIL
         inference_prompt = (
             _LAYER1_INFERENCE_PROMPT_HEAD + sections + _LAYER1_INFERENCE_PROMPT_TAIL
@@ -661,6 +685,7 @@ class IntakeProcessor:
             gaps=identified_gaps,
             follow_up_questions=follow_up_questions,
             extraction_breakdown=extraction_breakdown,
+            analysis_available=not layer1_merged.get("_used_defaults", False),
         )
 
 

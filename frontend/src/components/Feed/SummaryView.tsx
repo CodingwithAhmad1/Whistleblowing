@@ -2,6 +2,7 @@ import type {
   Layer1Extraction,
   FollowUpQuestion,
   ExtractionBreakdown,
+  CoverageSnapshot,
 } from '@/utils/feedStore'
 import type { ReportData } from '@/types/report'
 import styles from './SummaryView.module.css'
@@ -11,7 +12,16 @@ interface Props {
   /** When present, shows algorithmic vs model slices; optional for legacy rows. */
   extractionBreakdown?: ExtractionBreakdown | null
   followUpQuestions: FollowUpQuestion[]
+  /** Dual-corpus coverage snapshot; optional for legacy rows. */
+  coverage?: CoverageSnapshot | null
   formData: ReportData
+}
+
+const COVERAGE_LABELS: Record<string, string> = {
+  covered: 'Covered by policy & law',
+  legal_only: 'Legal only — policy gap',
+  policy_only: 'Policy only — exceeds statutory floor',
+  uncovered: 'Uncovered by both corpora',
 }
 
 function BooleanBadges({ extraction }: { extraction: Layer1Extraction }) {
@@ -274,7 +284,7 @@ function BreakdownView({
   )
 }
 
-export function SummaryView({ extraction, extractionBreakdown, followUpQuestions, formData }: Props) {
+export function SummaryView({ extraction, extractionBreakdown, followUpQuestions, coverage, formData }: Props) {
   const policyQuote = formData.policy_quote_matched?.trim()
   const policySection = formData.policy_section_matched?.trim()
 
@@ -327,6 +337,39 @@ export function SummaryView({ extraction, extractionBreakdown, followUpQuestions
           )}
         </div>
       </div>
+
+      {coverage && (
+        <div className={styles.section}>
+          <div className={styles.sectionTitle}>Coverage</div>
+          <div className={styles.card}>
+            <div className={styles.cardInner}>
+              <div className={styles.tagList}>
+                <span className={`${styles.tag} ${styles[`coverage_${coverage.classification}`] ?? ''}`}>
+                  {COVERAGE_LABELS[coverage.classification] ?? coverage.classification}
+                </span>
+              </div>
+              {coverage.legal && (
+                <blockquote className={styles.policyQuote}>
+                  &ldquo;{coverage.legal.verbatim_text}&rdquo;
+                  {coverage.legal.section && (
+                    <span className={styles.policyCitation}>
+                      — {coverage.legal.section} (legal corpus)
+                    </span>
+                  )}
+                </blockquote>
+              )}
+              {coverage.legal?.interpretation && (
+                <p className={styles.aiInterpretation}>
+                  AI interpretation: {coverage.legal.interpretation}
+                </p>
+              )}
+              {(coverage.absence_notices ?? []).map((notice) => (
+                <p key={notice} className={styles.noMatch}>{notice}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

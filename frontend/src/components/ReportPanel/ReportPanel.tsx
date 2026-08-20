@@ -48,6 +48,26 @@ export function ReportPanel() {
       }
     }
 
+    // Dual-corpus coverage snapshot (Component C's input). Best-effort: a
+    // failed classification never blocks the submission itself.
+    let coverage = null
+    try {
+      const res = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.RAG_COVERAGE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          form_data: report,
+          ...(report.constructed_sentence ? { constructed_sentence: report.constructed_sentence } : {}),
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        coverage = data?.coverage ?? null
+      }
+    } catch (e) {
+      console.error('[Submit] Coverage classification failed:', e)
+    }
+
     await saveSubmission({
       timestamp: new Date().toISOString(),
       formData: report,
@@ -55,6 +75,7 @@ export function ReportPanel() {
       extractionBreakdown: snapshot?.extraction_breakdown ?? null,
       gaps: snapshot?.gaps ?? [],
       followUpQuestions: snapshot?.follow_up_questions ?? [],
+      coverage,
     })
     setToastPhase('visible')
     setTimeout(() => setToastPhase('fading'), 2700)

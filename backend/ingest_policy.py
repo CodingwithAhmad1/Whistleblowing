@@ -1,9 +1,12 @@
-"""Ingest 3MRulesBook.pdf into ChromaDB for RAG policy retrieval.
+"""Structure-aware chunking for the 3M policy PDF (library module).
 
-Structure-aware chunking with section/chapter metadata extraction.
+DEPRECATED as a script: ingestion now goes through ingest_corpus.py, which adds
+document_id/char_span provenance, batched embeddings, and a safe collection swap:
 
-Usage:
-    cd backend && python ingest_policy.py [--dry-run]
+    python ingest_corpus.py --corpus policy --source ../docs/3MRulesBook.pdf
+
+The extraction/chunking functions below remain the policy-PDF implementation
+and are imported by ingest_corpus.py.
 """
 
 import re
@@ -15,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import pdfplumber
 
-PDF_PATH = Path(__file__).resolve().parent.parent / "3MRulesBook.pdf"
+PDF_PATH = Path(__file__).resolve().parent.parent / "docs" / "3MRulesBook.pdf"
 CHROMA_PATH = str(Path(__file__).resolve().parent / "data" / "chroma")
 COLLECTION_NAME = "whistleblowing_policy"
 
@@ -153,12 +156,24 @@ def _strip_nav_bar(text: str) -> str:
     return "\n".join(cleaned)
 
 
+# Undecodable embedded-font glyphs leak from pdfplumber as "(cid:NN)" — strip
+# them (and any whitespace runs they leave behind) or they pollute embeddings
+# and surface verbatim in reporter-facing quotes and amendment anchors.
+_CID_ARTIFACT_RE = re.compile(r"\(cid:\d+\)")
+
+
+def _strip_cid_artifacts(text: str) -> str:
+    text = _CID_ARTIFACT_RE.sub(" ", text)
+    return re.sub(r"[ \t]{2,}", " ", text)
+
+
 def extract_pages(pdf_path: Path) -> list[dict]:
     """Extract text from PDF with page numbers."""
     pages = []
     with pdfplumber.open(pdf_path) as pdf:
         for i, page in enumerate(pdf.pages, start=1):
             text = page.extract_text() or ""
+            text = _strip_cid_artifacts(text)
             text = _strip_nav_bar(text)
             text = text.strip()
             if text:
@@ -183,7 +198,7 @@ def _format_table(table: list[list]) -> str:
         return ""
     lines = []
     for row in table:
-        cells = [str(c).strip() if c else "" for c in row]
+        cells = [_strip_cid_artifacts(str(c)).strip() if c else "" for c in row]
         line = " | ".join(c for c in cells if c)
         if line:
             lines.append(line)
@@ -331,9 +346,14 @@ def chunk_pages(pages: list[dict]) -> list[dict]:
     return chunks
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# ── Main (deprecated — use ingest_corpus.py) ─────────────────────────────────
 
 def main():
+    print(
+        "NOTE: ingest_policy.py is deprecated as a script.\n"
+        "Use: python ingest_corpus.py --corpus policy --source ../docs/3MRulesBook.pdf\n"
+        "Continuing with the legacy single-collection ingest...\n"
+    )
     dry_run = "--dry-run" in sys.argv
 
     if not PDF_PATH.exists():

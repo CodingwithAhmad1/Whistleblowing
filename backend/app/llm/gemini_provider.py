@@ -84,9 +84,10 @@ class GeminiProvider:
                     if chunk.text:
                         yield chunk.text
             except ClientError as e:
-                if e.code == 429:
+                # 429 = quota exhausted; 404 = model retired by the provider.
+                if e.code in (429, 404):
                     logger.warning(
-                        f"Quota 429 for model {model!r}, marking exhausted and retrying"
+                        f"Model {model!r} unusable ({e.code}), marking exhausted and retrying"
                     )
                     mark_model_exhausted(model)
                     quota_hit = True

@@ -15,14 +15,22 @@ For each candidate policy excerpt:
    5 = Highly relevant, directly addresses the case
 
 2. For the MOST relevant candidate (highest score, must be >= 3), extract a clean 1-3 sentence \
-policy quote. Remove PDF artifacts (navigation bars, footers, page numbers, sidebar callouts). \
-Preserve the EXACT original wording — do not paraphrase.
+policy quote. Skip PDF artifacts (navigation bars, footers, page numbers, sidebar callouts). \
+The quote MUST be a contiguous, character-for-character copy of text from that candidate — \
+do not paraphrase, do not merge separate passages.
+
+3. For that same candidate, write ONE sentence of interpretation: how the quoted \
+provision relates to the case. This is your own words and will be displayed \
+separately from the quote, clearly labeled as model interpretation.
 
 Output ONLY valid JSON with this structure:
 {{
   "scores": [{{"index": 0, "score": 4}}, {{"index": 1, "score": 2}}],
-  "best_quote": "The extracted clean policy quote text" or null if no candidate scores >= 3
+  "best_quote": {{"index": 0, "text": "The extracted clean policy quote"}} or null if no candidate scores >= 3,
+  "interpretation": "One sentence relating the quoted provision to the case" or null
 }}
+
+The "index" inside best_quote MUST be the index of the candidate the quote was copied from.
 
 Candidates:
 {numbered_candidates}

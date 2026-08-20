@@ -89,6 +89,9 @@ async def intake_analyze(body: dict[str, Any] = Body(default_factory=dict)):
             "gaps": result["gaps"],
             "follow_up_questions": result["follow_up_questions"],
             "used_defaults": used_defaults,
+            # False when the LLM extraction failed entirely: gaps=[] then means
+            # "analysis unavailable", not "the account is complete".
+            "analysis_available": result["analysis_available"],
         }
     except ValueError as e:
         logger.warning(f"Intake analyze bad input: {e}")

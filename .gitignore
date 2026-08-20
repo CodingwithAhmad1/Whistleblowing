@@ -27,3 +27,11 @@ backend/data/submissions.json
 
 # ChromaDB vector store
 backend/data/chroma/
+
+# RAG runtime artifacts (reproducible via backend/ingest_corpus.py)
+backend/data/corpus_text/
+backend/data/eval/
+backend/data/coverage_clusters.json
+backend/data/amendment_proposals.json
+backend/data/*.lock
+backend/data/test_history.json

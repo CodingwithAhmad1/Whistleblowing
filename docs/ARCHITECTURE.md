@@ -68,7 +68,8 @@ flowchart TB
 | Backend | FastAPI, Pydantic 2, Uvicorn |
 | AI SDK | `google-genai` >= 1.0.0 (new Gen AI SDK, replaces deprecated `google-generativeai`) |
 | AI Model | Gemini (default from `GEMINI_MODEL`; fallback chain in `model_fallback.MODEL_CHAIN`: `gemini-2.0-flash` → `gemini-2.5-flash-lite` → `gemini-2.5-flash`) |
-| Embeddings | `models/text-embedding-004` via `google-genai` |
+| Embeddings | `gemini-embedding-001` (3072-dim) via `google-genai`, task-typed (`RETRIEVAL_DOCUMENT`/`RETRIEVAL_QUERY`) |
+| Retrieval | ChromaDB (persistent, `backend/data/chroma/`), two collections: `corpus_policy` + `corpus_legal`; hybrid dense + BM25 (RRF fusion) + LLM re-rank |
 | Settings | JSON file (`backend/data/settings.json`) with file locking |
 | Quota fallback | In-process only: models that return HTTP 429 are skipped for the rest of the UTC day in that server process (no `usage.json`) |
 | Data | In-memory (React context + backend chat sessions); Feed uses `localStorage` plus optional `POST /api/submissions`; Analysis page uses `sessionStorage` for the last intake run |
@@ -319,15 +320,30 @@ Gap configs are stored in `settings.json` under the `intakeGaps` key. The 5 defa
 
 Sequence-of-events and supporting-evidence coverage are handled by two **standardised** questions in the wizard (`sequence_of_events`, `evidence_description`) and no longer need a gap template. Layer 1 evaluates its booleans across the combined narrative of Q1 + sequence + evidence.
 
-### Embeddings
+### Retrieval (RAG)
 
 ```
+app/rag/
+├── service.py         # CorpusRetrievalService(corpus) — ChromaDB + hybrid search + verbatim enforcement
+├── lexical.py         # BM25 leg (rank_bm25) fused with dense ranks via RRF
+├── reranker.py        # LLM relevance scoring 1–5; index-bound best_quote + separate interpretation
+├── quote_extractor.py # fallback LLM quote cleaner
+├── verbatim.py        # serialization-layer verbatim checks (is_verbatim / find_verbatim_span)
+├── coverage.py        # dual-corpus classification: covered/legal_only/policy_only/uncovered
+└── sentence_builder.py# constructed-sentence query builder
+
 app/embeddings/
-├── service.py  # EmbeddingService (Gemini text-embedding-004) — lazy init; get_embedding_service()
-└── store.py    # InMemoryDocumentStore — cosine similarity; heapq.nlargest for top-k
+├── service.py  # EmbeddingService (gemini-embedding-001, task-typed, batched) — get_embedding_service()
+└── store.py    # legacy InMemoryDocumentStore — unused; retrieval lives in app/rag on ChromaDB
 ```
 
-Policy quoting (`get_relevant_policy_snippets`) returns `[]` until documents are loaded into the store. Placeholder for future policy document search.
+Two corpora are indexed by `backend/ingest_corpus.py` (`--corpus policy|legal`): the 3M Code of
+Conduct PDF and EU Directive 2019/1937 (EUR-Lex XHTML). Every chunk carries `corpus`,
+`document_id`, `section_title`, and `char_start`/`char_end` into a canonical text under
+`backend/data/corpus_text/`, so every surfaced quote is verifiable verbatim at the
+serialization layer. Endpoints: `POST /api/rag/policy-quote`, `POST /api/rag/construct-sentence`,
+`POST /api/rag/coverage`. Coverage classes `legal_only` and `uncovered` feed the amendment
+pipeline (`app/amendments/`, surfaced in Admin ▸ Activity).
 
 ### Storage
 
@@ -396,7 +412,7 @@ User → WebSocket → Chat Router → Layer 1 Classify (20 tokens) → Layer 2 
 |----------|----------|---------|--------------|
 | `GEMINI_API_KEY` | No* | — | Google AI API key; Admin-stored key takes precedence |
 | `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Preferred model; starting point for fallback chain |
-| `GEMINI_EMBEDDING_MODEL` | No | `models/text-embedding-004` | Embedding model |
+| `GEMINI_EMBEDDING_MODEL` | No | `gemini-embedding-001` | Embedding model (must match the ingested index; dimension guard at collection open) |
 | `TEMPERATURE` | No | `0.7` | Sampling temperature |
 | `TOP_P` | No | `0.9` | Nucleus sampling probability |
 | `MAX_TOKENS` | No | `512` | Default max output tokens |
@@ -487,12 +503,19 @@ backend/app/
 │   └── intake_processor.py       # 3-layer intake pipeline: IntakeLayer1/2/3, IntakeProcessor
 ├── settings/
 │   ├── __init__.py               # Exports: get_settings, update_settings, get_intake_gaps,
-│   │                             #          update_intake_gaps, _slugify
+│   │                             #          update_intake_gaps, get/update_amendment_config, _slugify
 │   └── store.py                  # JSON settings store with FileLock + atomic writes
+├── rag/                          # Retrieval: hybrid search, re-rank, verbatim, coverage (see above)
+├── amendments/                   # Component C: clustering, anchored proposals, metrics, stores
 └── embeddings/
-    ├── service.py                # EmbeddingService (text-embedding-004), lazy init
-    └── store.py                  # InMemoryDocumentStore, cosine similarity, heapq top-k
+    ├── service.py                # EmbeddingService (gemini-embedding-001, task-typed, batched)
+    └── store.py                  # legacy InMemoryDocumentStore (unused; retrieval is app/rag)
 
 backend/data/                     # Created at runtime
-└── settings.json                 # Admin settings (API key, Q2/Q3 templates, intake gap configs)
+├── settings.json                 # Admin settings (API key, Q2/Q3 templates, intake gaps, amendment gates)
+├── submissions.json              # Feed rows ({next_id, items}; FileLock; monotonic ids)
+├── chroma/                       # ChromaDB index: corpus_policy + corpus_legal
+├── corpus_text/                  # Canonical document texts + manifests (char_span source of truth)
+├── coverage_clusters.json        # Component C cluster state + schema-embedding cache
+└── amendment_proposals.json      # Component C proposals + reviewer decisions
 ```

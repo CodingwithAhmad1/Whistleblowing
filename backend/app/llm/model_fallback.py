@@ -7,9 +7,12 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-# Priority-ordered fallback chain (when preferred model is exhausted, try next).
+# Priority-ordered fallback chain (when preferred model is exhausted or
+# retired, try next). gemini-2.0-flash was retired by Google (404s) in 2026;
+# gemini-3.6-flash is its stated replacement.
 MODEL_CHAIN: list[str] = [
-    "gemini-2.0-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
 ]

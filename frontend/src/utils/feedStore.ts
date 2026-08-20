@@ -56,6 +56,31 @@ export interface FollowUpQuestion {
   question_text: string
 }
 
+/** A verbatim excerpt with a pinned reference (corpus / document / char span). */
+export interface PinnedExcerpt {
+  corpus: string
+  document_id: string | null
+  section: string | null
+  char_span: [number, number] | null
+  verbatim_text: string
+  score: number
+  relevance_score: number | null
+  /** Model-authored text — always rendered visually separate from the quote. */
+  interpretation: string | null
+}
+
+export type CoverageClass = 'covered' | 'legal_only' | 'policy_only' | 'uncovered'
+
+/** Dual-corpus coverage snapshot computed at submit time. */
+export interface CoverageSnapshot {
+  classification: CoverageClass
+  policy: PinnedExcerpt | null
+  legal: PinnedExcerpt | null
+  scores: { policy: number | null; legal: number | null }
+  thresholds: { policy: number; legal: number }
+  absence_notices: string[]
+}
+
 export interface StoredSubmission {
   id: number
   timestamp: string
@@ -65,13 +90,15 @@ export interface StoredSubmission {
   extractionBreakdown?: ExtractionBreakdown | null
   gaps: string[]
   followUpQuestions: FollowUpQuestion[]
+  /** Dual-corpus coverage classification (optional for legacy rows). */
+  coverage?: CoverageSnapshot | null
 }
 
 export const SUBMISSIONS_STORAGE_KEY = 'whistleblow_submissions'
 
 export const SUBMISSIONS_UPDATED_EVENT = 'whistleblow:submissions-updated'
 
-const SUBMISSIONS_API = `${API_CONFIG.BASE_URL}/api/submissions`
+const SUBMISSIONS_API = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SUBMISSIONS}`
 
 function _notifySubmissionsChanged() {
   if (typeof window === 'undefined') return

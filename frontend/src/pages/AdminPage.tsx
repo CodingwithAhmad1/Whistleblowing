@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { API_CONFIG } from '@/config'
+import { ActivityTab } from './admin/ActivityTab'
 import styles from './AdminPage.module.css'
 
 // ─── Intake Gap Configuration ─────────────────────────────────────────────────
@@ -821,35 +822,65 @@ function DiagnosticsSection() {
   )
 }
 
+type AdminTab = 'configuration' | 'activity'
+
 export function AdminPage() {
+  const [activeTab, setActiveTab] = useState<AdminTab>('configuration')
+
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>Admin Settings</h1>
       <p className={styles.subtitle}>
-        Configure intake gap types and monitor AI pipeline health.
+        Configure intake gap types, monitor AI pipeline health, and review policy amendment activity.
       </p>
 
-      <GeminiStatusSection />
+      <div className={styles.tabBar} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'configuration'}
+          className={`${styles.tab} ${activeTab === 'configuration' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('configuration')}
+        >
+          Configuration
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeTab === 'activity'}
+          className={`${styles.tab} ${activeTab === 'activity' ? styles.tabActive : ''}`}
+          onClick={() => setActiveTab('activity')}
+        >
+          Activity
+        </button>
+      </div>
 
-      <hr className={styles.divider} />
-      <DiagnosticsSection />
+      {activeTab === 'configuration' && (
+        <>
+          <GeminiStatusSection />
 
-      <hr className={styles.divider} />
+          <hr className={styles.divider} />
+          <DiagnosticsSection />
 
-      <section>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>Gap Configuration</h2>
-          <p className={styles.sectionDesc}>
-            Define the gaps evaluated after the combined narrative (what happened, sequence, evidence). The
-            backend walks active gaps in priority order and may surface <strong>up to two</strong> template
-            follow-ups per intake run — never more. Templates work best when they ask for specific,
-            investigation-ready details rather than open-ended restatement. Edits, deletes, and drag-reorder
-            save to the backend immediately via the intake-gaps API.
-          </p>
-        </div>
-        <GapConfigSection />
-      </section>
+          <hr className={styles.divider} />
 
+          <section>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>Gap Configuration</h2>
+              <p className={styles.sectionDesc}>
+                Define the gaps evaluated after the combined narrative (what happened, sequence, evidence). The
+                backend walks active gaps in priority order and may surface <strong>up to two</strong> template
+                follow-ups per intake run — never more. Templates work best when they ask for specific,
+                investigation-ready details rather than open-ended restatement. Edits, deletes, and drag-reorder
+                save to the backend immediately via the intake-gaps API.
+              </p>
+            </div>
+            <GapConfigSection />
+          </section>
+        </>
+      )}
+
+      {activeTab === 'activity' && <ActivityTab />}
     </div>
   )
 }

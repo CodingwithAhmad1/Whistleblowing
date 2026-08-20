@@ -51,6 +51,10 @@ TEST_FIXTURES: list[dict] = [
                 "should_pass": True,
                 "must_have_quote": True,
             },
+            "coverage_classification": {
+                "should_pass": True,
+                "expected_classification": "covered",
+            },
         },
     },
     {
@@ -113,6 +117,10 @@ TEST_FIXTURES: list[dict] = [
             "rag_retrieval": {
                 "should_pass": True,
                 "must_have_quote": False,
+            },
+            "coverage_classification": {
+                "should_pass": True,
+                "expected_classification": "uncovered",
             },
         },
     },

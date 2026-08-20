@@ -223,6 +223,81 @@ async def reportiq_submission_delete(submission_id: int) -> dict[str, Any]:
     return await _delete(f"/api/submissions/{submission_id}")
 
 
+async def _put_json(path: str, body: dict[str, Any]) -> Any:
+    url = f"{_base_url()}{path}"
+    async with httpx.AsyncClient() as client:
+        r = await client.put(url, json=body, timeout=120.0)
+        if r.is_success:
+            return r.json()
+        try:
+            detail = r.json()
+        except Exception:
+            detail = r.text
+        return {"error": f"HTTP {r.status_code}", "status_code": r.status_code, "detail": detail}
+
+
+@mcp.tool()
+async def reportiq_rag_coverage(
+    form_data: dict[str, Any],
+    constructed_sentence: str | None = None,
+) -> dict[str, Any]:
+    """POST /api/rag/coverage — dual-corpus coverage classification.
+
+    Returns covered / legal_only / policy_only / uncovered with the best pinned
+    excerpt per corpus (verbatim text + corpus/document/section/char_span).
+    """
+    body: dict[str, Any] = {"form_data": form_data}
+    if constructed_sentence:
+        body["constructed_sentence"] = constructed_sentence
+    return await _post_json("/api/rag/coverage", body)
+
+
+@mcp.tool()
+async def reportiq_activity_analyze() -> dict[str, Any]:
+    """POST /api/admin/activity/analyze — cluster coverage-gap submissions and
+    generate anchored amendment proposals (Component C). On-demand; skips
+    clusters that already have a non-rejected proposal."""
+    return await _post_json("/api/admin/activity/analyze", {})
+
+
+@mcp.tool()
+async def reportiq_activity_proposals(status: str | None = None) -> dict[str, Any]:
+    """GET /api/admin/activity/proposals — amendment proposals + coverage notices.
+
+    status filter: pending | accepted | modified | rejected.
+    """
+    path = "/api/admin/activity/proposals"
+    if status:
+        path += f"?status={status}"
+    return await _get_json(path)
+
+
+@mcp.tool()
+async def reportiq_activity_decide(
+    proposal_id: str,
+    action: str,
+    modified_text: str | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """PUT /api/admin/activity/proposals/{id}/decision — reviewer gate.
+
+    action: accept | modify (requires modified_text) | reject (requires reason).
+    """
+    body: dict[str, Any] = {"action": action}
+    if modified_text is not None:
+        body["modified_text"] = modified_text
+    if reason is not None:
+        body["reason"] = reason
+    return await _put_json(f"/api/admin/activity/proposals/{proposal_id}/decision", body)
+
+
+@mcp.tool()
+async def reportiq_activity_metrics(window_days: int = 90) -> dict[str, Any]:
+    """GET /api/admin/activity/metrics — standing coverage figures, including the
+    legal_only rate (the anti-gaming metric) and unanchored-rejection rate."""
+    return await _get_json(f"/api/admin/activity/metrics?window_days={window_days}")
+
+
 @mcp.tool()
 async def reportiq_q2_generate(report: dict[str, Any] | None = None) -> dict[str, Any]:
     """POST /api/questions/q2/generate — optional legacy Q2 content from full report object."""

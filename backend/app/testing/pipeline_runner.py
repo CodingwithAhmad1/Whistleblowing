@@ -79,6 +79,13 @@ def _validate_step(step_name: str, step_result: dict, expected: dict | None) -> 
         if result is None or (isinstance(result, dict) and not result.get("quote")):
             violations.append("Expected a policy quote but none was returned")
 
+    if "expected_classification" in exp and step_result["status"] == "pass":
+        got = (result or {}).get("classification") if isinstance(result, dict) else None
+        if got != exp["expected_classification"]:
+            violations.append(
+                f"Coverage classified as {got!r}, expected {exp['expected_classification']!r}"
+            )
+
     return violations
 
 
@@ -149,6 +156,17 @@ async def run_pipeline_test(fixture: dict) -> dict:
     else:
         step5 = _skip_step("No query text available")
 
+    # Step 6: Dual-corpus coverage classification
+    if query:
+        from ..rag.coverage import classify_coverage
+
+        step6 = _run_step(
+            "coverage_classification",
+            lambda: classify_coverage(query).model_dump(),
+        )
+    else:
+        step6 = _skip_step("No query text available")
+
     total_ms = round((time.monotonic() - t_total) * 1000)
 
     # Validate each step against expected outcomes
@@ -158,6 +176,7 @@ async def run_pipeline_test(fixture: dict) -> dict:
         "intake_layer3_questions": step3,
         "constructed_sentence": step4,
         "rag_retrieval": step5,
+        "coverage_classification": step6,
     }
 
     for step_name, step_data in steps.items():

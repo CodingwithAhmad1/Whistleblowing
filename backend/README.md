@@ -44,7 +44,7 @@ GEMINI_API_KEY=your_google_ai_api_key_here
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | No* | — | Google AI API key. Admin-stored key takes precedence. |
 | `GEMINI_MODEL` | No | `gemini-2.5-flash-lite` | Preferred Gemini model. Falls back through the model chain on quota exhaustion. |
-| `GEMINI_EMBEDDING_MODEL` | No | `models/text-embedding-004` | Embedding model for future policy document search. |
+| `GEMINI_EMBEDDING_MODEL` | No | `gemini-embedding-001` | Embedding model (3072-dim). Must match the ingested ChromaDB index — a dimension/model guard disables retrieval on mismatch; re-run `ingest_corpus.py` after changing it. |
 | `TEMPERATURE` | No | `0.7` | LLM sampling temperature (chat, Q2/Q3, RAG, etc.). |
 | `INTAKE_TEMPERATURE` | No | `0.2` | Temperature for Layer‑1 intake JSON extraction only (more stable structured output). |
 | `TOP_P` | No | `0.9` | LLM nucleus sampling probability. |

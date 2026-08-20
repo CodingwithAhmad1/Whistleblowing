@@ -218,3 +218,34 @@
   padding: var(--space-16);
   margin: 0;
 }
+
+/* ── Coverage classification badges ──────────────────────────────────────── */
+
+.coverage_covered {
+  background: #dcfce7 !important;
+  color: #166534 !important;
+}
+
+.coverage_legal_only {
+  background: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+.coverage_policy_only {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+}
+
+.coverage_uncovered {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.aiInterpretation {
+  font-size: var(--text-sm);
+  font-style: italic;
+  color: var(--color-text-muted);
+  border-left: 3px dotted var(--color-border);
+  padding-left: var(--space-12);
+  margin: var(--space-8) 0 0;
+}

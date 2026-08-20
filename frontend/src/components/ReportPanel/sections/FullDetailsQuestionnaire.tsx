@@ -73,7 +73,9 @@ export function FullDetailsQuestionnaire() {
       updateReport({ full_details_gap2_question: followUpQuestions[1].question_text })
     }
 
-    setIntakeFallbackNotice(Boolean(analysisResult?.used_defaults))
+    setIntakeFallbackNotice(
+      Boolean(analysisResult?.used_defaults) || analysisResult?.analysis_available === false,
+    )
 
     if (followUpQuestions.length > 0) {
       fq1WasShownRef.current = true

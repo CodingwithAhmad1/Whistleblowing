@@ -169,6 +169,63 @@ def update_intake_gaps(gaps: list[dict]) -> list[dict]:
     return gaps
 
 
+# ── Amendment (Component C) clustering thresholds ─────────────────────────────
+# Evidence accumulation is the gating mechanism, not model self-confidence —
+# these are evaluation parameters, admin-tunable and reported with every run.
+
+DEFAULT_AMENDMENT_CONFIG = {
+    "nMin": 2,        # minimum distinct reports in a cluster (evidence volume)
+    "simMin": 0.75,   # minimum intra-cluster similarity (same conduct)
+    "windowDays": 90, # rolling window (currency)
+}
+
+
+def get_amendment_config() -> dict:
+    raw = _read_raw().get("amendmentConfig")
+    cfg = dict(DEFAULT_AMENDMENT_CONFIG)
+    if isinstance(raw, dict):
+        try:
+            _validate_amendment_config(raw)
+            cfg.update({k: raw[k] for k in DEFAULT_AMENDMENT_CONFIG if k in raw})
+        except ValueError as e:
+            logger.warning("Ignoring invalid amendmentConfig from settings: %s", e)
+    return cfg
+
+
+def _validate_amendment_config(cfg: dict) -> None:
+    if "nMin" in cfg and (not isinstance(cfg["nMin"], int) or cfg["nMin"] < 1):
+        raise ValueError("nMin must be a positive integer")
+    if "simMin" in cfg and (
+        not isinstance(cfg["simMin"], (int, float)) or not 0 < cfg["simMin"] <= 1
+    ):
+        raise ValueError("simMin must be in (0, 1]")
+    if "windowDays" in cfg and (not isinstance(cfg["windowDays"], int) or cfg["windowDays"] < 1):
+        raise ValueError("windowDays must be a positive integer")
+
+
+def update_amendment_config(updates: dict) -> dict:
+    """Merge, validate, and persist amendment clustering thresholds."""
+    _validate_amendment_config(updates)
+    lock_path = SETTINGS_FILE.with_suffix(SETTINGS_FILE.suffix + ".lock")
+    with FileLock(lock_path):
+        current = _read_raw()
+        cfg = dict(DEFAULT_AMENDMENT_CONFIG)
+        if isinstance(current.get("amendmentConfig"), dict):
+            cfg.update(current["amendmentConfig"])
+        cfg.update({k: updates[k] for k in DEFAULT_AMENDMENT_CONFIG if k in updates})
+        current["amendmentConfig"] = cfg
+        _ensure_dir()
+        fd, tmp_path = tempfile.mkstemp(dir=str(DATA_DIR), suffix=".tmp", prefix="settings_")
+        try:
+            with open(fd, "w", encoding="utf-8") as f:
+                json.dump(current, f, indent=2)
+            Path(tmp_path).replace(SETTINGS_FILE)
+        except BaseException:
+            Path(tmp_path).unlink(missing_ok=True)
+            raise
+        return cfg
+
+
 def _slugify(label: str) -> str:
     """Convert label to a URL/id-safe slug."""
     slug = label.lower().strip()
